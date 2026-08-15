@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ORCHID HRM — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/design-system.css" />
+<link rel="stylesheet" href="css/web.css" />
+</head>
+<body>
+
+<!-- ============ ADMIN LOGIN ============ -->
+<div id="webLogin" class="web-login">
+  <div class="wl-left">
+    <div class="wl-brand"><div class="auth-logo" id="wlLogo"></div><span class="t-h3">ORCHID HRM</span></div>
+    <h1 class="t-display" style="max-width:420px;margin-top:36px">Run your workforce with clarity.</h1>
+    <p class="t-body-lg text-secondary" style="max-width:400px;margin-top:14px">Recruitment, attendance, hourly wages and approvals — one premium control room for Orchid Flowers.</p>
+    <div class="wl-points">
+      <div class="wl-point"><span id="wlP1"></span><div><p class="t-body-sm" style="font-weight:600">Hourly wage automation</p><p class="t-caption text-tertiary">GPS hours flow into weekly wage runs</p></div></div>
+      <div class="wl-point"><span id="wlP2"></span><div><p class="t-body-sm" style="font-weight:600">Role-based security</p><p class="t-caption text-tertiary">Admin · HR · Managers · Supervisors</p></div></div>
+      <div class="wl-point"><span id="wlP3"></span><div><p class="t-body-sm" style="font-weight:600">Real-time reporting</p><p class="t-caption text-tertiary">Attendance, wages, overtime &amp; people</p></div></div>
+    </div>
+    <p class="t-caption text-tertiary" style="margin-top:auto;padding-top:40px">Phase 1 · Orchid One · 2026</p>
+  </div>
+  <div class="wl-right">
+    <div class="wl-card card">
+      <h2 class="t-h1">Sign in</h2>
+      <p class="t-body-sm text-secondary" style="margin-top:6px">HR / Admin back-office access</p>
+      <form id="webLoginForm" class="auth-form" style="margin-top:28px" novalidate>
+        <div class="field"><label class="field-label">Email address</label>
+          <div class="input-icon-wrap"><span class="input-prefix" id="wlUserIcon"></span><input class="input" value="priya.devi@orchidflowers.in" /></div></div>
+        <div class="field"><label class="field-label">Password</label>
+          <div class="input-icon-wrap"><span class="input-prefix" id="wlPassIcon"></span><input class="input" type="password" value="orchildemo" /><span class="input-suffix icon-btn icon-btn-sm" id="wlTogglePass"></span></div></div>
+        <div class="row between">
+          <label class="row gap-2" style="cursor:pointer"><span class="toggle"><input type="checkbox" checked /><span class="track"></span></span><span class="t-body-sm text-secondary">Remember me</span></label>
+          <span class="t-body-sm" style="color:var(--primary);font-weight:600;cursor:pointer" onclick="toast('Password reset link sent to your email')">Forgot password?</span>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Sign in to dashboard</button>
+      </form>
+      <div class="auth-divider"><span>or</span></div>
+      <button class="btn btn-outline btn-block" onclick="toast('SSO configured for Orchid Flowers domain')">Sign in with company SSO</button>
+      <p class="t-caption text-tertiary text-center" style="margin-top:22px">Demo credentials pre-filled · press Sign in</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="webApp" class="web-app hidden">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand"><div class="auth-logo" id="sbLogo"></div><div class="col"><span class="sb-name">ORCHID HRM</span><span class="sb-tag">People. Workforce. Performance.</span></div></div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-foot">
+      <div class="sb-role card">
+        <div class="row gap-3">
+          <div class="avatar" id="sbAvatar"></div>
+          <div class="col flex-1"><p class="t-body-sm" style="font-weight:600">Priya Devi</p><p class="t-caption text-tertiary">HR Manager</p></div>
+          <button class="icon-btn icon-btn-sm" onclick="logout()"><span id="sbLogout"></span></button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="row gap-3">
+        <button class="icon-btn" id="hamburger"><span id="hbIcon"></span></button>
+        <div class="col"><p class="t-caption text-tertiary" id="crumb">Dashboard</p><h2 class="t-h2" id="pageTitle">Overview</h2></div>
+      </div>
+      <div class="row gap-3">
+        <div class="input-icon-wrap tb-search"><span class="input-prefix" id="tbSearchIcon"></span><input class="input" id="globalSearch" placeholder="Search employees, requests, candidates..." /></div>
+        <button class="icon-btn" onclick="openGlobalSearch()"><span id="tbSearchBtn"></span></button>
+        <button class="icon-btn" style="position:relative" onclick="navigate('notifications')"><span id="tbBell"></span><span class="count-badge" style="position:absolute;top:4px;right:4px">4</span></button>
+        <div class="divider-v"></div>
+        <div class="avatar" style="cursor:pointer" onclick="navigate('settings')" id="tbAvatar"></div>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+      <section class="sec" id="sec-dashboard"></section>
+      <section class="sec hidden" id="sec-employees"></section>
+      <section class="sec hidden" id="sec-recruitment"></section>
+      <section class="sec hidden" id="sec-candidates"></section>
+      <section class="sec hidden" id="sec-onboarding"></section>
+      <section class="sec hidden" id="sec-documents"></section>
+      <section class="sec hidden" id="sec-attendance"></section>
+      <section class="sec hidden" id="sec-hourly"></section>
+      <section class="sec hidden" id="sec-overtime"></section>
+      <section class="sec hidden" id="sec-wages"></section>
+      <section class="sec hidden" id="sec-leave"></section>
+      <section class="sec hidden" id="sec-shifts"></section>
+      <section class="sec hidden" id="sec-performance"></section>
+      <section class="sec hidden" id="sec-organization"></section>
+      <section class="sec hidden" id="sec-policies"></section>
+      <section class="sec hidden" id="sec-holidays"></section>
+      <section class="sec hidden" id="sec-events"></section>
+      <section class="sec hidden" id="sec-reports"></section>
+      <section class="sec hidden" id="sec-settings"></section>
+      <section class="sec hidden" id="sec-roles"></section>
+      <section class="sec hidden" id="sec-users"></section>
+      <section class="sec hidden" id="sec-notifications"></section>
+    </main>
+  </div>
+
+</div>
+
+<!-- ============ DRAWER ============ -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"><div class="drawer" id="drawer" onclick="event.stopPropagation()"></div></div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal()"><div class="modal" id="modal" onclick="event.stopPropagation()"></div></div>
+
+<!-- ============ TOASTS ============ -->
+<div class="toast-stack" id="toasts"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/data.js"></script>
+<script src="js/web.js"></script>
+</body>
+</html>

@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ORCHID HRM — Employee &amp; Manager App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/design-system.css" />
+<link rel="stylesheet" href="css/mobile.css" />
+</head>
+<body>
+<div class="stage">
+
+  <!-- ======== PHONE FRAME ======== -->
+  <div class="device">
+    <div class="statusbar">
+      <span class="sb-time" id="sbTime">09:41</span>
+      <span class="sb-icons"></span>
+    </div>
+    <div class="app">
+
+      <div class="screens" id="screens">
+
+        <!-- ============ SPLASH ============ -->
+        <section class="screen auth active" id="scr-splash">
+          <div class="splash-inner">
+            <div class="splash-mark" id="splashMark"></div>
+            <h1 class="t-h1 splash-name">ORCHID&nbsp;HRM</h1>
+            <p class="t-body text-secondary">People. Workforce. Performance.</p>
+            <div class="splash-loader"><span></span><span></span><span></span></div>
+            <p class="t-caption text-tertiary splash-sub">Phase 1 · Orchid One · 2026</p>
+          </div>
+        </section>
+
+        <!-- ============ LOGIN ============ -->
+        <section class="screen auth" id="scr-login">
+          <div class="auth-pad">
+            <div class="auth-brand"><div class="auth-logo" id="loginLogo"></div><span class="t-h3">ORCHID HRM</span></div>
+            <h2 class="t-h1" style="margin-top:34px">Welcome back</h2>
+            <p class="t-body text-secondary" style="margin-top:6px">Sign in to your work account to continue.</p>
+
+            <form id="loginForm" class="auth-form" novalidate>
+              <div class="field">
+                <label class="field-label">Mobile number / Email</label>
+                <div class="input-icon-wrap">
+                  <span class="input-prefix" id="loginUserIcon"></span>
+                  <input class="input" id="loginUser" value="+91 98450 88907" placeholder="Enter mobile number or email" />
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label">Password</label>
+                <div class="input-icon-wrap">
+                  <span class="input-prefix" id="loginPassIcon"></span>
+                  <input class="input" id="loginPass" type="password" value="orchildemo" placeholder="Enter your password" />
+                  <span class="input-suffix icon-btn icon-btn-sm" id="togglePass"></span>
+                </div>
+              </div>
+              <div class="row between" style="margin-top:2px">
+                <label class="row gap-2" style="cursor:pointer">
+                  <span class="toggle"><input type="checkbox" checked /><span class="track"></span></span>
+                  <span class="t-body-sm text-secondary">Remember me</span>
+                </label>
+                <span class="t-body-sm" style="color:var(--primary);font-weight:600;cursor:pointer" onclick="go('forgot')">Forgot password?</span>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Sign In</button>
+            </form>
+
+            <div class="auth-divider"><span>or</span></div>
+            <button class="btn btn-outline btn-block" id="bioBtn">
+              <span id="bioIcon"></span> Sign in with fingerprint
+            </button>
+            <p class="t-caption text-tertiary text-center" style="margin-top:26px">Protected for Orchid Flowers workforce</p>
+          </div>
+        </section>
+
+        <!-- ============ OTP ============ -->
+        <section class="screen auth" id="scr-otp">
+          <div class="sub-header">
+            <button class="icon-btn" onclick="go('login')" id="otpBack"></button>
+            <span class="sub-title">Verify it's you</span>
+            <span style="width:40px"></span>
+          </div>
+          <div class="auth-pad">
+            <h2 class="t-h1">Enter OTP</h2>
+            <p class="t-body text-secondary" style="margin-top:8px">We sent a 6-digit code to<br /><b id="otpTo" style="color:var(--text)">+91 98450 88907</b></p>
+            <div class="otp-row" id="otpRow">
+              <input class="otp-in" maxlength="1" inputmode="numeric" /><input class="otp-in" maxlength="1" inputmode="numeric" /><input class="otp-in" maxlength="1" inputmode="numeric" /><input class="otp-in" maxlength="1" inputmode="numeric" /><input class="otp-in" maxlength="1" inputmode="numeric" /><input class="otp-in" maxlength="1" inputmode="numeric" />
+            </div>
+            <p class="row between" style="margin-top:18px">
+              <span class="t-body-sm text-tertiary">Resend code in <b id="otpTimer" style="color:var(--primary)">00:30</b></span>
+              <span class="t-body-sm" style="color:var(--primary);font-weight:600;cursor:pointer" onclick="go('login')">Change number</span>
+            </p>
+            <button class="btn btn-primary btn-block btn-lg" id="otpVerify" style="margin-top:26px">Verify &amp; Continue</button>
+          </div>
+        </section>
+
+        <!-- ============ FORGOT PASSWORD ============ -->
+        <section class="screen auth" id="scr-forgot">
+          <div class="sub-header">
+            <button class="icon-btn" onclick="go('login')" id="forgotBack"></button>
+            <span class="sub-title">Reset password</span>
+            <span style="width:40px"></span>
+          </div>
+          <div class="auth-pad">
+            <h2 class="t-h1">Forgot password</h2>
+            <p class="t-body text-secondary" style="margin-top:8px">Enter your mobile number. We'll send an OTP to reset your password.</p>
+            <div class="field" style="margin-top:26px">
+              <label class="field-label">Mobile number</label>
+              <div class="input-icon-wrap">
+                <span class="input-prefix" id="forgotIcon"></span>
+                <input class="input" value="+91 98450 88907" />
+              </div>
+            </div>
+            <button class="btn btn-primary btn-block btn-lg" style="margin-top:26px" onclick="go('otp')">Send OTP</button>
+          </div>
+        </section>
+
+        <!-- ============ FIRST LOGIN ONBOARDING ============ -->
+        <section class="screen auth" id="scr-firstlogin">
+          <div class="onb-steps"><div class="onb-steps-track" id="onbTrack"></div></div>
+          <div class="onb-body" id="onbBody"></div>
+          <div class="onb-actions" id="onbActions"></div>
+        </section>
+
+        <!-- ============ MAIN SCREENS ============ -->
+
+        <!-- EMPLOYEE HOME -->
+        <section class="screen main" id="scr-home">
+          <div class="home-scroll">
+            <header class="home-header">
+              <div class="col">
+                <p class="t-caption text-secondary" id="greetSub">Thursday, 14 August 2026</p>
+                <h2 class="t-h2" id="greetName">Good morning, Divya</h2>
+              </div>
+              <div class="row gap-3">
+                <button class="icon-btn" onclick="go('notifications')"><span id="homeBell"></span><span class="bell-dot"></span></button>
+                <div class="avatar avatar-lg" style="cursor:pointer" onclick="go('profile')"><span id="homeAvatar"></span></div>
+              </div>
+            </header>
+
+            <!-- Check-in hero -->
+            <div class="hero-checkin card" id="heroCheckin">
+              <div class="hero-top row between">
+                <span class="badge badge-primary"><span class="dot"></span>Morning Shift · 06:00 – 14:00</span>
+                <span class="t-caption text-secondary">Grace 10 min</span>
+              </div>
+              <div class="hero-clock" id="heroClock">06:00:00</div>
+              <p class="t-body-sm text-secondary" id="heroDate">Thursday, 14 Aug 2026</p>
+              <div class="hero-ring-wrap" id="heroRingWrap">
+                <div class="hero-ring pulse" id="heroRing"></div>
+              </div>
+              <p class="t-h3" id="heroStateLabel">You are not checked in yet</p>
+              <p class="t-body-sm text-secondary" id="heroStateSub">Location verified · inside the attendance area</p>
+              <button class="btn btn-primary btn-lg hero-btn" id="heroBtn" onclick="openAttendance()">
+                <span id="heroBtnIcon"></span><span id="heroBtnLabel">Check In</span>
+              </button>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="home-grid2" id="homeStats">
+              <div class="card card-pad stat-cell">
+                <p class="t-caption text-secondary">Today's hours</p>
+                <p class="t-metric" id="statTodayHrs">0.0</p>
+                <p class="t-caption text-tertiary" id="statTodaySub">Not checked in</p>
+              </div>
+              <div class="card card-pad stat-cell">
+                <p class="t-caption text-secondary">Month attendance</p>
+                <p class="t-metric" style="color:var(--success-dark)">18 / 22</p>
+                <p class="t-caption text-tertiary">82% attendance</p>
+              </div>
+              <div class="card card-pad stat-cell">
+                <p class="t-caption text-secondary">Leave balance</p>
+                <p class="t-metric">8</p>
+                <p class="t-caption text-tertiary">Casual leave</p>
+              </div>
+              <div class="card card-pad stat-cell">
+                <p class="t-caption text-secondary">This week's wage</p>
+                <p class="t-metric">₹4,800</p>
+                <p class="t-caption text-tertiary">40 hrs · submitted</p>
+              </div>
+            </div>
+
+            <!-- Pending -->
+            <div class="section-head" style="margin-top:20px">
+              <span class="section-title">Pending</span>
+              <span class="section-link" onclick="go('requests')">View all</span>
+            </div>
+            <div class="card" id="pendingList"></div>
+
+            <!-- Today at a glance -->
+            <div class="section-head" style="margin-top:20px">
+              <span class="section-title">Today at a glance</span>
+              <span class="section-link" onclick="go('notifications')">View all</span>
+            </div>
+            <div class="card" id="glanceList"></div>
+
+            <!-- Upcoming -->
+            <div class="section-head" style="margin-top:20px">
+              <span class="section-title">Upcoming</span>
+            </div>
+            <div class="card" id="upcomingList"></div>
+          </div>
+        </section>
+
+        <!-- ATTENDANCE (main) -->
+        <section class="screen main" id="scr-attendance">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="attBack"></button>
+              <span class="sub-title">Attendance</span>
+              <button class="icon-btn" onclick="openSheet('attHistorySheet')"><span id="attMore"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="row between" style="padding:0 4px">
+                <div>
+                  <p class="t-h2">Thursday, 14 Aug</p>
+                  <p class="t-caption text-tertiary" style="margin-top:2px">Morning Shift · 06:00 – 14:00</p>
+                </div>
+                <div class="att-clock" id="attClock">06:00</div>
+              </div>
+
+              <!-- GPS status -->
+              <div class="card gps-card" id="gpsCard" style="margin-top:14px">
+                <div class="row gap-3">
+                  <div class="gps-icon" id="gpsIcon"></div>
+                  <div class="col flex-1">
+                    <p class="t-body" style="font-weight:600" id="gpsTitle">Inside the attendance area</p>
+                    <p class="t-caption text-tertiary" id="gpsSub">120 m from office · accuracy ±8 m</p>
+                  </div>
+                  <span class="badge badge-success" id="gpsBadge"><span class="dot"></span>Verified</span>
+                </div>
+              </div>
+
+              <!-- Circular control -->
+              <div class="card att-control" id="attControl">
+                <div class="ring" id="attRing">
+                  <div class="ring-center">
+                    <p class="t-caption text-tertiary" id="ringLabel">Working time</p>
+                    <p class="ring-time" id="ringTime">0:00:00</p>
+                    <p class="t-caption" id="ringSub" style="color:var(--text-tertiary);font-weight:600">Not checked in</p>
+                  </div>
+                </div>
+                <div class="att-actions" id="attActions"></div>
+              </div>
+
+              <!-- Shift info -->
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="section-head" style="margin-bottom:6px"><span class="section-title">Your shift</span><span class="section-link" onclick="go('shift')">View schedule</span></div>
+                <div class="kv"><span class="kv-key">Shift</span><span class="kv-val">Morning</span></div>
+                <div class="kv"><span class="kv-key">Working hours</span><span class="kv-val">06:00 – 14:00</span></div>
+                <div class="kv"><span class="kv-key">Break</span><span class="kv-val">30 min</span></div>
+                <div class="kv"><span class="kv-key">Grace period</span><span class="kv-val">10 min</span></div>
+                <div class="kv"><span class="kv-key">Expected check-out</span><span class="kv-val" id="expOut">14:00</span></div>
+              </div>
+
+              <!-- Office location -->
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="section-head" style="margin-bottom:6px"><span class="section-title">Attendance location</span></div>
+                <div class="row gap-3">
+                  <div style="width:46px;height:46px;border-radius:12px;background:var(--success-bg);color:var(--success-dark);display:flex;align-items:center;justify-content:center" id="locIcon"></div>
+                  <div class="col flex-1">
+                    <p class="t-body" style="font-weight:600">Orchid Flowers — Main Campus</p>
+                    <p class="t-caption text-tertiary">Kovaipudur, Coimbatore · 641042</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Attendance summary (after checkout) -->
+              <div class="card card-pad att-summary hidden" id="attSummary" style="margin-top:14px">
+                <div class="section-head" style="margin-bottom:4px"><span class="section-title">Attendance summary</span><span class="badge badge-success">Completed</span></div>
+                <div class="kv"><span class="kv-key">Check-in</span><span class="kv-val" id="sumIn">05:58</span></div>
+                <div class="kv"><span class="kv-key">Check-out</span><span class="kv-val" id="sumOut">14:02</span></div>
+                <div class="kv"><span class="kv-key">Breaks</span><span class="kv-val" id="sumBreak">30 min</span></div>
+                <div class="kv"><span class="kv-key">Working hours</span><span class="kv-val" id="sumHours">8.1 hrs</span></div>
+                <div class="kv"><span class="kv-key">Payable hours</span><span class="kv-val" style="color:var(--primary)">8.1 hrs</span></div>
+                <div class="kv"><span class="kv-key">Estimated wage</span><span class="kv-val" style="color:var(--success-dark)">₹972</span></div>
+                <div class="row gap-2" style="margin-top:10px">
+                  <button class="btn btn-secondary flex-1" onclick="go('hours')">View working hours</button>
+                  <button class="btn btn-outline flex-1" onclick="back()">Done</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ATTENDANCE HISTORY -->
+        <section class="screen main" id="scr-att-history">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="attHBack"></button>
+              <span class="sub-title">Attendance History</span>
+              <button class="icon-btn" onclick="openSheet('filterSheet')"><span id="attHFilter"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="row gap-3 card card-pad" style="margin-bottom:14px">
+                <div class="col flex-1">
+                  <p class="t-caption text-tertiary">This month</p>
+                  <p class="t-metric">18 / 22</p>
+                </div>
+                <div class="col flex-1">
+                  <p class="t-caption text-tertiary">Present</p>
+                  <p class="t-metric" style="color:var(--success-dark)">18</p>
+                </div>
+                <div class="col flex-1">
+                  <p class="t-caption text-tertiary">Absent</p>
+                  <p class="t-metric" style="color:var(--error)">2</p>
+                </div>
+                <div class="col flex-1">
+                  <p class="t-caption text-tertiary">Leave</p>
+                  <p class="t-metric" style="color:var(--warning)">2</p>
+                </div>
+              </div>
+              <div class="card card-pad">
+                <div class="section-head"><span class="section-title">August 2026</span><span class="t-caption text-tertiary">Swipe to view weeks</span></div>
+                <div class="cal-grid cal-legend" id="attCal"></div>
+              </div>
+              <p class="section-title" style="margin-top:18px">Recent days</p>
+              <div class="card" id="attHistoryList" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- REQUESTS (role aware) -->
+        <section class="screen main" id="scr-requests">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <span class="sub-title" id="reqTitle">My Requests</span>
+              <button class="icon-btn" onclick="go('notifications')"><span id="reqBell"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="tabs" style="margin-bottom:14px" id="reqTabs"></div>
+              <div id="reqContent"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- LEAVE BALANCE -->
+        <section class="screen main" id="scr-leave">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="leaveBack"></button>
+              <span class="sub-title">Leave</span>
+              <button class="btn btn-primary btn-sm" onclick="go('apply-leave')" id="leaveApplyBtn">+ Apply</button>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad leave-hero">
+                <p class="t-caption text-tertiary">Total balance</p>
+                <p class="t-metric" style="font-size:34px">30 <span style="font-size:16px;color:var(--text-secondary)">days</span></p>
+                <p class="t-caption text-tertiary" style="margin-top:2px">Next renewal · 01 Jan 2027</p>
+                <div class="progress" style="margin-top:12px"><div class="progress-bar" style="width:42%"></div></div>
+              </div>
+              <div class="tabs" style="margin-top:14px" id="leaveTabs"></div>
+              <div id="leaveContent" style="margin-top:14px"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- APPLY LEAVE -->
+        <section class="screen main" id="scr-apply-leave">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="alBack"></button>
+              <span class="sub-title">Apply Leave</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <form id="leaveForm" novalidate>
+                <div class="field">
+                  <label class="field-label">Leave type</label>
+                  <select class="select" id="leaveType"></select>
+                </div>
+                <div class="field" style="margin-top:12px">
+                  <label class="field-label">Duration</label>
+                  <div class="segmented" id="durSeg">
+                    <div class="seg active" data-dur="single">Single day</div>
+                    <div class="seg" data-dur="range">Date range</div>
+                  </div>
+                </div>
+                <div class="form-grid" style="margin-top:12px">
+                  <div class="field">
+                    <label class="field-label">From date</label>
+                    <div class="input-icon-wrap"><span class="input-prefix" id="alCal1"></span><input class="input" value="17 Aug 2026" id="alFrom" /></div>
+                  </div>
+                  <div class="field hidden" id="alToField">
+                    <label class="field-label">To date</label>
+                    <div class="input-icon-wrap"><span class="input-prefix" id="alCal2"></span><input class="input" value="18 Aug 2026" id="alTo" /></div>
+                  </div>
+                </div>
+                <div class="row gap-2" style="margin-top:12px">
+                  <span class="t-caption text-secondary">Number of days</span>
+                  <span class="badge badge-primary" id="alDays">1 day</span>
+                </div>
+                <div class="field" style="margin-top:16px">
+                  <label class="field-label">Reason</label>
+                  <textarea class="textarea" id="alReason" placeholder="Briefly describe the reason for leave"></textarea>
+                </div>
+                <div class="field" style="margin-top:16px">
+                  <label class="field-label">Supporting document <span class="t-caption text-tertiary">(optional)</span></label>
+                  <div class="upload-zone" id="alUpload" onclick="simulateUpload(this)">
+                    <div class="upload-icon" id="alUpIcon"></div>
+                    <p class="t-body-sm">Tap to attach a document</p>
+                    <p class="t-caption text-tertiary">PDF, JPG or PNG · max 5 MB</p>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:20px">Submit Request</button>
+                <p class="t-caption text-tertiary text-center" style="margin-top:12px">Your manager will be notified. You can track this request in Pending.</p>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- SHIFT SCHEDULE -->
+        <section class="screen main" id="scr-shift">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="shiftBack"></button>
+              <span class="sub-title">My Schedule</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="tabs" style="margin-bottom:14px" id="shiftTabs"></div>
+              <div id="shiftContent"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WORKING HOURS -->
+        <section class="screen main" id="scr-hours">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="hoursBack"></button>
+              <span class="sub-title">Working Hours</span>
+              <button class="icon-btn" onclick="openSheet('filterSheet')"><span id="hoursFilter"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="segmented" id="hoursSeg">
+                <div class="seg active" data-view="week">Week</div>
+                <div class="seg" data-view="month">Month</div>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="section-head"><span class="section-title">This week</span><span class="t-caption text-tertiary">10 – 16 Aug</span></div>
+                <div class="bars" id="weekBars"></div>
+                <div class="row between" style="margin-top:10px">
+                  <span class="t-caption text-tertiary">Mon</span>
+                  <span class="t-caption text-tertiary">Wed</span>
+                  <span class="t-caption text-tertiary">Fri</span>
+                  <span class="t-caption text-tertiary">Sun</span>
+                </div>
+              </div>
+              <div class="home-grid2" style="margin-top:14px">
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Regular hours</p><p class="t-metric">40.0</p><p class="t-caption text-tertiary">5 days</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Overtime</p><p class="t-metric" style="color:var(--warning)">4.5</p><p class="t-caption text-tertiary">+₹675</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Payable hours</p><p class="t-metric" style="color:var(--primary)">44.5</p><p class="t-caption text-tertiary">incl. breaks</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Estimated wage</p><p class="t-metric" style="color:var(--success-dark)">₹5,475</p><p class="t-caption text-tertiary">Week 33</p></div>
+              </div>
+              <p class="section-title" style="margin-top:20px">Daily breakdown</p>
+              <div class="card" id="dailyHours" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WAGE SUMMARY -->
+        <section class="screen main" id="scr-wage">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="wageBack"></button>
+              <span class="sub-title">My Wages</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad wage-hero">
+                <div class="row gap-3">
+                  <div class="wage-hero-icon" id="wageHeroIcon"></div>
+                  <div class="col flex-1">
+                    <p class="t-caption text-secondary">Hourly rate</p>
+                    <p class="t-h2">₹120 / hour</p>
+                    <p class="t-caption text-tertiary">Effective from 01 Jan 2026</p>
+                  </div>
+                  <span class="badge badge-primary">Hourly Wage</span>
+                </div>
+              </div>
+              <div class="home-grid2" style="margin-top:14px">
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Today</p><p class="t-metric">₹972</p><p class="t-caption text-tertiary">8.1 hrs</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">This week</p><p class="t-metric">₹5,475</p><p class="t-caption text-tertiary">44.5 hrs</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">This month</p><p class="t-metric">₹19,840</p><p class="t-caption text-tertiary">163 hrs</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Overtime wage</p><p class="t-metric" style="color:var(--warning)">₹1,050</p><p class="t-caption text-tertiary">7 hrs @ 1.25×</p></div>
+              </div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Wage history</span></div>
+              <div class="card" id="wageHistory"></div>
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="row between" style="cursor:pointer" onclick="go('wage-detail')">
+                  <span class="t-body" style="font-weight:600">View this week's calculation</span>
+                  <span class="list-chev" id="wageChev"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WAGE DETAIL -->
+        <section class="screen main" id="scr-wage-detail">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="wdBack"></button>
+              <span class="sub-title">Wage Calculation</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="row between">
+                <div>
+                  <p class="t-h2">Week 33</p>
+                  <p class="t-caption text-tertiary" style="margin-top:2px">10 – 16 Aug 2026</p>
+                </div>
+                <span class="badge badge-primary">Submitted</span>
+              </div>
+              <div class="card card-pad calc-card" style="margin-top:14px">
+                <p class="section-title">Breakdown</p>
+                <div class="kv"><span class="kv-key">Regular hours</span><span class="kv-val">40.0 × ₹120</span></div>
+                <div class="kv"><span class="kv-key">Regular wage</span><span class="kv-val">₹4,800</span></div>
+                <div class="kv"><span class="kv-key">Overtime hours</span><span class="kv-val">4.5 × ₹150</span></div>
+                <div class="kv"><span class="kv-key">Overtime wage</span><span class="kv-val">₹675</span></div>
+                <div class="kv"><span class="kv-key">Deductions</span><span class="kv-val">₹0</span></div>
+                <div class="divider" style="margin:8px 0"></div>
+                <div class="row between">
+                  <span class="t-body" style="font-weight:700">Total wage</span>
+                  <span class="t-h2" style="color:var(--success-dark)">₹5,475</span>
+                </div>
+                <p class="t-caption text-tertiary" style="margin-top:4px">Estimated wage for approval · payment after HR review</p>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <p class="section-title">Rate details</p>
+                <div class="kv"><span class="kv-key">Hourly rate</span><span class="kv-val">₹120 / hr</span></div>
+                <div class="kv"><span class="kv-key">Overtime rate</span><span class="kv-val">₹150 / hr (1.25×)</span></div>
+                <div class="kv"><span class="kv-key">Effective from</span><span class="kv-val">01 Jan 2026</span></div>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="section-head"><span class="section-title">Approval status</span></div>
+                <div class="timeline" id="wageTimeline"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- DOCUMENTS -->
+        <section class="screen main" id="scr-docs">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="docsBack"></button>
+              <span class="sub-title">My Documents</span>
+              <button class="icon-btn" onclick="openSheet('uploadSheet')"><span id="docsPlus"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="tabs" style="margin-bottom:14px" id="docTabs"></div>
+              <div id="docContent"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- POLICIES -->
+        <section class="screen main" id="scr-policies">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="polBack"></button>
+              <span class="sub-title">HR Policies</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="input-icon-wrap">
+                <span class="input-prefix" id="polSearchIcon"></span>
+                <input class="input" placeholder="Search policies..." />
+              </div>
+              <p class="t-caption text-tertiary" style="margin-top:14px;margin-bottom:6px">6 policies · updated 01 Apr 2026</p>
+              <div id="policyList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- POLICY DETAIL -->
+        <section class="screen main" id="scr-policy-detail">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="pdBack"></button>
+              <span class="sub-title" id="pdTitle">Attendance Policy</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad">
+                <div class="row between">
+                  <div class="col">
+                    <p class="t-h2" id="pdName">Attendance Policy</p>
+                    <p class="t-caption text-tertiary" style="margin-top:2px" id="pdMeta">v3.1 · Effective 01 Apr 2026</p>
+                  </div>
+                  <span class="badge badge-neutral">v3.1</span>
+                </div>
+                <p class="t-body text-secondary" style="margin-top:12px" id="pdSummary"></p>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <p class="section-title">Document</p>
+                <div class="row gap-3" style="margin-top:10px">
+                  <div style="width:42px;height:42px;border-radius:10px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center" id="pdFileIcon"></div>
+                  <div class="col flex-1"><p class="t-body-sm" style="font-weight:600">Attendance_Policy_v3.1.pdf</p><p class="t-caption text-tertiary">1.2 MB</p></div>
+                  <button class="icon-btn" id="pdDownload"></button>
+                </div>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <p class="section-title">Key points</p>
+                <div class="kv"><span class="kv-key">Check-in window</span><span class="kv-val">06:00 – 09:30</span></div>
+                <div class="kv"><span class="kv-key">Grace period</span><span class="kv-val">10 minutes</span></div>
+                <div class="kv"><span class="kv-key">Late marking</span><span class="kv-val">After grace</span></div>
+                <div class="kv"><span class="kv-key">Half day</span><span class="kv-val">&lt; 4 hrs</span></div>
+                <div class="kv"><span class="kv-key">GPS requirement</span><span class="kv-val">Within geofence</span></div>
+              </div>
+              <button class="btn btn-primary btn-block btn-lg" style="margin-top:14px" onclick="confirmPolicyRead()">
+                <span id="pdCheckIcon"></span> I have read this policy
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- HOLIDAYS -->
+        <section class="screen main" id="scr-holidays">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="holBack"></button>
+              <span class="sub-title">Holiday Calendar</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad">
+                <div class="row between" style="margin-bottom:10px">
+                  <span class="t-h3">August 2026</span>
+                  <span class="row gap-2"><button class="icon-btn icon-btn-sm" id="holPrev"></button><span class="t-caption text-tertiary">14 Aug</span><button class="icon-btn icon-btn-sm" id="holNext"></button></span>
+                </div>
+                <div class="cal-grid" id="holCal"></div>
+              </div>
+              <p class="section-title" style="margin-top:18px">Upcoming holidays</p>
+              <div class="card" id="holList" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- NOTIFICATIONS -->
+        <section class="screen main" id="scr-notifications">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="notifBack"></button>
+              <span class="sub-title">Notifications</span>
+              <span class="t-body-sm" style="color:var(--primary);font-weight:600;cursor:pointer" onclick="toast('All notifications marked as read')">Mark all read</span>
+            </div>
+            <div class="att-scroll">
+              <div class="tab-scroll" style="margin-bottom:12px" id="notifTabs"></div>
+              <div id="notifList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section class="screen main" id="scr-profile">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="profBack"></button>
+              <span class="sub-title">Profile</span>
+              <button class="icon-btn" onclick="toast('Profile editing coming in the full build')"><span id="profEdit"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="profile-hero">
+                <div class="avatar avatar-xl" id="profAvatar"></div>
+                <h2 class="t-h2" style="margin-top:10px" id="profName">Divya Lakshmi</h2>
+                <p class="t-body-sm text-secondary" id="profRole">Gardening Staff · Production</p>
+                <div class="row gap-2" style="margin-top:10px">
+                  <span class="badge badge-primary">Hourly Wage</span>
+                  <span class="badge badge-success"><span class="dot"></span>Active</span>
+                </div>
+              </div>
+              <div class="card card-pad" style="margin-top:16px">
+                <div class="section-head"><span class="section-title">Contact</span></div>
+                <div class="kv"><span class="kv-key">Phone</span><span class="kv-val">+91 98450 88907</span></div>
+                <div class="kv"><span class="kv-key">Email</span><span class="kv-val">divya.l@orchidflowers.in</span></div>
+                <div class="kv"><span class="kv-key">Address</span><span class="kv-val">Kovaipudur, Coimbatore</span></div>
+                <div class="kv"><span class="kv-key">Emergency contact</span><span class="kv-val">Murugan (Husband)</span></div>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="section-head"><span class="section-title">Employment</span></div>
+                <div class="kv"><span class="kv-key">Employee ID</span><span class="kv-val">OH-1008</span></div>
+                <div class="kv"><span class="kv-key">Department</span><span class="kv-val">Production</span></div>
+                <div class="kv"><span class="kv-key">Shift</span><span class="kv-val">Morning · 06:00 – 14:00</span></div>
+                <div class="kv"><span class="kv-key">Joining date</span><span class="kv-val">11 Aug 2024</span></div>
+                <div class="kv"><span class="kv-key">Reporting manager</span><span class="kv-val">R. Vasanth</span></div>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="section-head"><span class="section-title">Performance</span></div>
+                <div class="row between">
+                  <div class="col"><p class="t-caption text-tertiary">Average rating</p><p class="t-metric">3.8</p></div>
+                  <div class="col"><p class="t-caption text-tertiary">Reviews</p><p class="t-metric">2</p></div>
+                  <div class="col"><p class="t-caption text-tertiary">Last review</p><p class="t-metric" style="font-size:18px">Apr 26</p></div>
+                </div>
+              </div>
+              <div class="card card-pad" style="margin-top:14px">
+                <div class="row gap-3" style="cursor:pointer" onclick="go('wage')">
+                  <div style="color:var(--primary)" id="profWallet"></div>
+                  <div class="col flex-1"><p class="t-body" style="font-weight:600">My wages</p><p class="t-caption text-tertiary">Rates, calculations &amp; history</p></div>
+                  <span class="list-chev" id="profChev1"></span>
+                </div>
+                <div class="divider" style="margin:12px 0"></div>
+                <div class="row gap-3" style="cursor:pointer" onclick="go('docs')">
+                  <div style="color:var(--primary)" id="profDoc"></div>
+                  <div class="col flex-1"><p class="t-body" style="font-weight:600">My documents</p><p class="t-caption text-tertiary">Identity &amp; education documents</p></div>
+                  <span class="list-chev" id="profChev2"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SETTINGS -->
+        <section class="screen main" id="scr-settings">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="setBack"></button>
+              <span class="sub-title">Settings</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <p class="t-caption text-tertiary" style="margin-bottom:6px">NOTIFICATIONS</p>
+              <div class="card">
+                <div class="list-item"><div class="col flex-1"><p class="list-title">Attendance reminders</p><p class="list-sub">Check-in &amp; check-out nudges</p></div><span class="toggle"><input type="checkbox" checked /><span class="track"></span></span></div>
+                <div class="list-item"><div class="col flex-1"><p class="list-title">Leave updates</p><p class="list-sub">Approvals and rejections</p></div><span class="toggle"><input type="checkbox" checked /><span class="track"></span></span></div>
+                <div class="list-item"><div class="col flex-1"><p class="list-title">Wage &amp; salary alerts</p><p class="list-sub">Weekly wage submission</p></div><span class="toggle"><input type="checkbox" checked /><span class="track"></span></span></div>
+                <div class="list-item"><div class="col flex-1"><p class="list-title">Announcements</p><p class="list-sub">Company-wide notices</p></div><span class="toggle"><input type="checkbox" /><span class="track"></span></span></div>
+              </div>
+              <p class="t-caption text-tertiary" style="margin:18px 0 6px">PREFERENCE</p>
+              <div class="card">
+                <div class="list-item"><div class="col flex-1"><p class="list-title">Language</p><p class="list-sub">English (current)</p></div><span class="list-chev" id="setChev1"></span></div>
+                <div class="list-item"><div class="col flex-1"><p class="list-title">Biometric login</p><p class="list-sub">Fingerprint unlock</p></div><span class="toggle"><input type="checkbox" checked /><span class="track"></span></span></div>
+              </div>
+              <p class="t-caption text-tertiary" style="margin:18px 0 6px">ACCOUNT</p>
+              <div class="card">
+                <div class="list-item clickable" onclick="go('login')"><div class="col flex-1"><p class="list-title" style="color:var(--error)">Log out</p></div><span class="list-chev" id="setChev2"></span></div>
+              </div>
+              <p class="t-caption text-tertiary text-center" style="margin-top:18px">ORCHID HRM · v1.0 · Phase 1 of Orchid One</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- HR HOME / DASHBOARD -->
+        <section class="screen main" id="scr-hr-home">
+          <div class="home-scroll">
+            <header class="home-header">
+              <div class="col">
+                <p class="t-caption text-secondary" id="hrGreetSub">Thursday, 14 August 2026</p>
+                <h2 class="t-h2" id="hrGreet">Good morning, Priya</h2>
+              </div>
+              <div class="row gap-3">
+                <button class="icon-btn" onclick="go('notifications')"><span id="hrBell"></span><span class="bell-dot"></span></button>
+                <div class="avatar avatar-lg" style="cursor:pointer" onclick="go('profile')"><span id="hrAvatar"></span></div>
+              </div>
+            </header>
+
+            <div class="hr-summary card card-pad">
+              <div class="row between">
+                <div class="col">
+                  <p class="t-caption text-secondary">Today · Attendance</p>
+                  <div class="row gap-2" style="margin-top:4px">
+                    <p class="t-metric" style="color:var(--success-dark)">12</p>
+                    <p class="t-metric" style="color:var(--text-secondary)">/ 16</p>
+                    <span class="t-caption text-tertiary" style="align-self:flex-end;padding-bottom:5px">present now</span>
+                  </div>
+                </div>
+                <div class="row gap-3">
+                  <div class="mini-legend"><span class="dot" style="background:var(--success)"></span><span class="t-caption text-secondary">Present 12</span></div>
+                  <div class="mini-legend"><span class="dot" style="background:var(--info)"></span><span class="t-caption text-secondary">Late 1</span></div>
+                  <div class="mini-legend"><span class="dot" style="background:var(--error)"></span><span class="t-caption text-secondary">Absent 1</span></div>
+                  <div class="mini-legend"><span class="dot" style="background:var(--warning)"></span><span class="t-caption text-secondary">Leave 2</span></div>
+                </div>
+              </div>
+              <div class="donut-wrap" id="attDonutWrap"><div class="donut" id="attDonut" style="background:conic-gradient(#2E9E6B 0 75%, #D6455C 75% 81%, #E8E4F0 81% 87.5%, #C28212 87.5% 100%)"><div class="donut-center"><span class="t-h2">75%</span><span class="t-caption text-tertiary">attendance</span></div></div></div>
+              <div class="row between" style="margin-top:6px">
+                <div class="col"><p class="t-caption text-tertiary">Working now</p><p class="t-body" style="font-weight:700">12</p></div>
+                <div class="col"><p class="t-caption text-tertiary">Overtime today</p><p class="t-body" style="font-weight:700">8.5 hrs</p></div>
+                <div class="col"><p class="t-caption text-tertiary">On leave</p><p class="t-body" style="font-weight:700">2</p></div>
+                <div class="col"><p class="t-caption text-tertiary">Pending approvals</p><p class="t-body" style="font-weight:700;color:var(--warning)">4</p></div>
+              </div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="section-head" style="margin-top:20px"><span class="section-title">Quick actions</span></div>
+            <div class="quick-grid">
+              <div class="quick-action" onclick="go('add-employee')"><div class="qa-icon" id="qa1"></div><span class="qa-label">Add employee</span></div>
+              <div class="quick-action" onclick="go('recruitment')"><div class="qa-icon" id="qa2"></div><span class="qa-label">Add candidate</span></div>
+              <div class="quick-action" onclick="go('requests')"><div class="qa-icon" id="qa3"></div><span class="qa-label">Approve leave</span></div>
+              <div class="quick-action" onclick="go('overtime')"><div class="qa-icon" id="qa4"></div><span class="qa-label">Overtime</span></div>
+              <div class="quick-action" onclick="go('wages')"><div class="qa-icon" id="qa5"></div><span class="qa-label">Review wages</span></div>
+              <div class="quick-action" onclick="go('attendance-admin')"><div class="qa-icon" id="qa6"></div><span class="qa-label">Attendance</span></div>
+              <div class="quick-action" onclick="go('hourly')"><div class="qa-icon" id="qa7"></div><span class="qa-label">Hourly workforce</span></div>
+              <div class="quick-action" onclick="go('reports')"><div class="qa-icon" id="qa8"></div><span class="qa-label">Reports</span></div>
+            </div>
+
+            <!-- Workforce distribution -->
+            <div class="section-head" style="margin-top:22px"><span class="section-title">Workforce</span><span class="section-link" onclick="go('people')">View all</span></div>
+            <div class="card card-pad">
+              <div class="row gap-4">
+                <div class="col flex-1">
+                  <p class="t-body-sm" style="font-weight:600">16 total employees</p>
+                  <div class="legend-row"><span class="dot" style="background:var(--primary)"></span><span class="t-caption text-secondary">Permanent · 8</span></div>
+                  <div class="legend-row"><span class="dot" style="background:var(--info)"></span><span class="t-caption text-secondary">Contract · 3</span></div>
+                  <div class="legend-row"><span class="dot" style="background:var(--lavender)"></span><span class="t-caption text-secondary">Hourly · 5</span></div>
+                </div>
+                <div class="donut" style="width:96px;height:96px;background:conic-gradient(#6E3FA8 0 50%, #3E72B8 50% 68.75%, #A98BCB 68.75% 100%)"><div class="donut-center" style="inset:14px"><span class="t-h3">16</span><span class="t-caption text-tertiary">people</span></div></div>
+              </div>
+            </div>
+
+            <!-- Attendance trend -->
+            <div class="section-head" style="margin-top:22px"><span class="section-title">Attendance trend</span><span class="t-caption text-tertiary">Last 7 days</span></div>
+            <div class="card card-pad">
+              <div class="bars" id="hrTrendBars"></div>
+              <div class="row between" style="margin-top:8px"><span class="t-caption text-tertiary">Fri</span><span class="t-caption text-tertiary">Sat</span><span class="t-caption text-tertiary">Sun</span><span class="t-caption text-tertiary">Mon</span><span class="t-caption text-tertiary">Tue</span><span class="t-caption text-tertiary">Wed</span><span class="t-caption text-tertiary">Thu</span></div>
+            </div>
+
+            <!-- Pending approvals preview -->
+            <div class="section-head" style="margin-top:22px"><span class="section-title">Pending approvals</span><span class="section-link" onclick="go('requests')">Review</span></div>
+            <div class="card" id="hrPendingPreview"></div>
+
+            <!-- Recent activity -->
+            <div class="section-head" style="margin-top:22px"><span class="section-title">Recent activity</span></div>
+            <div class="card" id="hrActivity"></div>
+
+            <!-- Celebrations -->
+            <div class="section-head" style="margin-top:22px"><span class="section-title">Birthdays &amp; anniversaries</span></div>
+            <div class="card" id="hrCelebrations"></div>
+          </div>
+        </section>
+
+        <!-- PEOPLE / DIRECTORY -->
+        <section class="screen main" id="scr-people">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="pplBack"></button>
+              <span class="sub-title">Employees</span>
+              <button class="btn btn-primary btn-sm" onclick="go('add-employee')">+ Add</button>
+            </div>
+            <div class="att-scroll">
+              <div class="input-icon-wrap">
+                <span class="input-prefix" id="pplSearchIcon"></span>
+                <input class="input" id="pplSearch" placeholder="Search employees..." />
+              </div>
+              <div class="chip-row" style="margin-top:12px" id="pplFilters"></div>
+              <p class="t-caption text-tertiary" style="margin-top:12px;margin-bottom:6px" id="pplCount">16 employees</p>
+              <div id="pplList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- EMPLOYEE PROFILE -->
+        <section class="screen main" id="scr-emp-profile">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="epBack"></button>
+              <span class="sub-title">Employee Profile</span>
+              <button class="icon-btn" onclick="openSheet('empActionsSheet')"><span id="epMore"></span></button>
+            </div>
+            <div class="att-scroll" id="empProfileBody"></div>
+          </div>
+        </section>
+
+        <!-- ADD EMPLOYEE -->
+        <section class="screen main" id="scr-add-employee">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="aeBack"></button>
+              <span class="sub-title">Add Employee</span>
+              <span class="btn btn-sm btn-ghost" onclick="toast('Draft saved')">Save draft</span>
+            </div>
+            <div class="att-scroll">
+              <div class="row gap-3 card card-pad">
+                <div class="avatar avatar-lg" id="aeAvatar">+</div>
+                <button class="btn btn-outline btn-sm" id="aeUploadBtn"><span id="aeUploadIcon"></span> Upload photo</button>
+              </div>
+              <form id="addEmpForm" style="margin-top:14px" novalidate>
+                <div class="form-grid">
+                  <div class="field"><label class="field-label">Full name</label><input class="input" placeholder="Enter full name" /></div>
+                  <div class="field"><label class="field-label">Mobile number</label><div class="input-icon-wrap"><span class="input-prefix">+91</span><input class="input" placeholder="98450 00000" /></div></div>
+                  <div class="field"><label class="field-label">Email <span class="t-caption text-tertiary">(optional)</span></label><input class="input" placeholder="name@orchidflowers.in" /></div>
+                  <div class="field"><label class="field-label">Department</label><select class="select" id="aeDept"></select></div>
+                  <div class="field"><label class="field-label">Designation</label><select class="select" id="aeDesignation"></select></div>
+                  <div class="field"><label class="field-label">Employment type</label><div class="segmented" id="aeTypeSeg"><div class="seg active" data-type="Permanent">Permanent</div><div class="seg" data-type="Contract">Contract</div><div class="seg" data-type="Hourly Wage">Hourly</div></div></div>
+                  <div class="field" id="aeRateField"><label class="field-label">Hourly rate <span class="t-caption text-tertiary">(₹ / hour)</span></label><input class="input" value="120" /></div>
+                  <div class="field"><label class="field-label">Shift</label><select class="select" id="aeShift"></select></div>
+                  <div class="field"><label class="field-label">Joining date</label><div class="input-icon-wrap"><span class="input-prefix" id="aeCal"></span><input class="input" value="14 Aug 2026" /></div></div>
+                  <div class="field"><label class="field-label">Reporting manager</label><select class="select" id="aeManager"></select></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:22px">Create Employee</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- RECRUITMENT DASHBOARD -->
+        <section class="screen main" id="scr-recruitment">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="recBack"></button>
+              <span class="sub-title">Recruitment</span>
+              <button class="btn btn-primary btn-sm" onclick="toast('New position form opens here')">+ Position</button>
+            </div>
+            <div class="att-scroll">
+              <div class="home-grid2">
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Open positions</p><p class="t-metric">5</p><p class="t-caption text-tertiary">3 urgent</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Candidates</p><p class="t-metric">7</p><p class="t-caption text-tertiary">this month</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Interviews</p><p class="t-metric">4</p><p class="t-caption text-tertiary">this week</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Selected</p><p class="t-metric">2</p><p class="t-caption text-tertiary">awaiting offer</p></div>
+              </div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Pipeline</span><span class="section-link" onclick="go('candidates')">All candidates</span></div>
+              <div class="card card-pad">
+                <div class="funnel" id="funnel"></div>
+              </div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Open positions</span></div>
+              <div class="card" id="openPositions"></div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Upcoming interviews</span></div>
+              <div class="card" id="upInterviews"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CANDIDATES -->
+        <section class="screen main" id="scr-candidates">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="candBack"></button>
+              <span class="sub-title">Candidates</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="tab-scroll" style="margin-bottom:12px" id="candStages"></div>
+              <div id="candList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CANDIDATE PROFILE -->
+        <section class="screen main" id="scr-cand-profile">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="cpBack"></button>
+              <span class="sub-title">Candidate</span>
+              <button class="icon-btn" onclick="openSheet('candActionsSheet')"><span id="cpMore"></span></button>
+            </div>
+            <div class="att-scroll" id="candProfileBody"></div>
+          </div>
+        </section>
+
+        <!-- INTERVIEW SCHEDULE -->
+        <section class="screen main" id="scr-interview">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="ivBack"></button>
+              <span class="sub-title">Schedule Interview</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad">
+                <div class="section-head"><span class="section-title">Candidate</span></div>
+                <div id="ivCandidate"></div>
+              </div>
+              <form style="margin-top:14px">
+                <div class="field"><label class="field-label">Interviewer</label><select class="select" id="ivInterviewer"></select></div>
+                <div class="form-grid" style="margin-top:12px">
+                  <div class="field"><label class="field-label">Date</label><div class="input-icon-wrap"><span class="input-prefix" id="ivCal"></span><input class="input" value="17 Aug 2026" /></div></div>
+                  <div class="field"><label class="field-label">Time</label><div class="input-icon-wrap"><span class="input-prefix" id="ivClock"></span><input class="input" value="10:30 AM" /></div></div>
+                </div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Mode</label><div class="segmented" id="ivMode"><div class="seg active" data-mode="in">In person</div><div class="seg" data-mode="phone">Phone</div><div class="seg" data-mode="video">Video</div></div></div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Location / Link</label><input class="input" value="HR Cabin, Main Campus" /></div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Notes</label><textarea class="textarea" placeholder="Add interview notes or instructions"></textarea></div>
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="toast('Interview scheduled · sent to candidate')">Schedule Interview</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- INTERVIEW EVALUATION -->
+        <section class="screen main" id="scr-evaluation">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="evBack"></button>
+              <span class="sub-title">Evaluation</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad" id="evCandidate"></div>
+              <form style="margin-top:14px">
+                <div id="evRatings"></div>
+                <div class="field" style="margin-top:16px"><label class="field-label">Strengths</label><textarea class="textarea" placeholder="What went well in this interview"></textarea></div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Areas to improve</label><textarea class="textarea" placeholder="Notes for improvement"></textarea></div>
+                <div class="field" style="margin-top:16px"><label class="field-label">Recommendation</label><div class="segmented" id="evRec"><div class="seg active" data-rec="select">Select</div><div class="seg" data-rec="hold">On hold</div><div class="seg" data-rec="reject">Reject</div></div></div>
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="toast('Evaluation submitted · stage updated')">Submit Evaluation</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- OFFER -->
+        <section class="screen main" id="scr-offer">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="offBack"></button>
+              <span class="sub-title">Offer</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad" id="offCandidate"></div>
+              <form style="margin-top:14px">
+                <div class="field"><label class="field-label">Proposed salary <span class="t-caption text-tertiary">(₹ / month)</span></label><input class="input" id="offSalary" value="30000" /></div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Employment type</label><div class="segmented" id="offType"><div class="seg active" data-t="Permanent">Permanent</div><div class="seg" data-t="Contract">Contract</div></div></div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Joining date</label><div class="input-icon-wrap"><span class="input-prefix" id="offCal"></span><input class="input" value="01 Sep 2026" /></div></div>
+                <div class="field" style="margin-top:12px"><label class="field-label">Notes <span class="t-caption text-tertiary">(optional)</span></label><textarea class="textarea" placeholder="Terms, conditions or joining instructions"></textarea></div>
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px" onclick="toast('Offer generated as draft')">Generate Offer</button>
+                <button class="btn btn-success btn-block btn-lg" style="margin-top:10px" onclick="toast('Offer sent to candidate · +91 96554 44556')">Send Offer</button>
+              </form>
+              <div class="card card-pad" style="margin-top:14px">
+                <p class="section-title">Offer status</p>
+                <div class="timeline" id="offTimeline"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ONBOARDING (HR view) -->
+        <section class="screen main" id="scr-onboarding">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="onbBack"></button>
+              <span class="sub-title">Onboarding</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="card card-pad">
+                <div class="row gap-3">
+                  <div class="avatar avatar-lg" id="onbAvatar">J</div>
+                  <div class="col flex-1">
+                    <p class="t-body" style="font-weight:600" id="onbName">Janani V</p>
+                    <p class="t-caption text-tertiary" id="onbPos">HR Executive · Offer accepted</p>
+                  </div>
+                  <span class="badge badge-primary">Joining 01 Sep</span>
+                </div>
+                <div class="onb-progress" style="margin-top:14px">
+                  <div class="row between t-caption text-tertiary" style="margin-bottom:6px"><span>Onboarding progress</span><span id="onbPct">38%</span></div>
+                  <div class="progress"><div class="progress-bar" id="onbBar" style="width:38%"></div></div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:14px" id="onbSteps"></div>
+              <div class="card card-pad" style="margin-top:14px" id="onbDocs">
+                <p class="section-title">Documents</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- HOURLY WORKFORCE -->
+        <section class="screen main" id="scr-hourly">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="hourlyBack"></button>
+              <span class="sub-title">Hourly Workforce</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="home-grid2">
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Hourly employees</p><p class="t-metric">5</p><p class="t-caption text-tertiary">of 16 total</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Hours today</p><p class="t-metric">36.8</p><p class="t-caption text-tertiary">6 working</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Hours this week</p><p class="t-metric">198</p><p class="t-caption text-tertiary">target 200</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Est. week wage</p><p class="t-metric" style="color:var(--success-dark)">₹26,700</p><p class="t-caption text-tertiary">₹5,475 avg</p></div>
+              </div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Hourly employees</span></div>
+              <div class="card" id="hourlyList"></div>
+              <div class="card card-pad" style="margin-top:14px">
+                <p class="section-title">Overtime this week</p>
+                <div class="kv"><span class="kv-key">Total overtime hours</span><span class="kv-val">10.0 hrs</span></div>
+                <div class="kv"><span class="kv-key">Estimated overtime cost</span><span class="kv-val" style="color:var(--warning)">₹1,430</span></div>
+                <div class="kv"><span class="kv-key">Pending approvals</span><span class="kv-val" style="color:var(--warning)">2 requests</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- HOURLY EMPLOYEE DETAIL -->
+        <section class="screen main" id="scr-hourly-emp">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="heBack"></button>
+              <span class="sub-title">Hourly Profile</span>
+              <button class="icon-btn" onclick="toast('Edit rate opens here')"><span id="heEdit"></span></button>
+            </div>
+            <div class="att-scroll" id="hourlyEmpBody"></div>
+          </div>
+        </section>
+
+        <!-- ATTENDANCE ADMIN -->
+        <section class="screen main" id="scr-attendance-admin">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="aaBack"></button>
+              <span class="sub-title">Today's Attendance</span>
+              <button class="icon-btn" onclick="openSheet('filterSheet')"><span id="aaFilter"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="row between">
+                <div>
+                  <p class="t-h2">14 Aug 2026</p>
+                  <p class="t-caption text-tertiary" style="margin-top:2px">12 present · 1 late · 1 absent · 2 leave</p>
+                </div>
+                <span class="t-caption text-tertiary">Live</span>
+              </div>
+              <div class="tab-scroll" style="margin-top:12px" id="aaStatusTabs"></div>
+              <div class="card" style="margin-top:8px" id="aaList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OVERTIME -->
+        <section class="screen main" id="scr-overtime">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="otBack"></button>
+              <span class="sub-title">Overtime</span>
+              <button class="icon-btn" onclick="openSheet('filterSheet')"><span id="otFilter"></span></button>
+            </div>
+            <div class="att-scroll">
+              <div class="home-grid2">
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Pending approval</p><p class="t-metric" style="color:var(--warning)">2</p><p class="t-caption text-tertiary">4.5 hrs</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Approved</p><p class="t-metric" style="color:var(--success-dark)">6</p><p class="t-caption text-tertiary">this week</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Total OT hours</p><p class="t-metric">10.0</p><p class="t-caption text-tertiary">this week</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Est. OT cost</p><p class="t-metric">₹1,430</p><p class="t-caption text-tertiary">this week</p></div>
+              </div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Pending approval</span></div>
+              <div id="otPending"></div>
+              <div class="section-head" style="margin-top:20px"><span class="section-title">Recent</span></div>
+              <div class="card" id="otRecent"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WAGES (approvals) -->
+        <section class="screen main" id="scr-wages">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="wagBack"></button>
+              <span class="sub-title">Wage Management</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="home-grid2">
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Today's wage</p><p class="t-metric">₹4,440</p><p class="t-caption text-tertiary">36.8 hrs</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">This week</p><p class="t-metric">₹26,700</p><p class="t-caption text-tertiary">Week 33</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">This month</p><p class="t-metric">₹1,02,400</p><p class="t-caption text-tertiary">Aug 2026</p></div>
+                <div class="card card-pad stat-cell"><p class="t-caption text-secondary">Pending approvals</p><p class="t-metric" style="color:var(--warning)">2</p><p class="t-caption text-tertiary">₹10,875</p></div>
+              </div>
+              <div class="tabs" style="margin-top:16px" id="wageTabs"></div>
+              <div id="wageContent" style="margin-top:14px"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ASSIGNMENTS -->
+        <section class="screen main" id="scr-assignments">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="asBack"></button>
+              <span class="sub-title">Daily Work</span>
+              <button class="btn btn-primary btn-sm" onclick="toast('Assign work form opens here')">+ Assign</button>
+            </div>
+            <div class="att-scroll">
+              <div class="tabs" style="margin-bottom:14px" id="asTabs"></div>
+              <div id="asList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- REPORTS -->
+        <section class="screen main" id="scr-reports">
+          <div class="sub-screen">
+            <div class="sub-header">
+              <button class="icon-btn" onclick="back()" id="repBack"></button>
+              <span class="sub-title">Reports</span>
+              <span style="width:40px"></span>
+            </div>
+            <div class="att-scroll">
+              <div class="input-icon-wrap"><span class="input-prefix" id="repSearchIcon"></span><input class="input" placeholder="Search reports..." /></div>
+              <p class="t-caption text-tertiary" style="margin-top:14px;margin-bottom:6px">RECENTLY VIEWED</p>
+              <div id="repRecent"></div>
+              <p class="t-caption text-tertiary" style="margin:18px 0 6px">ALL REPORTS</p>
+              <div id="repAll"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MORE -->
+        <section class="screen main" id="scr-more">
+          <div class="home-scroll">
+            <header class="home-header">
+              <div class="col">
+                <p class="t-caption text-secondary">Menu</p>
+                <h2 class="t-h2">More</h2>
+              </div>
+            </header>
+            <div class="more-sections" id="moreSections"></div>
+            <div class="more-foot">
+              <div class="row gap-3" style="cursor:pointer" onclick="go('profile')">
+                <div class="avatar avatar-lg" id="moreAvatar"></div>
+                <div class="col flex-1"><p class="t-body" style="font-weight:600" id="moreName">Divya Lakshmi</p><p class="t-caption text-tertiary" id="moreRole">OH-1008 · Gardening Staff</p></div>
+                <span class="list-chev" id="moreChev"></span>
+              </div>
+              <div class="divider" style="margin:14px 0"></div>
+              <div class="row gap-3" style="cursor:pointer" onclick="go('settings')">
+                <span id="moreSetIcon"></span>
+                <span class="t-body" style="font-weight:600">Settings</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /screens -->
+
+      <!-- Bottom nav -->
+      <nav class="bottomnav" id="bottomnav">
+        <div class="bn-item" data-nav="home"><span class="bn-icon" id="bnHome"></span><span class="bn-label">Home</span></div>
+        <div class="bn-item" data-nav="attendance"><span class="bn-icon" id="bnAtt"></span><span class="bn-label">Attendance</span></div>
+        <div class="bn-item" data-nav="requests"><span class="bn-icon" id="bnReq"></span><span class="bn-label">Requests</span><span class="bn-badge" id="bnReqBadge">2</span></div>
+        <div class="bn-item" data-nav="more"><span class="bn-icon" id="bnMore"></span><span class="bn-label">More</span></div>
+      </nav>
+
+    </div><!-- /app -->
+  </div><!-- /device -->
+
+  <!-- ======== DEMO TOOL ======== -->
+  <div class="demo-tool" id="demoTool">
+    <button class="demo-fab" id="demoFab" onclick="toggleDemo()"></button>
+    <div class="demo-panel hidden" id="demoPanel">
+      <p class="t-h3">Prototype controls</p>
+      <p class="t-caption text-tertiary" style="margin:2px 0 10px">Switch role &amp; explore important states</p>
+      <p class="t-caption" style="font-weight:600;color:var(--text-secondary);margin-bottom:6px">ROLE</p>
+      <div class="segmented" id="demoRole">
+        <div class="seg active" data-role="employee">Employee</div>
+        <div class="seg" data-role="hr">HR</div>
+      </div>
+      <p class="t-caption" style="font-weight:600;color:var(--text-secondary);margin:14px 0 6px">LOCATION (GPS)</p>
+      <div class="segmented" id="demoLoc">
+        <div class="seg active" data-loc="inside">Inside</div>
+        <div class="seg" data-loc="outside">Outside</div>
+        <div class="seg" data-loc="off">GPS off</div>
+      </div>
+      <p class="t-caption" style="font-weight:600;color:var(--text-secondary);margin:14px 0 6px">CONNECTION</p>
+      <div class="segmented" id="demoNet">
+        <div class="seg active" data-net="online">Online</div>
+        <div class="seg" data-net="offline">Offline</div>
+      </div>
+      <p class="t-caption" style="font-weight:600;color:var(--text-secondary);margin:14px 0 6px">AUTH FLOW</p>
+      <div class="segmented" id="demoAuth">
+        <div class="seg active" data-auth="login">Login</div>
+        <div class="seg" data-auth="first">First login</div>
+      </div>
+      <button class="btn btn-outline btn-block btn-sm" style="margin-top:14px" onclick="resetDemo()">Reset demo</button>
+    </div>
+  </div>
+
+  <!-- ======== SHEET ======== -->
+  <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheets()"><div class="sheet" id="sheet" onclick="event.stopPropagation()"></div></div>
+
+  <!-- ======== MODAL ======== -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="closeSheets()"><div class="modal" id="modal" onclick="event.stopPropagation()"></div></div>
+
+  <!-- ======== TOASTS ======== -->
+  <div class="toast-stack" id="toasts"></div>
+
+  <!-- ======== OFFLINE BANNER ======== -->
+  <div class="offline-banner hidden" id="offlineBanner"><span id="offlineIcon"></span> You're offline · changes will sync when back online</div>
+
+</div><!-- /stage -->
+
+<script src="js/icons.js"></script>
+<script src="js/data.js"></script>
+<script src="js/mobile.js"></script>
+</body>
+</html>
