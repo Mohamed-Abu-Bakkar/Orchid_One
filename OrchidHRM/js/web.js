@@ -20,7 +20,10 @@ window.toast = toast;
 
 /* ---------- Sidebar ---------- */
 const NAV = [
-  { group: "Overview", items: [["dashboard", "grid", "Dashboard", null]] },
+  { group: "Overview", items: [
+    ["dashboard", "grid", "Dashboard", null],
+    ["notifications", "bell", "Notifications", "4"],
+  ] },
   { group: "People", items: [
     ["employees", "people", "Employees", null],
     ["recruitment", "user", "Recruitment", "2"],
@@ -264,7 +267,7 @@ function renderEmployees() {
   <div class="panel">
     <div class="toolbar">
       <div class="input-icon-wrap"><span class="input-prefix" style="color:var(--text-tertiary)">${ICON("search",16)}</span><input class="input search" id="empSearch" placeholder="Search employees..." oninput="renderEmpTable()" /></div>
-      <select class="select" id="empDept" onchange="renderEmpTable()">${deptOptions("all")}</select>
+      <select class="select" id="empDept" onchange="renderEmpTable()">${deptOptions("All departments")}</select>
       <select class="select" id="empType" onchange="renderEmpTable()">${["All types","Permanent","Contract","Hourly Wage"].map(t=>`<option>${t}</option>`).join("")}</select>
       <select class="select" id="empStatus" onchange="renderEmpTable()">${["All status","Present","Absent","On Leave","Late","Working"].map(s=>`<option>${s}</option>`).join("")}</select>
       <div class="spacer"></div>
@@ -288,7 +291,7 @@ function renderEmpTable() {
     (!q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q)) &&
     (dept === "All departments" || deptName(e.dept) === dept) &&
     (type === "All types" || e.type === type) &&
-    (status === "All status" || e.status === status.toLowerCase().replace(" ",""))
+    (status === "All status" || e.status === ({ "Present": "present", "Late": "late", "Absent": "absent", "On Leave": "leave", "Working": "working" })[status])
   );
   const stc = { present: "success", absent: "error", leave: "warning", late: "info", working: "success" };
   el("empTable").innerHTML = `

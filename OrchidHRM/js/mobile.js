@@ -104,7 +104,7 @@ function injectIcons() {
   const map = {
     loginUserIcon: ["user", 18], loginPassIcon: ["lock", 18], togglePass: ["eye", 18],
     bioIcon: ["fingerprint", 18], bioBtn: null,
-    loginLogo: ["layers", 22], splashMark: ["layers", 44], forgotIcon: ["phone", 18],
+    loginLogo: ["layers", 22], splashMark: ["flower", 44], forgotIcon: ["phone", 18],
     otpBack: ["arrowLeft", 20], forgotBack: ["arrowLeft", 20],
     homeBell: ["bell", 22], hrBell: ["bell", 22], reqBell: ["bell", 20],
     homeAvatar: null, hrAvatar: null, moreAvatar: null,
@@ -415,6 +415,7 @@ function renderGlance() {
 }
 
 /* ---------- Upcoming ---------- */
+
 function renderUpcoming() {
   el("upcomingList").innerHTML = `
     <div class="list-item clickable" onclick="go('holidays')"><div class="col flex-1"><p class="list-title">Independence Day</p><p class="list-sub">Public holiday · Tomorrow</p></div><span class="badge badge-neutral">15 Aug</span></div>

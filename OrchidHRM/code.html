@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Employee Profile - Orchid HRM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#83488b",
+                      "on-surface": "#1b1c1c",
+                      "tertiary": "#2c2c2a",
+                      "secondary": "#6f5385",
+                      "surface-bright": "#fcf9f8",
+                      "secondary-fixed-dim": "#dcbaf3",
+                      "on-background": "#1b1c1c",
+                      "on-primary-fixed-variant": "#683071",
+                      "on-secondary-fixed-variant": "#573b6b",
+                      "surface": "#fcf9f8",
+                      "primary-fixed-dim": "#f4affa",
+                      "on-surface-variant": "#4e444d",
+                      "on-tertiary-fixed-variant": "#474745",
+                      "surface-variant": "#e4e2e1",
+                      "inverse-on-surface": "#f3f0f0",
+                      "surface-container-low": "#f6f3f2",
+                      "on-tertiary-fixed": "#1c1c1a",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed": "#350040",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed": "#f2daff",
+                      "secondary-container": "#e8c5fe",
+                      "primary-fixed": "#ffd6ff",
+                      "on-secondary-fixed": "#290e3d",
+                      "outline": "#80737e",
+                      "primary-container": "#632b6c",
+                      "surface-dim": "#dcd9d9",
+                      "error": "#ba1a1a",
+                      "error-container": "#ffdad6",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#f0eded",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed": "#e5e2df",
+                      "tertiary-fixed-dim": "#c8c6c3",
+                      "tertiary-container": "#434240",
+                      "inverse-primary": "#f4affa",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#b0aeac",
+                      "on-primary-container": "#db97e1",
+                      "on-secondary-container": "#6a4e80",
+                      "primary": "#4a1254",
+                      "surface-container-high": "#eae7e7",
+                      "inverse-surface": "#303030",
+                      "background": "#fcf9f8",
+                      "surface-container-highest": "#e4e2e1",
+                      "on-error": "#ffffff",
+                      "outline-variant": "#d1c2ce"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-padding-desktop": "32px",
+                      "gutter": "24px",
+                      "base": "8px",
+                      "stack-md": "12px",
+                      "stack-lg": "24px",
+                      "stack-sm": "4px",
+                      "container-padding-mobile": "16px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Manrope"
+                      ],
+                      "headline-lg": [
+                              "Manrope"
+                      ],
+                      "title-md": [
+                              "Manrope"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "tabular-nums": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "tabular-nums": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .circular-progress {
+            transform: rotate(-90deg);
+        }
+        .circular-progress circle {
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col md:flex-row">
+<!-- Navigation Drawer (Desktop) -->
+<nav aria-label="Main Navigation" class="hidden md:flex flex-col gap-2 py-6 h-full bg-surface dark:bg-surface-container-low border-r border-outline-variant fixed left-0 top-0 h-full w-[280px] z-40">
+<div class="px-6 mb-8 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-variant flex-shrink-0">
+<img alt="Admin Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a female HR administrator in a well-lit, modern corporate office. Light-themed aesthetic with soft orchid accents in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4hHDKULN6Iq5KbzVcXbazIEAfCS73fKXQIem2Nh3h7qGv-lKmS1cWWAMd18YokbYePMO9U703E1KmPHwbv8K0hkcXQsrp8pRG_0D-9yd8flP6ZLSMb8b_-HvRC2PJHanLwD9u_On09hG-kSghqIf9TLigaTuiwsL7aPh02hqBC6bc6nLj2qwaCONm4ljmiLgp4oTOD9XsJLxkOLC_dsX7_odxWVo2jQgaP8MCNGqGgnmKsBDAcV4s"/>
+</div>
+<div>
+<h2 class="text-title-md font-title-md text-primary font-bold">Admin Portal</h2>
+<p class="text-label-sm font-label-sm text-on-surface-variant">HR Management</p>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto px-2 space-y-1">
+<a class="flex items-center gap-3 text-on-surface-variant mx-2 px-4 py-3 hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="text-body-md font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 bg-secondary-fixed text-on-secondary-fixed rounded-lg mx-2 px-4 py-3 hover:bg-surface-container-high transition-all font-medium" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">badge</span>
+<span class="text-body-md font-body-md">People</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant mx-2 px-4 py-3 hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">timer</span>
+<span class="text-body-md font-body-md">Workforce</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant mx-2 px-4 py-3 hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">sentiment_satisfied</span>
+<span class="text-body-md font-body-md">Experience</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant mx-2 px-4 py-3 hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">account_tree</span>
+<span class="text-body-md font-body-md">Organization</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant mx-2 px-4 py-3 hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">analytics</span>
+<span class="text-body-md font-body-md">Reports</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant mx-2 px-4 py-3 hover:bg-surface-container-high transition-all rounded-lg mt-auto" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="text-body-md font-body-md">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Top App Bar (Mobile) -->
+<header aria-label="Top App Bar" class="md:hidden flex justify-between items-center w-full px-4 h-16 bg-surface dark:bg-background shadow-sm sticky top-0 z-40">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-variant">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A professional headshot of a female HR administrator in a well-lit, modern corporate office. Light-themed aesthetic with soft orchid accents in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO6Irk8MGzjc4XmHSxasaQzS1mxMUbw8cumqUQzbWAQWgh8O26-QFLZ4KUzOl-4tavAP_EY-BqAJJtQTXbVWl1LZYrF4Uy7KaizQ_2sTwxHenT8TdWovOjg8nLCEP4ZClcLSHZLk3K7p6RI83pIQM-nZWX1IWR0Tq5-3sTptHtM_3jhteje68woGaZ9Wx-yoepsDrY0mYbRU1bN8MDWX6tBwDlfIZJv2uMg5jAdoqZ4gsuHEhw1C73"/>
+</div>
+<span class="text-title-md font-title-md font-bold text-primary dark:text-primary-fixed-dim tracking-tight">Orchid HRM</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-primary dark:text-primary-fixed-dim hover:bg-surface-container-highest transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-[280px] pb-24 md:pb-8">
+<!-- Header Section -->
+<div class="bg-surface relative pb-8 shadow-sm">
+<!-- Ambient Header Background -->
+<div class="h-32 md:h-48 bg-gradient-to-r from-primary-container to-secondary-container opacity-20 w-full absolute top-0 left-0 z-0"></div>
+<div class="relative z-10 px-container-padding-mobile md:px-container-padding-desktop pt-16 md:pt-24 max-w-6xl mx-auto">
+<div class="flex flex-col md:flex-row gap-6 md:gap-8 items-start md:items-end">
+<!-- Avatar -->
+<div class="relative">
+<div class="w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-[1.5rem] overflow-hidden border-4 border-surface shadow-lg bg-surface-variant flex-shrink-0">
+<!-- Placeholder for IMAGE_1 if provided, otherwise a generic professional placeholder -->
+<img alt="Arun Kumar Profile Picture" class="w-full h-full object-cover" data-alt="A highly detailed professional portrait of an Indian male software developer in his early 30s. He is wearing a clean, modern button-down shirt. The background is a bright, softly blurred tech office environment with high-key lighting. The overall mood is confident, approachable, and corporate. Modern enterprise aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXNPrDoUMs9RbNq_QWsCKuqHdut5wgiSN5WsG9rr4HeQVv6dbfo0v0GSGhS8gRf0nTJl3t_bDRsOL97IJ4eM7-_9Orl9JFxfPr1r4JqcYArptD_dlWmW_KmI7gNZJJILF-vKRxKu_ywMV5kxpo-aym3w3DSJ4nBbcEmjmVtlLlytiHPy1btyFbaJx1Lrgs2YepibWmfk0rMNSpf6nEahUpMFsixXCkpRG_U6ylFYjinUzMJQE75ctZ"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-[#dcfce7] text-[#166534] text-[10px] font-bold px-2 py-1 rounded-full border-2 border-surface flex items-center gap-1">
+<div class="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse"></div> Active
+                        </div>
+</div>
+<!-- Profile Info -->
+<div class="flex-1 w-full">
+<div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+<div>
+<h1 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-surface mb-1">Arun Kumar</h1>
+<p class="text-title-md font-title-md text-primary mb-3">Senior Developer</p>
+<div class="flex flex-wrap gap-y-2 gap-x-4 text-body-md font-body-md text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span>EMP-2023-042</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+<span>Joined: Jan 2022</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">domain</span>
+<span>Department: Tech</span>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex gap-3 w-full md:w-auto">
+<button class="flex-1 md:flex-none px-4 py-2.5 rounded-lg border border-outline text-primary font-medium text-body-md font-body-md hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">chat</span>
+                                    Message
+                                </button>
+<button class="flex-1 md:flex-none px-4 py-2.5 rounded-lg bg-primary text-on-primary font-medium text-body-md font-body-md hover:bg-on-primary-fixed-variant transition-colors shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+                                    Edit Profile
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Details Canvas -->
+<div class="px-container-padding-mobile md:px-container-padding-desktop py-stack-lg max-w-6xl mx-auto space-y-stack-lg">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column (Performance & Stats) -->
+<div class="lg:col-span-1 space-y-6">
+<!-- Performance Section -->
+<section class="bg-surface-container-lowest border border-surface-variant rounded-2xl p-6 shadow-sm">
+<h3 class="text-title-md font-title-md text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">trending_up</span>
+                            Role Performance
+                        </h3>
+<div class="space-y-6">
+<!-- Attendance Ring -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-body-md font-body-md font-medium text-on-surface">Attendance</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Last 90 days</span>
+</div>
+<div class="relative w-16 h-16">
+<svg class="w-full h-full circular-progress" viewbox="0 0 36 36">
+<path class="text-surface-variant stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="4"></path>
+<path class="text-primary stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="96, 100" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center text-body-md font-body-md font-bold text-on-surface tabular-nums">96%</div>
+</div>
+</div>
+<!-- Efficiency Ring -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-body-md font-body-md font-medium text-on-surface">Efficiency</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Sprint velocity</span>
+</div>
+<div class="relative w-16 h-16">
+<svg class="w-full h-full circular-progress" viewbox="0 0 36 36">
+<path class="text-surface-variant stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="4"></path>
+<path class="text-secondary stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="88, 100" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center text-body-md font-body-md font-bold text-on-surface tabular-nums">88%</div>
+</div>
+</div>
+<!-- Peer Rating Ring -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-body-md font-body-md font-medium text-on-surface">Peer Rating</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">360° Feedback</span>
+</div>
+<div class="relative w-16 h-16">
+<svg class="w-full h-full circular-progress" viewbox="0 0 36 36">
+<path class="text-surface-variant stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="4"></path>
+<path class="text-primary-container stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="96, 100" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center text-body-md font-body-md font-bold text-on-surface tabular-nums">4.8<span class="text-[10px] text-on-surface-variant font-normal">/5</span></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (Accomplishments & Timeline) -->
+<div class="lg:col-span-2 space-y-6">
+<section class="bg-surface-container-lowest border border-surface-variant rounded-2xl p-6 shadow-sm">
+<h3 class="text-title-md font-title-md text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">workspace_premium</span>
+                            Recent Accomplishments
+                        </h3>
+<div class="relative border-l-2 border-surface-variant ml-4 space-y-8 pb-4">
+<!-- Timeline Item 1 -->
+<div class="relative pl-6">
+<div class="absolute w-4 h-4 rounded-full bg-primary -left-[9px] top-1 border-4 border-surface-container-lowest"></div>
+<div class="mb-1 text-label-sm font-label-sm text-primary font-medium tracking-wide uppercase">Oct 2023</div>
+<div class="bg-surface-container rounded-xl p-4 shadow-sm border border-surface-variant/50">
+<p class="text-body-md font-body-md text-on-surface">Led the Orchid One Phase 1 deployment.</p>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative pl-6">
+<div class="absolute w-4 h-4 rounded-full bg-surface-variant -left-[9px] top-1 border-4 border-surface-container-lowest"></div>
+<div class="mb-1 text-label-sm font-label-sm text-on-surface-variant font-medium tracking-wide uppercase">Sep 2023</div>
+<div class="bg-surface rounded-xl p-4 shadow-sm border border-surface-variant/50">
+<p class="text-body-md font-body-md text-on-surface">Optimized attendance GPS geofencing logic.</p>
+</div>
+</div>
+<!-- Timeline Item 3 -->
+<div class="relative pl-6">
+<div class="absolute w-4 h-4 rounded-full bg-surface-variant -left-[9px] top-1 border-4 border-surface-container-lowest"></div>
+<div class="mb-1 text-label-sm font-label-sm text-on-surface-variant font-medium tracking-wide uppercase">Aug 2023</div>
+<div class="bg-surface rounded-xl p-4 shadow-sm border border-surface-variant/50">
+<p class="text-body-md font-body-md text-on-surface">Mentored 3 junior developers in the Logistics team.</p>
+</div>
+</div>
+<!-- Timeline Item 4 -->
+<div class="relative pl-6">
+<div class="absolute w-4 h-4 rounded-full bg-surface-variant -left-[9px] top-1 border-4 border-surface-container-lowest"></div>
+<div class="mb-1 text-label-sm font-label-sm text-on-surface-variant font-medium tracking-wide uppercase">Jul 2023</div>
+<div class="bg-surface rounded-xl p-4 shadow-sm border border-surface-variant/50">
+<p class="text-body-md font-body-md text-on-surface">Reduced mobile app load time by 40%.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Mobile) -->
+<nav class="w-full flex justify-around items-center px-2 py-3 bg-surface border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeRequests()">
+<span class="material-symbols-outlined">home</span>
+<span class="text-label-sm font-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeRequests();openAtt()">
+<span class="material-symbols-outlined">fingerprint</span>
+<span class="text-label-sm font-label-sm mt-1">Attendance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-label-sm font-label-sm mt-1">Performance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
+<span class="material-symbols-outlined icon-filled">pending_actions</span>
+<span class="text-label-sm font-label-sm mt-1">Requests</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
+<span class="material-symbols-outlined">menu</span>
+<span class="text-label-sm font-label-sm mt-1">More</span>
+</a>
+</nav>
+</body></html>
