@@ -2,7 +2,7 @@
   "name": "Orchid HRM Employee Dashboard",
   "short_name": "Orchid HRM",
   "description": "Employee dashboard for Orchid HRM - view payslips, requests, attendance and more",
-  "start_url": "/employee_mobileApp.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#fcf9f8",
