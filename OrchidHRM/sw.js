@@ -8,8 +8,8 @@ const PRECACHE_URLS = [
   '/js/web.js',
   '/manifest.json',
   '/assets/logo.png',
-  '/assets/launchericon-192x192.png',
-  '/assets/launchericon-512x512.png'
+  '/assets/android/launchericon-192x192.png',
+  '/assets/android/launchericon-512x512.png'
 ];
 
 self.addEventListener('install', (event) => {
