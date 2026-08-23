@@ -4,18 +4,22 @@
   "description": "Employee dashboard for Orchid HRM - view payslips, requests, attendance and more",
   "start_url": "/index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
   "background_color": "#fcf9f8",
   "theme_color": "#4a1254",
+  "orientation": "portrait",
   "icons": [
-    
     {
       "src": "assets/logo.png",
+      "sizes": "85x75",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/launchericon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "assets/logo.png",
+      "src": "assets/launchericon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
