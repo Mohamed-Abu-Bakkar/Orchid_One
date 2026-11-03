@@ -1,7 +1,7 @@
 {
-  "name": "Orchid HRM Employee Dashboard",
-  "short_name": "Orchid HRM",
-  "description": "Employee dashboard for Orchid HRM - view payslips, requests, attendance and more",
+  "name": "Orchid ONE Employee Dashboard",
+  "short_name": "Orchid ONE",
+  "description": "Employee dashboard for Orchid ONE - view payslips, requests, attendance and more",
   "start_url": "/employee_mobileApp.html",
   "display": "standalone",
   "background_color": "#fcf9f8",

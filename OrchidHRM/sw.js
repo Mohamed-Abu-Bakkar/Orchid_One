@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orchid-hrm-v1';
+const CACHE_NAME = 'orchid-ONE-v1';
 const PRECACHE_URLS = [
   '/index.html',
   '/css/design-system.css',

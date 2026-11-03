@@ -1,4 +1,4 @@
-/* ORCHID HRM — Icon set (inline SVG, stroke-based, 1.6px) */
+/* ORCHID ONE — Icon set (inline SVG, stroke-based, 1.6px) */
 const ICON = (name, size = 20) => {
   const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 1.7, "stroke-linecap": "round", "stroke-linejoin": "round" };
   if (name === "flower") { p.viewBox = "0 -960 960 960"; p.fill = "currentColor"; delete p.stroke; delete p["stroke-width"]; delete p["stroke-linecap"]; delete p["stroke-linejoin"]; }

@@ -1,5 +1,5 @@
 /* ============================================================
-   ORCHID HRM — ADMIN WEB DASHBOARD LOGIC
+   ORCHID ONE — ADMIN WEB DASHBOARD LOGIC
    ============================================================ */
 
 const el = id => document.getElementById(id);

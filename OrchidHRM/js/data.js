@@ -1,4 +1,4 @@
-/* ORCHID HRM — Realistic sample data (Orchid Flowers workforce) */
+/* ORCHID ONE — Realistic sample data (Orchid Flowers workforce) */
 
 const DEPARTMENTS = [
   { id: "prod", name: "Production", head: "R. Vasanth" },
