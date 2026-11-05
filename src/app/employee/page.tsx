@@ -5,12 +5,11 @@ export const metadata = {
 
 export default function EmployeePreviewPage() {
   return (
-    <main className="employee-preview">
+    <main style={{ position: "fixed", inset: 0, width: "100%", height: "100dvh", background: "#fcf9f8" }}>
       <iframe
         title="Orchid One employee mobile preview"
         src="/employee-preview.html"
-        className="employee-preview__frame"
-        allow="geolocation"
+        style={{ display: "block", width: "100%", height: "100%", border: 0 }}
       />
     </main>
   );
