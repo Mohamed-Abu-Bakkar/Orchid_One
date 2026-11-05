@@ -30,3 +30,11 @@ Configure identity provider, Convex deployment, private document storage, secret
 - The current dashboard intentionally shows empty/live-data-pending states. Original prototype sample figures are not represented as production data.
 - Remaining UI work: migrate each original module screen, dialogs/drawers/forms, tables, filters, charts and employee mobile screens; then connect each to authenticated Convex operations.
 - Visual parity and runtime verification have not yet been completed. No build, typecheck or browser test result is claimed in this status.
+
+
+## Employee interface preview
+- Added `/employee` route to display the original employee mobile prototype without redesigning it.
+- The preview is intentionally isolated in an iframe so the legacy inline interactions do not leak into the Next.js application shell.
+- The preview remains a static prototype: attendance, requests, wage figures, documents and notifications are sample/local interactions only; they are not authenticated or persisted to Convex.
+- Prototype image assets are currently loaded from the feature branch's raw GitHub URLs. Before production, move these assets into the app's own `public/` directory and migrate interactions to React components and authenticated backend operations.
+- The original employee HTML in `OrchidHRM/` remains unchanged.
