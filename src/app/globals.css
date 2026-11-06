@@ -110,3 +110,23 @@
 .employee-directory-avatar{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700}
 .employee-directory-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text-tertiary)}
 @media(max-width:760px){.employee-directory-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.employee-directory-toolbar{align-items:stretch;flex-direction:column}.employee-status-filter{width:100%}}
+
+
+/* Employee onboarding and account linking */
+.onboarding-panel .panel-body{display:grid;gap:18px}
+.onboarding-link-box{display:grid;gap:12px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface-secondary)}
+.onboarding-link-box strong{font-size:13px;color:var(--text-primary)}
+.onboarding-link-box .policy-field{max-width:560px}
+.onboarding-success{display:flex;align-items:center;gap:8px;padding:11px 13px;border:1px solid var(--success);border-radius:8px;background:var(--success-bg);color:var(--success-dark);font-size:12px;line-height:1.5}
+.segmented-control{display:flex;gap:4px;padding:4px;border:1px solid var(--border);border-radius:9px;background:var(--surface-secondary)}
+.segmented-control button{border:0;border-radius:6px;padding:8px 12px;background:transparent;color:var(--text-secondary);font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.segmented-control button.active{background:var(--surface);color:var(--text-primary);font-weight:700;box-shadow:var(--shadow-sm)}
+.user-link-list{padding:0 16px}
+.user-link-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid var(--border)}
+.user-link-row:last-child{border-bottom:0}
+.user-link-main{min-width:180px;display:grid;gap:4px}
+.user-link-main strong{font-size:13px;color:var(--text-primary)}
+.user-link-main span,.user-link-main small{font-size:11px;color:var(--text-tertiary);overflow-wrap:anywhere}
+.user-link-actions{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end}
+.user-link-actions select{width:min(100%,360px);min-height:36px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);padding:0 9px}
+@media(max-width:760px){.user-link-row{align-items:stretch;flex-direction:column}.user-link-actions{align-items:stretch;flex-direction:column}.user-link-actions select{width:100%}.segmented-control{width:100%}.segmented-control button{flex:1}}
