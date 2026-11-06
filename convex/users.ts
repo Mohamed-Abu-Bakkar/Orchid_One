@@ -13,11 +13,19 @@ export const listPendingUsers = query({
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx);
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 100);
-    return ctx.db
+    const users = await ctx.db
       .query("users")
       .withIndex("by_org", (q) => q.eq("organizationId", actor.organizationId))
       .filter((q) => q.eq(q.field("accountStatus"), "pending"))
+      .order("desc")
       .take(limit);
+    return users.map((user) => ({
+      _id: user._id,
+      fullName: user.fullName ?? "New user",
+      email: user.email ?? "",
+      createdAt: user.createdAt,
+      role: user.role,
+    }));
   },
 });
 
