@@ -15,7 +15,7 @@ function clock(value: number | null, timeZone: string) {
   }).format(new Date(value));
 }
 
-function stamp(value: number, timeZone: string) {
+function duration(value: number | null | undefined) {\n  if (value === null || value === undefined) return "—";\n  return Math.floor(value / 60) + "h " + String(value % 60).padStart(2, "0") + "m";\n}\n\nfunction stamp(value: number, timeZone: string) {
   return new Intl.DateTimeFormat("en-IN", {
     timeZone, day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
@@ -99,7 +99,7 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
             {register.truncated && <p className="form-error" role="status">This result exceeds the 5,000-event display limit. Narrow the date range or select an employee to view a complete subset.</p>}
             {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
             : <div className="employee-directory-table-wrap"><table className="employee-directory-table">
-                <thead><tr><th>Employee</th><th>Work date</th><th>Scheduled shift</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
+                <thead><tr><th>Employee</th><th>Work date</th><th>Scheduled shift</th><th>First check-in</th><th>Last check-out</th><th>Payable time</th><th>Break time</th><th>Status</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
                 <tbody>{rows.map((row: any) => <tr key={row.id}>
                   <td><strong>{row.employeeName}</strong><small>{row.employeeCode}</small><small>{row.locationName}</small></td>
                   <td>{row.workDate}</td>
