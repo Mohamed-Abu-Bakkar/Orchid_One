@@ -35,7 +35,7 @@ export default function AdminShell() {
  const session=authClient.useSession();
  const account=useQuery(api.account.getMyAccountStatus,session.data?{}:"skip");
  const displayName=session.data?.user?.name?.trim() || session.data?.user?.email?.split("@")[0] || "Administrator";
- const initials=displayName.split(/\\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()).join("") || "AD";
+ const initials=displayName.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()).join("") || "AD";
  const [signingOut,setSigningOut]=useState(false);
  const logout=async()=>{if(signingOut)return;setSigningOut(true);try{await authClient.signOut();router.replace("/login");router.refresh();}catch(error){console.error("[Orchid One][Auth] Sign out failed:",error);setNotice("Could not sign out. Please try again.");setSigningOut(false);}};
  const [active,setActive]=useState("dashboard"),[open,setOpen]=useState(false),[notice,setNotice]=useState("");
