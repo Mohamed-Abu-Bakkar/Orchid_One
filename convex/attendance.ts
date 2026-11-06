@@ -290,7 +290,7 @@ export const adminRegister = query({
           employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
           employeeCode: employee.employeeCode, departmentId: employee.departmentId,
           locationName: locationMap.get(String(employee.locationId)) ?? "Unknown location",
-          scheduledShifts: shiftMap.get(key) ?? [], workDate: day.workDate,
+          scheduledShifts: await shiftsForEmployeeDate(employee, key), workDate: day.workDate,
           firstCheckInAt: null as number | null, lastCheckOutAt: null as number | null,
           eventCount: 0, pendingReviews: 0, rejectedEvents: 0, outsideGeofenceEvents: 0,
           events: [] as any[],
