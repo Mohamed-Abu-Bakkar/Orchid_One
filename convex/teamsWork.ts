@@ -116,6 +116,6 @@ export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx
  }));
  const rows=await ctx.db.query("workAssignmentProgress").withIndex("by_employee_date",q=>q.eq("employeeId",e._id).eq("workDate",a.workDate)).take(100);
  const assignments=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive&&t.workDate===a.workDate?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status}:null;}));
- const validTeams=teams.filter(Boolean);
+ const validTeams=teams.filter((team):team is NonNullable<typeof team>=>team!==null);
  return {team:validTeams[0]??null,teams:validTeams,assignments:assignments.filter(Boolean)};
 }});
