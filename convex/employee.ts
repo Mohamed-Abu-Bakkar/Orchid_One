@@ -399,3 +399,81 @@ export const linkAccount = mutation({
     return { linked: true };
   },
 });
+
+
+/** Unlinks an employee record while preserving both account and employee history. */
+export const unlinkAccount = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const account = await ctx.db.get(userId);
+    if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+    if (account.role !== "employee") throw new Error("ONLY_EMPLOYEE_ACCOUNTS_CAN_BE_UNLINKED");
+    if (!account.employeeId) return true;
+    const employee = await ctx.db.get(account.employeeId);
+    await ctx.db.patch(account._id, { employeeId: undefined });
+    await ctx.db.insert("auditLogs", {
+      organizationId: admin.organizationId, actorUserId: admin._id,
+      action: "user.employee.unlinked", entityType: "user", entityId: String(account._id),
+      metadata: { employeeId: String(account.employeeId), employeeCode: employee?.employeeCode ?? null },
+      createdAt: Date.now(),
+    });
+    return true;
+  },
+});
+
+/** Role changes are restricted to superadmins and never permit self-demotion. */
+export const updateAccountRole = mutation({
+  args: { userId: v.id("users"), role: v.union(v.literal("superadmin"), v.literal("supervisor"), v.literal("employee")) },
+  handler: async (ctx, args) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin") throw new Error("SUPERADMIN_REQUIRED");
+    const account = await ctx.db.get(args.userId);
+    if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+    if (account._id === admin._id && args.role !== "superadmin") throw new Error("CANNOT_CHANGE_OWN_SUPERADMIN_ROLE");
+    if (account.role === "superadmin" && args.role !== "superadmin") {
+      const superadmins = await ctx.db.query("users").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
+      if (superadmins.filter(user => user.role === "superadmin" && user.isActive && user.accountStatus !== "suspended").length <= 1) {
+        throw new Error("CANNOT_REMOVE_LAST_ACTIVE_SUPERADMIN");
+      }
+    }
+    const previousRole = account.role;
+    if (previousRole === args.role) return true;
+    await ctx.db.patch(account._id, { role: args.role });
+    await ctx.db.insert("auditLogs", {
+      organizationId: admin.organizationId, actorUserId: admin._id,
+      action: "user.role_updated", entityType: "user", entityId: String(account._id),
+      metadata: { previousRole, newRole: args.role }, createdAt: Date.now(),
+    });
+    return true;
+  },
+});
+
+/** Account access lifecycle is restricted to superadmins. */
+export const setAccountStatus = mutation({
+  args: { userId: v.id("users"), status: v.union(v.literal("active"), v.literal("suspended")) },
+  handler: async (ctx, args) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin") throw new Error("SUPERADMIN_REQUIRED");
+    const account = await ctx.db.get(args.userId);
+    if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+    if (account._id === admin._id && args.status === "suspended") throw new Error("CANNOT_SUSPEND_OWN_ACCOUNT");
+    if (account.role === "superadmin" && args.status === "suspended" && account.isActive) {
+      const superadmins = await ctx.db.query("users").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
+      if (superadmins.filter(user => user.role === "superadmin" && user.isActive && user.accountStatus !== "suspended" && user._id !== account._id).length === 0) {
+        throw new Error("CANNOT_SUSPEND_LAST_ACTIVE_SUPERADMIN");
+      }
+    }
+    const isActive = args.status === "active";
+    if ((account.accountStatus ?? "active") === args.status && account.isActive === isActive) return true;
+    const previousStatus = account.accountStatus ?? "active";
+    await ctx.db.patch(account._id, { accountStatus: args.status, isActive });
+    await ctx.db.insert("auditLogs", {
+      organizationId: admin.organizationId, actorUserId: admin._id,
+      action: "user.account_status_updated", entityType: "user", entityId: String(account._id),
+      metadata: { previousStatus, newStatus: args.status }, createdAt: Date.now(),
+    });
+    return true;
+  },
+});
