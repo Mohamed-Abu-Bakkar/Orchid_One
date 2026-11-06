@@ -675,7 +675,7 @@
 </div>
 <!-- BottomNavBar (Mobile Only) -->
 <nav class="fixed bottom-0 w-full z-[95] flex justify-around items-center px-2 py-3 bg-surface dark:bg-surface-container border-t border-outline-variant shadow-lg pb-safe">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="goTo(\'home\'); return false;">
 <span class="material-symbols-outlined">home</span>
 <span class="text-label-sm font-label-sm mt-1">Home</span>
 </a>
@@ -1127,9 +1127,26 @@ Submit Request
 </div>
 </div>
 </div>
-<button class="flex items-center justify-center gap-2 text-[#B3261E] text-body-md font-body-md font-semibold rounded-lg px-4 py-3 border border-[#B3261E]/30 bg-[#fde8e8] hover:bg-[#fde8e8]/70 transition-colors w-full" onclick="toast('Logged out')">
+<button type="button" class="flex items-center justify-center gap-2 text-[#B3261E] text-body-md font-body-md font-semibold rounded-lg px-4 py-3 border border-[#B3261E]/30 bg-[#fde8e8] hover:bg-[#fde8e8]/70 transition-colors w-full" onclick="signOutEmployee()">
 <span class="material-symbols-outlined text-[18px]">logout</span>Sign Out
 </button>
+<button type="button" class="flex items-center justify-center gap-2 text-primary text-body-md font-body-md font-semibold rounded-lg px-4 py-3 border border-outline-variant bg-surface hover:bg-surface-container-low transition-colors w-full" onclick="toggleChangePassword()">
+<span class="material-symbols-outlined text-[18px]">lock_reset</span>Change Password
+</button>
+<form id="employeeChangePasswordForm" class="bento-card hidden flex flex-col gap-3" onsubmit="changeEmployeePassword(event)">
+<p class="text-body-md font-body-md font-semibold text-on-surface">Update your password</p>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Current password
+<input id="employeeCurrentPassword" type="password" autocomplete="current-password" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface">
+</label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">New password
+<input id="employeeNewPassword" type="password" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface">
+</label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Confirm new password
+<input id="employeeConfirmPassword" type="password" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface">
+</label>
+<p id="employeePasswordMessage" class="text-label-sm text-on-surface-variant" role="status"></p>
+<button id="employeePasswordSubmit" type="submit" class="w-full rounded-lg bg-primary px-4 py-3 text-white font-semibold">Update password</button>
+</form>
 </div>
 </div>
 </div>
@@ -1285,6 +1302,55 @@ Submit Request
         function closeHelpdesk() { goBack(); }
         function openMore() { pushScreen('moreScreen'); }
         function closeMore() { goBack(); }
+        async function signOutEmployee() {
+            const button = document.querySelector('#moreScreen button[onclick="signOutEmployee()"]');
+            if (button) { button.disabled = true; button.textContent = 'Signing out…'; }
+            try {
+                const response = await fetch('/api/auth/sign-out', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+                if (!response.ok) throw new Error('Sign out failed. Please try again.');
+                window.location.replace('/login');
+            } catch (error) {
+                if (button) { button.disabled = false; button.innerHTML = '<span class="material-symbols-outlined text-[18px]">logout</span>Sign Out'; }
+                toast(error instanceof Error ? error.message : 'Unable to sign out.');
+            }
+        }
+        function toggleChangePassword() {
+            const form = document.getElementById('employeeChangePasswordForm');
+            if (!form) return;
+            form.classList.toggle('hidden');
+            if (!form.classList.contains('hidden')) document.getElementById('employeeCurrentPassword')?.focus();
+        }
+        async function changeEmployeePassword(event) {
+            event.preventDefault();
+            const currentPassword = document.getElementById('employeeCurrentPassword')?.value || '';
+            const newPassword = document.getElementById('employeeNewPassword')?.value || '';
+            const confirmPassword = document.getElementById('employeeConfirmPassword')?.value || '';
+            const message = document.getElementById('employeePasswordMessage');
+            const button = document.getElementById('employeePasswordSubmit');
+            const say = value => { if (message) message.textContent = value; };
+            if (newPassword.length < 8) { say('New password must be at least 8 characters.'); return; }
+            if (newPassword !== confirmPassword) { say('New password and confirmation do not match.'); return; }
+            if (newPassword === currentPassword) { say('Choose a password different from your current password.'); return; }
+            if (button) { button.disabled = true; button.textContent = 'Updating…'; }
+            say('');
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword, newPassword, revokeOtherSessions: true })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || result.error || 'Unable to update password. Check your current password and try again.');
+                document.getElementById('employeeChangePasswordForm')?.reset();
+                say('Password updated successfully. Other sessions have been signed out.');
+                toast('Password changed successfully.');
+            } catch (error) {
+                say(error instanceof Error ? error.message : 'Unable to update password.');
+            } finally {
+                if (button) { button.disabled = false; button.textContent = 'Update password'; }
+            }
+        }
         const POLICIES = [
             { id: 'attendance', name: 'Attendance Policy', version: 'v3.1', eff: '01 Apr 2026', summary: 'Working hours, check-in window, late marking for all employment types.', file: 'Attendance_Policy_v3.1.pdf', size: '1.2 MB', points: [['Check-in window', '06:00 – 09:30'], ['Grace period', '10 minutes'], ['Late marking', 'After grace'], ['Half day', '< 4 hrs'], ['GPS requirement', 'Within geofence']] },
             { id: 'leave', name: 'Leave Policy', version: 'v2.4', eff: '01 Jan 2026', summary: 'Eligibility, accrual, approval flow and documentation for every leave category.', file: 'Leave_Policy_v2.4.pdf', size: '980 KB', points: [['Casual leave', '12 days / year'], ['Sick leave', '10 days / year'], ['Approval flow', 'Manager → HR'], ['Carry forward', 'Up to 5 days'], ['Documentation', 'Certificate if 3+ days']] },
