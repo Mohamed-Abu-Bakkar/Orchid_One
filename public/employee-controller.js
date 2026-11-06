@@ -22,7 +22,7 @@
     try {
       const response = await fetch("/api/employee/workspace", { credentials: "same-origin", cache: "no-store" });
       if (response.status === 401) {
-        window.location.replace("/login?next=/employee");
+        window.location.replace("/login?next=/");
         return;
       }
       if (!response.ok) throw new Error("Unable to load employee workspace");
@@ -79,15 +79,19 @@
 
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
-      const checkedIn = latest?.eventType === "check_in" || latest?.eventType === "break_end";
+      const acceptedLatest = !!latest && (latest.geofencePassed || latest.reviewStatus === "approved");
+      const pendingReview = latest?.reviewStatus === "pending";
+      const checkedIn = acceptedLatest && (latest.eventType === "check_in" || latest.eventType === "break_end");
       const heroLabel = document.getElementById("heroStateLabel");
-      if (heroLabel) heroLabel.textContent = checkedIn ? "Checked in · working" : "You are not checked in yet";
-      text("#heroStateSub", checkedIn ? "Shift active" : "No active attendance session");
-      text("#heroBtn", checkedIn ? "Check Out" : "Check In");
-      text("#attCheckBtn", checkedIn ? "Check Out" : "Check In");
+      if (heroLabel) heroLabel.textContent = pendingReview ? "Attendance awaiting review" : checkedIn ? "Checked in · working" : "You are not checked in yet";
+      text("#heroStateSub", pendingReview ? "Your outside-geofence attempt does not count until approved." : checkedIn ? "Shift active" : "No active attendance session");
+      text("#heroBtn", pendingReview ? "Awaiting Review" : checkedIn ? "Check Out" : "Check In");
+      text("#attCheckBtn", pendingReview ? "Awaiting Review" : checkedIn ? "Check Out" : "Check In");
+      const attendanceButtons = [document.getElementById("heroBtn"), document.getElementById("attCheckBtn")];
+      attendanceButtons.forEach(button => { if (button) button.disabled = pendingReview; });
       const ringSub = document.getElementById("ringSub");
       if (ringSub) ringSub.textContent = checkedIn ? "Checked in" : "Not checked in";
-      if (latest?.eventType === "check_in") {
+      if (latest?.eventType === "check_in" && acceptedLatest) {
         const when = new Date(latest.clientTimestamp);
         text("#statTodayHrs", "—");
         text("#statTodaySub", "Checked in · " + when.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
@@ -268,7 +272,7 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "ATTENDANCE_PUNCH_FAILED");
         if (result.requiresReview) {
-          window.toast?.("Punch recorded outside the configured geofence and requires review.");
+          window.toast?.("Outside the assigned work location. Your punch is pending supervisor or admin approval.");
         } else {
           window.toast?.(eventType === "check_in" ? "Checked in successfully." : "Checked out successfully.");
         }
