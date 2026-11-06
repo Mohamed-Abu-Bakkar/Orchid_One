@@ -214,8 +214,7 @@
         const label = card.querySelector("p");
         if (!label) return;
         if (label.textContent?.toLowerCase().includes("today's hours")) {
-          const value = card.querySelectorAll("p")[1];
-          if (value) value.textContent = "—";
+          // The live attendance timer above owns this value while a session is active.
         }
         if (label.textContent?.toLowerCase().includes("leave balance")) {
           const value = card.querySelectorAll("p")[1];
