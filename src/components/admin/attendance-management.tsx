@@ -22,9 +22,6 @@ function stamp(value: number, timeZone: string) {
   }).format(new Date(value));
 }
 
-function shiftClock(minutes: number) {
-  return String(Math.floor(minutes / 60)).padStart(2, "0") + ":" + String(minutes % 60).padStart(2, "0");
-}
 
 export function AttendanceManagement() {
   const today = localToday();
@@ -46,8 +43,6 @@ export function AttendanceManagement() {
 
   const timezone = register?.timezone ?? "Asia/Kolkata";
   const invalidRange = !fromDate || !toDate || fromDate > toDate;
-  const pending = register?.pendingReviews ?? 0;
-  const exceptions = register?.outsideGeofenceEvents ?? 0;
 
   return <section className="sec">
     <div className="page-head">
@@ -80,7 +75,7 @@ export function AttendanceManagement() {
             </div>
             {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
             : <div className="employee-directory-table-wrap"><table className="employee-directory-table">
-                <thead><tr><th>Employee</th><th>Work date</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th></tr></thead>
+                <thead><tr><th>Employee</th><th>Work date</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
                 <tbody>{rows.map((row: any) => <tr key={row.id}>
                   <td><strong>{row.employeeName}</strong><small>{row.employeeCode}</small><small>{row.locationName}</small></td>
                   <td>{row.workDate}</td>
