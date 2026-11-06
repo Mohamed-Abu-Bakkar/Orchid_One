@@ -79,9 +79,9 @@
 
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
-      const acceptedLatest = !!latest && (latest.geofencePassed || latest.reviewStatus === "approved");
+      const latestAccepted = attendance.find(event => event.geofencePassed || event.reviewStatus === "approved");
       const pendingReview = latest?.reviewStatus === "pending";
-      const checkedIn = acceptedLatest && (latest.eventType === "check_in" || latest.eventType === "break_end");
+      const checkedIn = !!latestAccepted && (latestAccepted.eventType === "check_in" || latestAccepted.eventType === "break_end");
       const heroLabel = document.getElementById("heroStateLabel");
       if (heroLabel) heroLabel.textContent = pendingReview ? "Attendance awaiting review" : checkedIn ? "Checked in · working" : "You are not checked in yet";
       text("#heroStateSub", pendingReview ? "Your outside-geofence attempt does not count until approved." : checkedIn ? "Shift active" : "No active attendance session");
