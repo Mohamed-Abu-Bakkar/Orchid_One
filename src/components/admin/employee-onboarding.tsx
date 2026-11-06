@@ -7,7 +7,9 @@ import { CheckCircle2, UserPlus, Plus } from "lucide-react";
 export function EmployeeOnboarding() {
   const options = useQuery(api.employee.listOnboardingOptions, {});
   const accounts = useQuery(api.employee.listAccountsForLinking, {});
-  const createEmployee = useMutation(api.employee.createForAdmin);\n  const createDepartment = useMutation(api.employee.createDepartmentForAdmin);\n  const createLocationDraft = useMutation(api.employee.createLocationDraftForAdmin);
+  const createEmployee = useMutation(api.employee.createForAdmin);
+  const createDepartment = useMutation(api.employee.createDepartmentForAdmin);
+  const createLocationDraft = useMutation(api.employee.createLocationDraftForAdmin);
   const [firstName,setFirstName]=useState("");
   const [lastName,setLastName]=useState("");
   const [email,setEmail]=useState("");
@@ -21,7 +23,11 @@ export function EmployeeOnboarding() {
   const [userId,setUserId]=useState("");
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
-  const [error,setError]=useState("");\n  const [newDepartment,setNewDepartment]=useState("");\n  const [newLocation,setNewLocation]=useState("");\n  const [creatingOption,setCreatingOption]=useState<"department"|"location"|null>(null);\n  const [optionMessage,setOptionMessage]=useState("");
+  const [error,setError]=useState("");
+  const [newDepartment,setNewDepartment]=useState("");
+  const [newLocation,setNewLocation]=useState("");
+  const [creatingOption,setCreatingOption]=useState<"department"|"location"|null>(null);
+  const [optionMessage,setOptionMessage]=useState("");
   const unlinked=useMemo(()=>accounts?.filter(a=>!a.employeeId&&a.role==="employee")??[],[accounts]);
   const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDepartmentId("");setLocationId("");setUserId("");};
 
@@ -74,7 +80,8 @@ export function EmployeeOnboarding() {
           <label className="policy-field">Registered account<select className="input" value={userId} onChange={e=>setUserId(e.target.value)}><option value="">Leave unlinked</option>{unlinked.map(a=><option key={a._id} value={a._id}>{a.fullName||"Unnamed account"} · {a.email||"No email"}</option>)}</select></label>
         </div>
         {options.departments.length===0||options.locations.length===0?<p className="auth-error">Create an active department and a fully configured active work location before onboarding an employee.</p>:null}
-        {optionMessage&&<p className="onboarding-success" role="status">{optionMessage}</p>}\n        {error&&<p className="auth-error" role="alert">{error}</p>}
+        {optionMessage&&<p className="onboarding-success" role="status">{optionMessage}</p>}
+        {error&&<p className="auth-error" role="alert">{error}</p>}
         {message&&<p className="onboarding-success" role="status"><CheckCircle2 size={16}/>{message}</p>}
         <div className="page-actions"><button className="btn btn-primary" type="submit" disabled={saving||!options.departments.length||!options.locations.length}><UserPlus size={16}/>{saving?"Creating…":"Create employee"}</button></div>
       </div>
