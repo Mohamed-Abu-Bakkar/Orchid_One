@@ -154,7 +154,7 @@ export const listForAdmin = query({
       .collect();
 
     return await Promise.all(employees.map(async (employee) => {
-      const [department, location] = await Promise.all([
+      const [department, location, defaultShift] = await Promise.all([
         ctx.db.get(employee.departmentId),
         ctx.db.get(employee.locationId),
       ]);
@@ -183,13 +183,15 @@ export const listOnboardingOptions = query({
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
     if (user.role !== "superadmin" && user.role !== "supervisor") throw new Error("FORBIDDEN");
-    const [departments, locations] = await Promise.all([
+    const [departments, locations, shifts] = await Promise.all([
       ctx.db.query("departments").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("locations").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
+      ctx.db.query("shifts").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
     ]);
     return {
       departments: departments.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
       locations: locations.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
+      shifts: shifts.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
     };
   },
 });
@@ -277,6 +279,7 @@ export const createForAdmin = mutation({
     joiningDate: v.string(),
     departmentId: v.id("departments"),
     locationId: v.id("locations"),
+    defaultShiftId: v.optional(v.id("shifts")),
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
@@ -291,9 +294,11 @@ export const createForAdmin = mutation({
     const [department, location] = await Promise.all([
       ctx.db.get(args.departmentId),
       ctx.db.get(args.locationId),
+      args.defaultShiftId ? ctx.db.get(args.defaultShiftId) : null,
     ]);
     if (!department || department.organizationId !== admin.organizationId || !department.isActive) throw new Error("INVALID_DEPARTMENT");
     if (!location || location.organizationId !== admin.organizationId || !location.isActive) throw new Error("INVALID_LOCATION");
+    if (args.defaultShiftId && (!defaultShift || defaultShift.organizationId !== admin.organizationId || !defaultShift.isActive)) throw new Error("INVALID_DEFAULT_SHIFT");
 
     // Scan the organization's retained records so archived codes are never reused.
     const existingEmployees = await ctx.db.query("employees")
@@ -324,6 +329,7 @@ export const createForAdmin = mutation({
       phone,
       departmentId: args.departmentId,
       designation,
+      defaultShiftId: args.defaultShiftId,
       employmentType: args.employmentType,
       status: args.status,
       joiningDate: args.joiningDate,
