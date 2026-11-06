@@ -88,7 +88,7 @@ export function CompanyDocumentManagement() {
         <label className="policy-field">Document title<input className="input" value={title} maxLength={160} onChange={event => setTitle(event.target.value)} placeholder="e.g. Employee handbook" required /></label>
         <label className="policy-field">Category<select className="input" value={category} onChange={event => setCategory(event.target.value)}>{categories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
         <label className="policy-field">Description (optional)<textarea className="input" rows={2} value={description} onChange={event => setDescription(event.target.value)} placeholder="Briefly describe this document" /></label>
-        <div
+        <label
           className={"company-doc-dropzone" + (dragging ? " is-dragging" : "") + (file ? " has-file" : "")}
           onDragEnter={event => { event.preventDefault(); setDragging(true); }}
           onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setDragging(true); }}
@@ -100,7 +100,7 @@ export function CompanyDocumentManagement() {
           <strong>{file ? file.name : "Drag and drop a document here"}</strong>
           <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB · Ready to upload` : "or click to browse · PDF, JPG or PNG · up to 15 MB"}</span>
           {file && <button type="button" className="btn btn-outline btn-sm" onClick={() => { setFile(null); const input = document.getElementById("company-document-file") as HTMLInputElement | null; if (input) input.value = ""; }}>Remove file</button>}
-        </div>
+        </label>
         <div><button className="btn btn-primary" type="submit" disabled={busy || !file}>{busy ? "Uploading…" : "Upload and publish"}</button></div>
         {message && <p className="sub" role="status">{message}</p>}
       </form>
