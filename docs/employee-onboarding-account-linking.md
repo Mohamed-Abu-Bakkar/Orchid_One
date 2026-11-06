@@ -68,3 +68,31 @@ The organization must have at least one active department and one active work lo
 - Confirm a user from another organization cannot read or configure the location.
 - Confirm non-admin roles cannot list or update locations.
 - Confirm each save/activation writes an audit log.
+
+
+## Employee shift scheduling
+
+- Employee onboarding supports an optional default shift. The selected shift must be active and belong to the same organization.
+- HR can maintain an employee's default shift and date-specific shifts from **Workforce → Teams & Work → Employee shift assignments**.
+- A date-specific schedule replaces the default shift for that date. HR may assign multiple shifts to the same employee on one date.
+- Date-specific shifts are checked for overlap, including overnight shifts that cross midnight and adjacent-day assignments. Overlapping schedules are rejected; shifts must be adjusted before saving.
+- Clearing all date-specific shifts removes that date's override, so the employee's default shift applies again.
+- Team membership eligibility uses the effective shift set for the selected date. An employee may belong to separate teams for separate shifts on the same date, but cannot be placed in two teams for the same shift.
+- Changing date-specific shifts deactivates team memberships whose team shift is no longer assigned on that date. The membership history remains stored.
+- Default and date-specific shift changes, plus team membership changes, are audit logged.
+- Employee self-work data returns all teams and all shifts for the selected day. The legacy single `team` and `shift` fields remain for compatibility.
+
+### Shift scheduling QA checklist
+
+- Onboard an employee without a shift and confirm onboarding succeeds.
+- Onboard an employee with a default shift and confirm the default is stored.
+- Assign a default shift to an existing active employee and remove it again.
+- Schedule two non-overlapping shifts on the same date and confirm both are eligible for their corresponding teams.
+- Try overlapping same-day shifts and confirm the save is rejected.
+- Try an overnight shift overlapping the next day's shift and confirm the save is rejected.
+- Save an empty date-specific schedule and confirm the default shift becomes effective again.
+- Confirm a date-specific schedule overrides the default shift for that date only.
+- Confirm team membership for different shifts can coexist, while duplicate same-shift team membership is rejected.
+- Change an employee's date-specific shifts and confirm incompatible team memberships are deactivated.
+- Confirm cross-organization employees/shifts and inactive employees/shifts are rejected.
+- Confirm all changes write audit logs.
