@@ -16,6 +16,7 @@ import type * as betterAuth_auth from "../betterAuth/auth.js";
 import type * as bootstrap from "../bootstrap.js";
 import type * as companyDocuments from "../companyDocuments.js";
 import type * as employee from "../employee.js";
+import type * as employeeDocuments from "../employeeDocuments.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as locations from "../locations.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   bootstrap: typeof bootstrap;
   companyDocuments: typeof companyDocuments;
   employee: typeof employee;
+  employeeDocuments: typeof employeeDocuments;
   http: typeof http;
   "lib/auth": typeof lib_auth;
   locations: typeof locations;
