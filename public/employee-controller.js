@@ -226,40 +226,108 @@
         }
       });
 
+      window.__orchidPolicies = Array.isArray(policies) ? policies : [];
       const policyList = document.getElementById("polList");
-      if (policyList) {
-        if (!policies?.length) empty(policyList, "No published policies are available.");
-        else {
-          policyList.replaceChildren();
-          policies.forEach(policy => {
-            const card = document.createElement("button");
-            card.type = "button";
-            card.className = "bento-card flex items-center gap-3 cursor-pointer hover:bg-surface-container-high transition-colors text-left w-full";
-            const title = document.createElement("span");
-            title.className = "text-body-md font-body-md font-medium text-on-surface flex-1";
-            title.textContent = policy.title;
-            const version = document.createElement("span");
-            version.className = "text-label-sm font-label-sm text-on-surface-variant";
-            version.textContent = "v" + policy.version + (policy.effectiveFrom ? " · eff. " + policy.effectiveFrom : "");
-            card.append(title, version);
-            card.addEventListener("click", () => {
-              const target = document.getElementById("polDetailScreen");
-              if (target) {
-                document.getElementById("pdTitle").textContent = policy.title;
-                document.getElementById("pdMeta").textContent = "v" + policy.version;
-                document.getElementById("pdName").textContent = policy.title;
-                document.getElementById("pdVersion").textContent = "v" + policy.version;
-                document.getElementById("pdBadge").textContent = policy.acknowledged ? "Acknowledged" : "Awaiting acknowledgement";
-                document.getElementById("pdSummary").textContent = policy.description || "No description provided.";
-                document.getElementById("pdFile").textContent = "Policy document";
-                document.getElementById("pdPoints").replaceChildren();
-                window.pushScreen("polDetailScreen");
-              }
-            });
-            policyList.append(card);
-          });
+      const renderEmployeePolicies = (searchTerm = "") => {
+        if (!policyList) return;
+        const term = String(searchTerm || "").trim().toLowerCase();
+        const matches = window.__orchidPolicies.filter(policy =>
+          !term || [policy.title, policy.description, policy.category].some(value => String(value || "").toLowerCase().includes(term))
+        );
+        policyList.replaceChildren();
+        if (!matches.length) {
+          empty(policyList, term ? "No policies match your search." : "No published policies are available.");
+          return;
         }
-      }
+        matches.forEach(policy => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "bento-card flex items-center gap-3 cursor-pointer hover:bg-surface-container-high transition-colors text-left w-full";
+          const icon = document.createElement("span");
+          icon.className = "more-ic bg-secondary-fixed text-secondary";
+          icon.textContent = "menu_book";
+          const copy = document.createElement("span");
+          copy.className = "flex flex-col flex-1 min-w-0";
+          const title = document.createElement("span");
+          title.className = "text-body-md font-body-md font-medium text-on-surface";
+          title.textContent = policy.title;
+          const meta = document.createElement("span");
+          meta.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5";
+          meta.textContent = "v" + policy.version + (policy.effectiveFrom ? " · effective " + fmtDate(policy.effectiveFrom) : "");
+          copy.append(title, meta);
+          const status = document.createElement("span");
+          status.className = "text-label-sm font-label-sm " + (policy.acknowledged ? "text-[#1E8E4E]" : "text-on-surface-variant");
+          status.textContent = policy.acknowledged ? "Acknowledged" : "Action required";
+          card.append(icon, copy, status);
+          card.addEventListener("click", () => window.openPolicy(policy._id));
+          policyList.append(card);
+        });
+      };
+      window.renderPolicies = renderEmployeePolicies;
+      window.openPolicies = () => {
+        window.pushScreen("polScreen");
+        const search = document.getElementById("polSearch");
+        if (search) search.value = "";
+        renderEmployeePolicies("");
+      };
+      window.openPolicy = (policyId) => {
+        const policy = window.__orchidPolicies.find(item => String(item._id) === String(policyId));
+        if (!policy) return;
+        window.__orchidSelectedPolicy = policy;
+        const versionLabel = "v" + policy.version + (policy.effectiveFrom ? " · Effective " + fmtDate(policy.effectiveFrom) : "");
+        document.getElementById("pdTitle").textContent = policy.title;
+        document.getElementById("pdMeta").textContent = versionLabel;
+        document.getElementById("pdName").textContent = policy.title;
+        document.getElementById("pdVersion").textContent = versionLabel;
+        document.getElementById("pdBadge").textContent = policy.acknowledged ? "Acknowledged" : "Awaiting acknowledgement";
+        document.getElementById("pdSummary").textContent = policy.description || "No description provided.";
+        document.getElementById("pdFile").textContent = policy.originalFileName || "Policy PDF";
+        const fileMeta = document.getElementById("pdFileMeta");
+        if (fileMeta) fileMeta.textContent = policy.fileSize ? (policy.fileSize / (1024 * 1024)).toFixed(2) + " MB · PDF" : "PDF document";
+        const fileButton = document.getElementById("pdFileButton");
+        if (fileButton) {
+          fileButton.disabled = false;
+          fileButton.textContent = "View PDF";
+          fileButton.onclick = () => window.open("/api/employee/policies/" + encodeURIComponent(policy._id) + "/file", "_blank", "noopener");
+        }
+        const ackButton = document.getElementById("pdAcknowledgeButton");
+        if (ackButton) {
+          ackButton.disabled = !!policy.acknowledged;
+          ackButton.innerHTML = policy.acknowledged
+            ? '<span class="material-symbols-outlined text-[18px]">verified</span>Already acknowledged'
+            : '<span class="material-symbols-outlined text-[18px]" id="pdCheckIcon">check_circle</span>I have read this policy';
+        }
+        document.getElementById("pdPoints").replaceChildren();
+        window.pushScreen("polDetailScreen");
+      };
+      window.closePolicies = () => window.goBack();
+      window.closePolicyDetail = () => window.goBack();
+      window.confirmPolicyRead = async () => {
+        const policy = window.__orchidSelectedPolicy;
+        const button = document.getElementById("pdAcknowledgeButton");
+        if (!policy || policy.acknowledged || !button) return;
+        button.disabled = true;
+        button.textContent = "Saving acknowledgement…";
+        try {
+          const response = await fetch("/api/employee/policies/acknowledge", {
+            method: "POST", credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ policyId: policy._id }),
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "POLICY_ACKNOWLEDGEMENT_FAILED");
+          policy.acknowledged = true;
+          document.getElementById("pdBadge").textContent = "Acknowledged";
+          button.innerHTML = '<span class="material-symbols-outlined text-[18px]">verified</span>Already acknowledged';
+          renderEmployeePolicies(document.getElementById("polSearch")?.value || "");
+          window.toast?.(payload.alreadyAcknowledged ? "This policy was already acknowledged." : "Policy acknowledgement saved.");
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = "I have read this policy";
+          window.toast?.(error instanceof Error ? error.message : "Unable to save acknowledgement.");
+        }
+      };
+      renderEmployeePolicies("");
     } catch (error) {
       console.error("[Orchid employee]", error);
       const notice = document.createElement("p");
@@ -313,7 +381,7 @@
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
   window.submitNewRequest = () => window.toast?.("Request submission is not enabled until the leave workflow is configured.");
-  window.confirmPolicyRead = () => window.toast?.("Policy acknowledgement will be enabled when the policy action is connected.");
+  // Employee policy actions are bound after the published policy data is loaded.
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once: true });
   else hydrate();

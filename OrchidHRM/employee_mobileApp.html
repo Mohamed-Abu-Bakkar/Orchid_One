@@ -1303,7 +1303,7 @@ Submit Request
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0">search</span>
 <input id="polSearch" oninput="renderPolicies(this.value)" placeholder="Search policies..." class="w-full bg-transparent text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none">
 </div>
-<p class="text-label-sm font-label-sm text-on-surface-variant">6 policies · updated 01 Apr 2026</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Published company policies</p>
 <div class="flex flex-col gap-2" id="polList"></div>
 </div>
 </div>
@@ -1341,18 +1341,16 @@ Submit Request
 </div>
 <div class="flex flex-col flex-1 min-w-0">
 <p class="text-body-md font-body-md font-medium text-on-surface" id="pdFile">Attendance_Policy_v3.1.pdf</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">1.2 MB</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="pdFileMeta">PDF document</p>
 </div>
-<button class="text-primary hover:bg-secondary-fixed transition-colors rounded-full p-2 flex-shrink-0" onclick="toast('Downloading ' + document.getElementById('pdFile').textContent)">
-<span class="material-symbols-outlined">download</span>
-</button>
+<button id="pdFileButton" type="button" class="text-primary hover:bg-secondary-fixed transition-colors rounded-full px-3 py-2 flex-shrink-0 text-label-sm font-semibold">View PDF</button>
 </div>
 </div>
 <div class="bento-card">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Key points</p>
 <div class="flex flex-col" id="pdPoints"></div>
 </div>
-<button class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-3 shadow-sm hover:bg-primary-container transition-colors w-full flex items-center justify-center gap-2" onclick="confirmPolicyRead()">
+<button id="pdAcknowledgeButton" class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-3 shadow-sm hover:bg-primary-container transition-colors w-full flex items-center justify-center gap-2" onclick="confirmPolicyRead()">
 <span class="material-symbols-outlined text-[18px]" id="pdCheckIcon">check_circle</span>I have read this policy
 </button>
 </div>

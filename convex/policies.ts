@@ -107,6 +107,8 @@ export const listPublishedForEmployee = query({
       description: policy.description, version: policy.version,
       effectiveFrom: policy.effectiveFrom, publishedAt: policy.publishedAt,
       acknowledged: acknowledged.has(String(policy._id)),
+      originalFileName: policy.originalFileName,
+      fileSize: policy.fileSize,
     }));
   },
 });
