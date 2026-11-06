@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { requireIdentity } from "./lib/auth";
 
 export const myWorkspace = query({
@@ -90,5 +90,62 @@ export const myWorkspace = query({
       wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status } : null })),
       notifications,
     };
+  },
+});
+
+
+export const generateDocumentUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireIdentity(ctx);
+    if (!user.employeeId) throw new Error("EMPLOYEE_PROFILE_REQUIRED");
+    const employee = await ctx.db.get(user.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") {
+      throw new Error("EMPLOYEE_INACTIVE");
+    }
+    return ctx.storage.generateUploadUrl();
+  },
+});
+
+export const saveMyDocument = mutation({
+  args: {
+    storageId: v.id("_storage"),
+    documentType: v.string(),
+    originalFileName: v.string(),
+    mimeType: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireIdentity(ctx);
+    if (!user.employeeId) throw new Error("EMPLOYEE_PROFILE_REQUIRED");
+    const employee = await ctx.db.get(user.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") {
+      throw new Error("EMPLOYEE_INACTIVE");
+    }
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+    if (!allowedTypes.includes(args.mimeType)) throw new Error("UNSUPPORTED_DOCUMENT_TYPE");
+    if (!args.documentType.trim() || !args.originalFileName.trim()) throw new Error("DOCUMENT_DETAILS_REQUIRED");
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata || metadata.contentType !== args.mimeType) throw new Error("DOCUMENT_UPLOAD_INVALID");
+    const documentId = await ctx.db.insert("employeeDocuments", {
+      organizationId: user.organizationId,
+      employeeId: employee._id,
+      documentType: args.documentType.trim(),
+      storageId: args.storageId,
+      originalFileName: args.originalFileName.trim(),
+      mimeType: args.mimeType,
+      uploadedBy: user._id,
+      uploadedAt: Date.now(),
+      reviewStatus: "pending",
+    });
+    await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId,
+      actorUserId: user._id,
+      action: "employee.document.uploaded",
+      entityType: "employeeDocument",
+      entityId: String(documentId),
+      metadata: { documentType: args.documentType.trim(), originalFileName: args.originalFileName.trim() },
+      createdAt: Date.now(),
+    });
+    return documentId;
   },
 });
