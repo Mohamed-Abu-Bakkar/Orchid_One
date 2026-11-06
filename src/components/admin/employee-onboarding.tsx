@@ -4,7 +4,6 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { CheckCircle2, UserPlus, Plus } from "lucide-react";
 import { CreatableSelect } from "@/components/admin/creatable-select";
-import { CreatableSelect } from "@/components/admin/creatable-select";
 
 export function EmployeeOnboarding() {
   const options = useQuery(api.employee.listOnboardingOptions, {});
@@ -26,8 +25,6 @@ export function EmployeeOnboarding() {
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
-  const [newLocation,setNewLocation]=useState("");
-  const [creatingOption,setCreatingOption]=useState<"department"|"location"|null>(null);
   const [optionMessage,setOptionMessage]=useState("");
   const unlinked=useMemo(()=>accounts?.filter(a=>!a.employeeId&&a.role==="employee")??[],[accounts]);
   const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDepartmentId("");setLocationId("");setUserId("");};
