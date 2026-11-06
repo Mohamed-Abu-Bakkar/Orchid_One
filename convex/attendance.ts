@@ -174,7 +174,7 @@ export const adminRegister = query({
     }
     const startAt = localDateStartUtc(args.fromDate, organization.timezone);
     const endAt = localDateStartUtc(nextDate(args.toDate), organization.timezone);
-    const [events, scheduledShifts] = await Promise.all([
+    const [events, scheduledShifts, attendanceDays] = await Promise.all([
       args.employeeId
         ? ctx.db.query("attendanceEvents")
             .withIndex("by_employee_time", q => q.eq("employeeId", args.employeeId!).gte("receivedAt", startAt).lt("receivedAt", endAt))
@@ -185,16 +185,24 @@ export const adminRegister = query({
       ctx.db.query("shiftAssignments")
         .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
         .collect(),
+      args.employeeId
+        ? ctx.db.query("attendanceDays")
+            .withIndex("by_employee_date", q => q.eq("employeeId", args.employeeId!).gte("workDate", args.fromDate).lte("workDate", args.toDate))
+            .collect()
+        : ctx.db.query("attendanceDays")
+            .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
+            .collect(),
     ]);
     const hasMoreEvents = events.length > 5000;
     const filtered = events.slice(0, 5000);
-    const employeeIds = [...new Set(filtered.map(event => String(event.employeeId)))];
+    const filteredDays = args.employeeId ? attendanceDays.filter(day => day.employeeId === args.employeeId) : attendanceDays;
+    const employeeIds = [...new Set([...filtered.map(event => String(event.employeeId)), ...filteredDays.map(day => String(day.employeeId))])];
     const employeeMap = new Map<string, any>();
     await Promise.all(employeeIds.map(async id => {
       const employee = await ctx.db.get(id as Id<"employees">);
       if (employee && employee.organizationId === admin.organizationId) employeeMap.set(id, employee);
     }));
-    const locationIds = [...new Set(filtered.map(event => String(event.locationId)))];
+    const locationIds = [...new Set([...filtered.map(event => String(event.locationId)), ...[...employeeMap.values()].map(employee => String(employee.locationId))])];
     const locationMap = new Map<string, string>();
     await Promise.all(locationIds.map(async id => {
       const location = await ctx.db.get(id as Id<"locations">);
@@ -254,9 +262,35 @@ export const adminRegister = query({
         locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
       });
     }
+    for (const day of filteredDays) {
+      const employee = employeeMap.get(String(day.employeeId));
+      if (!employee || day.organizationId !== admin.organizationId) continue;
+      const key = String(day.employeeId) + ":" + day.workDate;
+      let row = groups.get(key);
+      if (!row) {
+        row = {
+          id: key, employeeId: day.employeeId,
+          employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
+          employeeCode: employee.employeeCode, departmentId: employee.departmentId,
+          locationName: locationMap.get(String(employee.locationId)) ?? "Unknown location",
+          scheduledShifts: shiftMap.get(key) ?? [], workDate: day.workDate,
+          firstCheckInAt: null as number | null, lastCheckOutAt: null as number | null,
+          eventCount: 0, pendingReviews: 0, rejectedEvents: 0, outsideGeofenceEvents: 0,
+          events: [] as any[],
+        };
+        groups.set(key, row);
+      }
+      row.persistedStatus = day.status;
+      row.payableMinutes = day.payableMinutes;
+      row.breakMinutes = day.breakMinutes;
+      row.correctionNote = day.correctionNote ?? null;
+      row.hasPersistedSummary = true;
+      if (row.firstCheckInAt === null && day.firstCheckInAt !== undefined) row.firstCheckInAt = day.firstCheckInAt;
+      if (row.lastCheckOutAt === null && day.lastCheckOutAt !== undefined) row.lastCheckOutAt = day.lastCheckOutAt;
+    }
     const rows = [...groups.values()].map(row => ({
       ...row,
-      status: row.pendingReviews ? "pending_review" : row.rejectedEvents ? "rejected" : row.firstCheckInAt !== null ? "present" : "event_recorded",
+      status: row.persistedStatus ?? (row.pendingReviews ? "pending_review" : row.rejectedEvents ? "rejected" : row.firstCheckInAt !== null ? "present" : "event_recorded"),
       events: row.events.sort((a: any, b: any) => a.receivedAt - b.receivedAt),
     })).sort((a, b) => b.workDate.localeCompare(a.workDate) || a.employeeName.localeCompare(b.employeeName));
     return {
