@@ -4,6 +4,10 @@ import type { Id } from "./_generated/dataModel";
 import { requireAdmin, requireIdentity } from "./lib/auth";
 const dateOk=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s);
 const statuses=v.union(v.literal("not_started"),v.literal("in_progress"),v.literal("completed"));
+const dayNumber=(date:string)=>Math.floor(Date.parse(date+"T00:00:00Z")/86400000);
+const dateFromDay=(day:number)=>new Date(day*86400000).toISOString().slice(0,10);
+const shiftInterval=(shift:{startMinute:number;endMinute:number},day:number)=>({start:day*1440+shift.startMinute,end:day*1440+(shift.endMinute<=shift.startMinute?shift.endMinute+1440:shift.endMinute)});
+const overlaps=(a:{start:number;end:number},b:{start:number;end:number})=>a.start<b.end&&b.start<a.end;
 
 export const adminWorkspace=query({args:{workDate:v.string()},handler:async(ctx,{workDate})=>{
  const user=await requireAdmin(ctx);if(!dateOk(workDate))throw Error("INVALID_WORK_DATE");
@@ -16,7 +20,11 @@ export const adminWorkspace=query({args:{workDate:v.string()},handler:async(ctx,
   ctx.db.query("workAssignments").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId).eq("workDate",workDate)).take(100),
   ctx.db.query("workCategories").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect()
  ]);
- const employeeRows=employees.filter(e=>e.status==="active").map(e=>({_id:e._id,employeeCode:e.employeeCode,name:[e.firstName,e.lastName].filter(Boolean).join(" "),shiftId:shiftRows.find(s=>s.employeeId===e._id)?.shiftId??null}));
+ const employeeRows=employees.filter(e=>e.status==="active").map(e=>{
+  const dated=shiftRows.filter(s=>s.employeeId===e._id);
+  const effectiveShiftIds=dated.length?dated.map(s=>s.shiftId):(e.defaultShiftId?[e.defaultShiftId]:[]);
+  return {_id:e._id,employeeCode:e.employeeCode,name:[e.firstName,e.lastName].filter(Boolean).join(" "),defaultShiftId:e.defaultShiftId??null,shiftIds:effectiveShiftIds};
+ });
  const teamRows=await Promise.all(teams.filter(t=>t.isActive).map(async t=>{const shift=await ctx.db.get(t.shiftId);const rows=await Promise.all(memberships.filter(m=>m.teamId===t._id&&m.isActive).map(async m=>{const e=await ctx.db.get(m.employeeId);return e?{name:[e.firstName,e.lastName].filter(Boolean).join(" "),employeeCode:e.employeeCode}:null;}));return {_id:t._id,name:t.name,shiftId:t.shiftId,shiftName:shift?.name??"Shift unavailable",members:rows.filter(Boolean)};}));
  const assignmentRows=await Promise.all(assignments.filter(a=>a.isActive).map(async a=>{const [team,employee,progress]=await Promise.all([a.teamId?ctx.db.get(a.teamId):null,a.employeeId?ctx.db.get(a.employeeId):null,ctx.db.query("workAssignmentProgress").withIndex("by_assignment",q=>q.eq("assignmentId",a._id)).collect()]);const rows=await Promise.all(progress.map(async p=>{const e=await ctx.db.get(p.employeeId);return {status:p.status,name:e?[e.firstName,e.lastName].filter(Boolean).join(" "):"Unknown",code:e?.employeeCode??""};}));return {_id:a._id,title:a.title,category:a.category,priority:a.priority,targetName:team?.name??(employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Unknown"),progress:rows};}));
  return {employees:employeeRows,shifts:shifts.filter(s=>s.isActive).map(s=>({_id:s._id,name:s.name})),categories:categories.filter(c=>c.isActive).map(c=>c.name),teams:teamRows,memberships:memberships.filter(m=>m.isActive).map(m=>({teamId:m.teamId,employeeId:m.employeeId})),assignments:assignmentRows};
@@ -26,7 +34,68 @@ export const createShift=mutation({args:{name:v.string(),startMinute:v.number(),
 export const createWorkCategory=mutation({args:{name:v.string()},handler:async(ctx,a)=>{const u=await requireAdmin(ctx),name=a.name.trim().replace(/\\s+/g," ");if(!name||name.length>60)throw Error("INVALID_WORK_CATEGORY");const rows=await ctx.db.query("workCategories").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect();if(rows.some(c=>c.name.toLowerCase()===name.toLowerCase()))throw Error("WORK_CATEGORY_ALREADY_EXISTS");const id=await ctx.db.insert("workCategories",{organizationId:u.organizationId,name,isActive:true,createdBy:u._id,createdAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_category.created",entityType:"workCategory",entityId:String(id),metadata:{name},createdAt:Date.now()});return id;}});
 
 export const createTeam=mutation({args:{name:v.string(),shiftId:v.id("shifts")},handler:async(ctx,a)=>{const u=await requireAdmin(ctx),name=a.name.trim(),s=await ctx.db.get(a.shiftId);if(!name||name.length>80)throw Error("TEAM_NAME_INVALID");if(!s||s.organizationId!==u.organizationId||!s.isActive)throw Error("SHIFT_NOT_AVAILABLE");const id=await ctx.db.insert("teams",{organizationId:u.organizationId,name,shiftId:a.shiftId,isActive:true,createdBy:u._id,createdAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"team.created",entityType:"team",entityId:String(id),createdAt:Date.now()});return id;}});
-export const setTeamMembers=mutation({args:{teamId:v.id("teams"),workDate:v.string(),employeeIds:v.array(v.id("employees"))},handler:async(ctx,a)=>{const u=await requireAdmin(ctx);if(!dateOk(a.workDate)||a.employeeIds.length>100||new Set(a.employeeIds).size!==a.employeeIds.length)throw Error("INVALID_MEMBERS");const t=await ctx.db.get(a.teamId);if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");for(const id of a.employeeIds){const e=await ctx.db.get(id),s=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",id).eq("workDate",a.workDate)).first();if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");if(!s||s.shiftId!==t.shiftId)throw Error("EMPLOYEE_SHIFT_MISMATCH");}const old=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect(),keep=new Set(a.employeeIds.map(String));for(const m of old)if(m.isActive&&!keep.has(String(m.employeeId)))await ctx.db.patch(m._id,{isActive:false});for(const id of a.employeeIds){const prior=old.find(m=>m.employeeId===id);if(prior){if(!prior.isActive)await ctx.db.patch(prior._id,{isActive:true,assignedBy:u._id});}else{const other=await ctx.db.query("teamMemberships").withIndex("by_employee_date",q=>q.eq("employeeId",id).eq("workDate",a.workDate)).collect();for(const m of other)if(m.isActive)await ctx.db.patch(m._id,{isActive:false});await ctx.db.insert("teamMemberships",{organizationId:u.organizationId,teamId:t._id,employeeId:id,workDate:a.workDate,isActive:true,assignedBy:u._id,createdAt:Date.now()});}}await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"team.members_updated",entityType:"team",entityId:String(t._id),metadata:{workDate:a.workDate},createdAt:Date.now()});return true;}});
+export const setTeamMembers=mutation({args:{teamId:v.id("teams"),workDate:v.string(),employeeIds:v.array(v.id("employees"))},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx);
+ if(!dateOk(a.workDate)||a.employeeIds.length>100||new Set(a.employeeIds).size!==a.employeeIds.length)throw Error("INVALID_MEMBERS");
+ const t=await ctx.db.get(a.teamId);
+ if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");
+ for(const id of a.employeeIds){
+  const e=await ctx.db.get(id);
+  if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");
+  const dated=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",id).eq("workDate",a.workDate)).collect();
+  const effective=dated.length?dated.map(row=>row.shiftId):(e.defaultShiftId?[e.defaultShiftId]:[]);
+  if(!effective.some(shiftId=>shiftId===t.shiftId))throw Error("EMPLOYEE_SHIFT_MISMATCH");
+  const otherMemberships=await ctx.db.query("teamMemberships").withIndex("by_employee_date",q=>q.eq("employeeId",id).eq("workDate",a.workDate)).collect();
+  for(const membership of otherMemberships.filter(m=>m.isActive&&m.teamId!==t._id)){
+   const otherTeam=await ctx.db.get(membership.teamId);
+   if(otherTeam?.shiftId===t.shiftId)throw Error("EMPLOYEE_ALREADY_IN_TEAM_FOR_SHIFT");
+  }
+ }
+ const old=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect(),keep=new Set(a.employeeIds.map(String));
+ for(const m of old)if(m.isActive&&!keep.has(String(m.employeeId)))await ctx.db.patch(m._id,{isActive:false});
+ for(const id of a.employeeIds){
+  const prior=old.find(m=>m.employeeId===id);
+  if(prior){if(!prior.isActive)await ctx.db.patch(prior._id,{isActive:true,assignedBy:u._id});}
+  else await ctx.db.insert("teamMemberships",{organizationId:u.organizationId,teamId:t._id,employeeId:id,workDate:a.workDate,isActive:true,assignedBy:u._id,createdAt:Date.now()});
+ }
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"team.members_updated",entityType:"team",entityId:String(t._id),metadata:{workDate:a.workDate},createdAt:Date.now()});
+ return true;
+}});
+
+export const setEmployeeDefaultShift=mutation({args:{employeeId:v.id("employees"),shiftId:v.union(v.id("shifts"),v.null())},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx),employee=await ctx.db.get(a.employeeId);
+ if(!employee||employee.organizationId!==u.organizationId)throw Error("EMPLOYEE_NOT_FOUND");
+ if(employee.status!=="active")throw Error("EMPLOYEE_NOT_ACTIVE");
+ if(a.shiftId){const shift=await ctx.db.get(a.shiftId);if(!shift||shift.organizationId!==u.organizationId||!shift.isActive)throw Error("SHIFT_NOT_AVAILABLE");}
+ const previous=employee.defaultShiftId??null;
+ await ctx.db.patch(employee._id,{defaultShiftId:a.shiftId??undefined,updatedAt:Date.now()});
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"employee.default_shift_updated",entityType:"employee",entityId:String(employee._id),metadata:{previousShiftId:previous?String(previous):null,newShiftId:a.shiftId?String(a.shiftId):null},createdAt:Date.now()});
+ return true;
+}});
+
+export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees"),workDate:v.string(),shiftIds:v.array(v.id("shifts"))},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx),employee=await ctx.db.get(a.employeeId);
+ if(!dateOk(a.workDate)||a.shiftIds.length>10||new Set(a.shiftIds).size!==a.shiftIds.length)throw Error("INVALID_SHIFT_ASSIGNMENTS");
+ if(!employee||employee.organizationId!==u.organizationId)throw Error("EMPLOYEE_NOT_FOUND");
+ if(employee.status!=="active")throw Error("EMPLOYEE_NOT_ACTIVE");
+ const selected=await Promise.all(a.shiftIds.map(id=>ctx.db.get(id)));
+ if(selected.some(s=>!s||s.organizationId!==u.organizationId||!s.isActive))throw Error("SHIFT_NOT_AVAILABLE");
+ const existing=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id)).collect();
+ const targetDay=dayNumber(a.workDate);
+ const adjacent=existing.filter(row=>row.workDate!==a.workDate&&Math.abs(dayNumber(row.workDate)-targetDay)<=1);
+ const adjacentIntervals=await Promise.all(adjacent.map(async row=>{const shift=await ctx.db.get(row.shiftId);return shift?shiftInterval(shift,dayNumber(row.workDate)):null;}));
+ const candidates=selected.filter((s):s is NonNullable<typeof s>=>Boolean(s)).map(s=>shiftInterval(s,targetDay));
+ for(let i=0;i<candidates.length;i++){
+  if(candidates.some((other,j)=>i!==j&&overlaps(candidates[i],other)))throw Error("SHIFTS_OVERLAP");
+  if(adjacentIntervals.some(other=>other&&overlaps(candidates[i],other)))throw Error("SHIFTS_OVERLAP");
+ }
+ const current=existing.filter(row=>row.workDate===a.workDate);
+ for(const row of current)await ctx.db.delete(row._id);
+ for(const shiftId of a.shiftIds)await ctx.db.insert("shiftAssignments",{organizationId:u.organizationId,employeeId:employee._id,shiftId,workDate:a.workDate,assignedBy:u._id});
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"employee.date_shifts_updated",entityType:"employee",entityId:String(employee._id),metadata:{workDate:a.workDate,previousShiftIds:current.map(row=>String(row.shiftId)),newShiftIds:a.shiftIds.map(String)},createdAt:Date.now()});
+ return true;
+}});
+
 export const createWorkAssignment=mutation({args:{title:v.string(),description:v.optional(v.string()),category:v.string(),priority:v.union(v.literal("low"),v.literal("normal"),v.literal("high")),workDate:v.string(),targetType:v.union(v.literal("employee"),v.literal("team")),employeeId:v.optional(v.id("employees")),teamId:v.optional(v.id("teams"))},handler:async(ctx,a)=>{const u=await requireAdmin(ctx);if(!dateOk(a.workDate)||!a.title.trim()||a.title.length>120||!a.category.trim())throw Error("INVALID_WORK");let ids:Id<"employees">[]=[];if(a.targetType==="employee"){if(!a.employeeId||a.teamId)throw Error("INVALID_TARGET");const e=await ctx.db.get(a.employeeId);if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");ids=[a.employeeId];}else{if(!a.teamId||a.employeeId)throw Error("INVALID_TARGET");const t=await ctx.db.get(a.teamId);if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");const ms=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect();ids=ms.filter(m=>m.isActive).map(m=>m.employeeId);if(!ids.length)throw Error("TEAM_HAS_NO_MEMBERS");}const id=await ctx.db.insert("workAssignments",{organizationId:u.organizationId,title:a.title.trim(),description:a.description?.trim()||undefined,category:a.category.trim(),priority:a.priority,workDate:a.workDate,targetType:a.targetType,employeeId:a.employeeId,teamId:a.teamId,createdBy:u._id,createdAt:Date.now(),isActive:true});for(const employeeId of ids){await ctx.db.insert("workAssignmentProgress",{organizationId:u.organizationId,assignmentId:id,employeeId,workDate:a.workDate,status:"not_started",updatedAt:Date.now()});const recipients=await ctx.db.query("users").withIndex("by_org_employee",q=>q.eq("organizationId",u.organizationId).eq("employeeId",employeeId)).collect();for(const recipient of recipients)await ctx.db.insert("notifications",{organizationId:u.organizationId,userId:recipient._id,title:"New work assigned",body:a.title.trim(),createdAt:Date.now()});}await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.created",entityType:"workAssignment",entityId:String(id),createdAt:Date.now()});return id;}});
 export const updateMyWorkStatus=mutation({args:{progressId:v.id("workAssignmentProgress"),status:statuses},handler:async(ctx,a)=>{const u=await requireIdentity(ctx);if(!u.employeeId)throw Error("EMPLOYEE_PROFILE_REQUIRED");const p=await ctx.db.get(a.progressId);if(!p||p.organizationId!==u.organizationId||p.employeeId!==u.employeeId)throw Error("FORBIDDEN");const task=await ctx.db.get(p.assignmentId);if(!task||task.organizationId!==u.organizationId||!task.isActive)throw Error("WORK_UNAVAILABLE");await ctx.db.patch(p._id,{status:a.status,updatedAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.status_updated",entityType:"workAssignmentProgress",entityId:String(p._id),metadata:{status:a.status},createdAt:Date.now()});return true;}});
 export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx,a)=>{const u=await requireIdentity(ctx);if(!dateOk(a.workDate))throw Error("INVALID_WORK_DATE");if(!u.employeeId)return {team:null,assignments:[]};const e=await ctx.db.get(u.employeeId);if(!e||e.organizationId!==u.organizationId)return {team:null,assignments:[]};const membership=await ctx.db.query("teamMemberships").withIndex("by_employee_date",q=>q.eq("employeeId",e._id).eq("workDate",a.workDate)).filter(q=>q.eq(q.field("isActive"),true)).first();let team=null;if(membership){const t=await ctx.db.get(membership.teamId);if(t&&t.organizationId===u.organizationId){const [s,ms]=await Promise.all([ctx.db.get(t.shiftId),ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect()]);const members=await Promise.all(ms.filter(m=>m.isActive).map(async m=>{const x=await ctx.db.get(m.employeeId);return x?{name:[x.firstName,x.lastName].filter(Boolean).join(" "),employeeCode:x.employeeCode}:null;}));team={name:t.name,shiftName:s?.name??"Shift unavailable",members:members.filter(Boolean)};}}const rows=await ctx.db.query("workAssignmentProgress").withIndex("by_employee_date",q=>q.eq("employeeId",e._id).eq("workDate",a.workDate)).take(100);const assignments=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive&&t.workDate===a.workDate?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status}:null;}));return {team,assignments:assignments.filter(Boolean)};}});
