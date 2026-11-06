@@ -1287,41 +1287,9 @@ Submit Request
                 heroClock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
             }, 1000);
         }
-        const DOCS = {
-            all: [
-                { n: "Aadhaar Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "PAN Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "SSLC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-                { n: "HSC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-                { n: "Bank Account Proof", cat: "emp", t: "Employment", d: "20 Aug 2024", s: "success" },
-                { n: "Driving License", cat: "id", t: "Identity", d: "02 Jan 2026", s: "warning" },
-            ],
-            identity: [
-                { n: "Aadhaar Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "PAN Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "Driving License", cat: "id", t: "Identity", d: "02 Jan 2026", s: "warning" },
-            ],
-            education: [
-                { n: "SSLC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-                { n: "HSC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-            ],
-            employment: [
-                { n: "Bank Account Proof", cat: "emp", t: "Employment", d: "20 Aug 2024", s: "success" },
-            ],
-            
-        };
-        const DOC_ICON = { id: "fingerprint", edu: "school", emp: "work", other: "folder" };
-        function renderDocs(cat) {
-            const list = DOCS[cat];
-            document.getElementById('docContent').innerHTML = list.map(d => `
-                <div class="doc-card" onclick="toast('Open ${d.n}')">
-                    <div class="doc-icon"><span class="material-symbols-outlined text-[20px]">${DOC_ICON[d.cat]}</span></div>
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-semibold text-on-surface">${d.n}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">${d.t} · uploaded ${d.d}</p>
-                    </div>
-                    <span class="doc-badge ${d.s}">${d.s === 'success' ? 'Verified' : 'Pending'}</span>
-                </div>`).join('');
+        function renderDocs() {
+            const content = document.getElementById('docContent');
+            if (content) content.textContent = 'Loading your documents…';
         }
         const SCREEN_IDS = ['attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'polScreen', 'polDetailScreen'];
         var navStack = [];

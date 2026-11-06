@@ -130,6 +130,11 @@
       window.openDocs=()=>{window.pushScreen("docsScreen");renderEmployeeDocuments("all");};
       window.openUploadSheet=()=>document.getElementById("uploadSheet")?.classList.remove("hidden");
       window.closeUploadSheet=()=>document.getElementById("uploadSheet")?.classList.add("hidden");
+      const employeeDocumentFile = document.getElementById("employeeDocumentFile");
+      employeeDocumentFile?.addEventListener("change", () => {
+        const label = document.getElementById("employeeDocumentFileLabel");
+        if (label) label.textContent = employeeDocumentFile.files?.[0]?.name || "Tap to choose a document";
+      });
       window.uploadEmployeeDocument=async()=>{
         const file=document.getElementById("employeeDocumentFile")?.files?.[0],category=document.getElementById("employeeDocumentCategory")?.value||"",type=document.getElementById("employeeDocumentType")?.value?.trim()||"",message=document.getElementById("employeeDocumentMessage"),button=document.getElementById("employeeDocumentUploadButton");
         const say=value=>{if(message)message.textContent=value;};if(!file||!type){say("Choose a file and enter its document name.");return;}
