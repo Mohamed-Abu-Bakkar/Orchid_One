@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     .replaceAll('href="assets/', 'href="/employee/assets/')
     .replaceAll('src="assets/', 'src="/employee/assets/')
     .replace('href="manifest.json"', 'href="/manifest.webmanifest"')
-    .replace("</body>", '<script src="/employee-controller.js" defer></script>\\n</body>');
+    .replace("</body>", '<script src="/employee-controller.js" defer></script>\n</body>');
 
   return new NextResponse(html, {
     headers: {
