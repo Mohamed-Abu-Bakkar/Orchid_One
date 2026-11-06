@@ -16,9 +16,7 @@ export function AdminAccessGuard() {
 
   useEffect(() => {
     if (!session.isPending && !session.data) router.replace("/login");
-    if (account && account.status !== "active") {
-      router.replace(account.status === "rejected" ? "/rejected" : account.status === "suspended" ? "/suspended" : "/pending-approval");
-    }
+    if (account?.status === "suspended") router.replace("/suspended");
     if (account?.status === "active" && !ADMIN_ROLES.includes(account.role)) router.replace("/");
   }, [session.isPending, session.data, account, router]);
 
