@@ -919,7 +919,7 @@ export function EmployeeMockReplica() {
 </div>
 <div>
 <label className="text-label-sm font-label-sm text-on-surface-variant block mb-1">Reason</label>
-<textarea id="reqReason" rows="3" placeholder="Briefly describe the reason" className="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
+<textarea id="reqReason" rows={3} placeholder="Briefly describe the reason" className="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
 </div>
 </div>
 </div>
