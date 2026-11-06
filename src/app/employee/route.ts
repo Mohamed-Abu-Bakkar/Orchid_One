@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   html = html
     .replaceAll('href="assets/', 'href="/employee/assets/')
     .replaceAll('src="assets/', 'src="/employee/assets/')
-    .replace('href="manifest.json"', 'href="/manifest.webmanifest"')
+    .replace('<link rel="manifest" href="manifest.json"/>', '<link rel="manifest" href="/manifest.json" crossorigin="use-credentials"/>')
     .replace("</body>", '<script src="/employee-controller.js" defer></script>\n</body>');
 
   return new NextResponse(html, {
