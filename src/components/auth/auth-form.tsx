@@ -10,7 +10,7 @@ type Mode = "login" | "register";
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
-  const ensurePendingProfile = useMutation(api.account.ensurePendingProfile);
+  const ensureUserProfile = useMutation(api.account.ensureUserProfile);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,12 +30,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
         if (result.error) throw new Error(result.error.message || "Login failed");
       }
 
-      const profile = await ensurePendingProfile({});
-      if (profile.status === "active") {
-        router.replace(profile.role === "employee" ? "/" : "/admin");
-      } else {
-        router.replace(profile.status === "rejected" ? "/rejected" : profile.status === "suspended" ? "/suspended" : "/pending-approval");
+      const profile = await ensureUserProfile({});
+      if (profile.status === "suspended") {
+        await authClient.signOut();
+        throw new Error("This account is suspended. Contact the Orchid Flowers administrator.");
       }
+
+      router.replace(profile.role === "employee" ? "/" : "/admin");
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");
@@ -47,42 +48,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="auth-brand">
-          <span className="auth-mark">✿</span>
-          <span>ORCHID ONE</span>
-        </div>
+        <div className="auth-brand"><span className="auth-mark">✿</span><span>ORCHID ONE</span></div>
         <p className="auth-eyebrow">ORCHID FLOWERS</p>
         <h1>{mode === "register" ? "Create your account" : "Welcome back"}</h1>
-        <p className="auth-subtitle">
-          {mode === "register"
-            ? "Register to request access to the Orchid workforce portal."
-            : "Sign in to continue to your Orchid workspace."}
-        </p>
+        <p className="auth-subtitle">{mode === "register" ? "Create an account and start using the Orchid workforce portal." : "Sign in to continue to your Orchid workspace."}</p>
         <form onSubmit={submit} className="auth-form">
-          {mode === "register" && (
-            <label>
-              Full name
-              <input autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
-            </label>
-          )}
-          <label>
-            Email address
-            <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-          </label>
-          <label>
-            Password
-            <input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
-          </label>
+          {mode === "register" && <label>Full name<input autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" /></label>}
+          <label>Email address<input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
+          <label>Password<input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></label>
           {error && <p className="auth-error" role="alert">{error}</p>}
-          <button className="auth-submit" type="submit" disabled={busy}>
-            {busy ? "Please wait…" : mode === "register" ? "Create account" : "Sign in"}
-          </button>
+          <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "register" ? "Create account" : "Sign in"}</button>
         </form>
-        <p className="auth-switch">
-          {mode === "register" ? "Already have an account? " : "New to Orchid One? "}
-          <a href={mode === "register" ? "/login" : "/register"}>{mode === "register" ? "Sign in" : "Create an account"}</a>
-        </p>
-        <p className="auth-footnote">New registrations require administrator approval before access is granted.</p>
+        <p className="auth-switch">{mode === "register" ? "Already have an account? " : "New to Orchid One? "}<a href={mode === "register" ? "/login" : "/register"}>{mode === "register" ? "Sign in" : "Create an account"}</a></p>
       </section>
     </main>
   );
