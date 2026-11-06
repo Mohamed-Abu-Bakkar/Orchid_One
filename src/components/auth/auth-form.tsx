@@ -89,7 +89,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         <form onSubmit={submit} className="auth-form">
           {mode === "register" && <label>Full name<input autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" /></label>}
           <label>Email address<input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
-          <label>Password<input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></label>
+          <label>Password<input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" suppressHydrationWarning /></label>
           {error && <p className="auth-error" role="alert">{error}</p>}
           {awaitingConvexAuth && <p className="employee-muted" role="status">Verifying your secure session…</p>}
           <button className="auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "register" ? "Create account" : "Sign in"}</button>
