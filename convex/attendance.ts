@@ -158,7 +158,11 @@ export const adminRegister = query({
   },
   handler: async (ctx, args) => {
     const admin = await requireRole(ctx, ["supervisor", "superadmin"]);
-    const validDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value;
+    const validDate = (value: string) => {
+      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;
+      const parsed = new Date(value + "T00:00:00Z");
+      return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    };
     if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_ATTENDANCE_DATE_RANGE");
     const span = (Date.parse(args.toDate + "T00:00:00Z") - Date.parse(args.fromDate + "T00:00:00Z")) / 86400000;
     if (span > 30) throw new Error("ATTENDANCE_RANGE_LIMIT_31_DAYS");
