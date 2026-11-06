@@ -82,7 +82,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="auth-brand"><img className="auth-mark" src="/assets/orchid-logo.svg" alt="Orchid One logo" /><span>ORCHID ONE</span></div>
+        <div className="auth-brand"><img className="auth-mark" src="/assets/orchid-logo.png" alt="Orchid One logo" /><span>ORCHID ONE</span></div>
         <p className="auth-eyebrow">ORCHID FLOWERS</p>
         <h1>{mode === "register" ? "Create your account" : "Welcome back"}</h1>
         <p className="auth-subtitle">{mode === "register" ? "Create an account and start using the Orchid workforce portal." : "Sign in to continue to your Orchid workspace."}</p>
