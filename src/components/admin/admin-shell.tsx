@@ -5,6 +5,7 @@ import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { PolicyManagement } from "@/components/admin/policy-management";
 import { CompanyDocumentManagement } from "@/components/admin/company-document-management";
+import orchidLogo from "../../../OrchidHRM/assets/android/launchericon-192x192.png";
 import { Activity, Bell, BookOpen, Building2, CalendarDays, ChartNoAxesCombined, CheckCircle2, Clock3, Download, Flower2, Folder, GraduationCap, Grid2X2, Megaphone, Menu, Plus, Search, Settings, Shield, Star, UserRound, Users, Wallet, X, Zap } from "lucide-react";
 
 const groups = [
@@ -27,7 +28,7 @@ export default function AdminShell() {
  const go=(id:string)=>{setActive(id);setOpen(false);setNotice("");};
  return <div className="web-app orchid-app">
   <aside className={"sidebar "+(open?"open":"")}>
-   <div className="sb-brand"><div className="auth-logo"><Flower2 size={23}/></div><div className="col"><span className="sb-name">ORCHID ONE</span><span className="sb-tag">People. Workforce. Performance.</span></div></div>
+   <div className="sb-brand"><div className="auth-logo"><img src={orchidLogo.src} alt="Orchid One" width={32} height={32} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain", borderRadius: 8 }} /></div><div className="col"><span className="sb-name">ORCHID ONE</span><span className="sb-tag">People. Workforce. Performance.</span></div></div>
    <nav className="sb-nav" aria-label="Main navigation">{groups.map(g=><div className="sb-group" key={g.group}><div className="sb-group-title">{g.group}</div>{g.items.map(([id,label,Icon,count]:any)=><button type="button" key={id} onClick={()=>go(id)} className={"sb-item "+(active===id?"active":"")}><span className="sb-ic"><Icon size={18}/></span><span>{label}</span>{count&&<span className="sb-cnt">{count}</span>}</button>)}</div>)}</nav>
    <div className="sb-foot"><div className="sb-role card"><div className="row gap-3"><div className="avatar">OF</div><div className="col flex-1"><p className="t-body-sm" style={{fontWeight:600}}>Orchid Flowers</p><p className="t-caption text-tertiary">Workspace</p></div><span className="badge badge-neutral">Preview</span></div></div></div>
   </aside>
