@@ -26,7 +26,7 @@ export const getOverview = query({
 
     const [
       employees, departments, locations, shifts, attendanceToday, attendanceTrend,
-      leaveRequests, overtimeRequests, approvalRequests, attendanceExceptions,
+      leaveRequests, approvedLeaveRequests, overtimeRequests, approvalRequests, attendanceExceptions,
       candidates, holidays, assignments, policies, companyDocuments,
       wagePeriods, notifications, recentAuditLogs,
     ] = await Promise.all([
@@ -37,6 +37,7 @@ export const getOverview = query({
       ctx.db.query("attendanceDays").withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).eq("workDate", today)).collect(),
       ctx.db.query("attendanceDays").withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", trendStart).lte("workDate", today)).collect(),
       ctx.db.query("leaveRequests").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId).eq("status", "pending")).collect(),
+      ctx.db.query("leaveRequests").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId).eq("status", "approved")).collect(),
       ctx.db.query("overtimeRequests").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId).eq("status", "pending")).collect(),
       ctx.db.query("approvalRequests").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId).eq("status", "pending")).collect(),
       ctx.db.query("attendanceEvents").withIndex("by_org_review_time", q => q.eq("organizationId", admin.organizationId).eq("reviewStatus", "pending")).collect(),
@@ -62,7 +63,7 @@ export const getOverview = query({
       absent: attendanceToday.filter(row => row.status === "absent").length,
       exception: attendanceToday.filter(row => row.status === "exception" || row.status === "pending_review").length,
     };
-    const pendingLeaveToday = leaveRequests.filter(request => request.fromDate <= today && request.toDate >= today);
+    const approvedLeaveToday = approvedLeaveRequests.filter(request => request.fromDate <= today && request.toDate >= today);
     const dayMinutes = attendanceToday.reduce((sum, row) => sum + Math.max(0, row.payableMinutes), 0);
     const trend = Array.from({ length: 14 }, (_, index) => {
       const date = addDays(trendStart, index);
@@ -81,7 +82,6 @@ export const getOverview = query({
     const pendingCandidateCount = candidates.filter(candidate =>
       !["rejected", "hired", "joined", "withdrawn"].includes(candidate.status.toLowerCase())
     ).length;
-    const orgWagePeriods = new Set(wagePeriods.map(period => String(period._id)));
     const orgWageRecords = (await Promise.all(wagePeriods.map(period =>
       ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()
     ))).flat().filter(record => orgEmployeeIds.has(String(record.employeeId)));
@@ -109,7 +109,7 @@ export const getOverview = query({
       },
       leave: {
         pendingRequests: leaveRequests.length,
-        approvedToday: pendingLeaveToday.length,
+        approvedToday: approvedLeaveToday.length,
       },
       overtime: { pendingRequests: overtimeRequests.length },
       approvals: {
