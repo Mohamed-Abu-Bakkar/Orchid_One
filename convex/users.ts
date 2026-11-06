@@ -15,8 +15,7 @@ export const listPendingUsers = query({
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 100);
     const users = await ctx.db
       .query("users")
-      .withIndex("by_org", (q) => q.eq("organizationId", actor.organizationId))
-      .filter((q) => q.eq(q.field("accountStatus"), "pending"))
+      .withIndex("by_org_status", (q) => q.eq("organizationId", actor.organizationId).eq("accountStatus", "pending"))
       .order("desc")
       .take(limit);
     return users.map((user) => ({
