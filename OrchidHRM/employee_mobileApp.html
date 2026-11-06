@@ -385,24 +385,10 @@
 <div class="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-4"></div>
 <p class="text-title-md font-title-md font-semibold text-on-surface">Upload document</p>
 <p class="text-body-md font-body-md text-on-surface-variant mt-1">Add a new document to your records</p>
-<div class="mt-5 border-2 border-dashed border-outline-variant rounded-lg py-8 flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors" onclick="simulateUpload(this)">
-<span class="material-symbols-outlined text-on-surface-variant text-[28px] mb-1.5">upload</span>
-<p class="text-body-md font-body-md text-on-surface">Tap to choose a document</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Aadhaar, PAN, certificates, etc.</p>
-</div>
-<div class="mt-4">
-<p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Category</p>
-<select class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface focus:outline-none focus:border-primary">
-<option>Identity</option>
-<option>Education</option>
-<option>Employment</option>
-</select>
-</div>
-<div class="mt-4">
-<p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Document name</p>
-<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary" placeholder="e.g. Aadhaar Card" />
-</div>
-<button class="w-full mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg py-3 hover:bg-primary-container transition-colors" onclick="toast('Document uploaded for verification');closeUploadSheet()">Upload</button>
+<div class="mt-5 border-2 border-dashed border-outline-variant rounded-lg py-8 flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors" onclick="document.getElementById('employeeDocumentFile').click()"><span class="material-symbols-outlined text-on-surface-variant text-[28px] mb-1.5">upload</span><p class="text-body-md font-body-md text-on-surface" id="employeeDocumentFileLabel">Tap to choose a document</p><p class="text-label-sm font-label-sm text-on-surface-variant mt-1">PDF, JPG or PNG · Max 15 MB</p><input id="employeeDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="hidden" /></div>
+<div class="mt-4"><p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Category</p><select id="employeeDocumentCategory" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface"><option value="Identity">Identity</option><option value="Education">Education</option><option value="Employment">Employment</option></select></div>
+<div class="mt-4"><p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Document name</p><input id="employeeDocumentType" maxlength="100" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface" placeholder="e.g. Aadhaar Card" /></div>
+<p id="employeeDocumentMessage" class="text-label-sm font-label-sm text-on-surface-variant mt-3" role="status"></p><button id="employeeDocumentUploadButton" type="button" class="w-full mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg py-3" onclick="uploadEmployeeDocument()">Upload for review</button>
 </div>
 </div>
 <!-- Feedback Sheet -->

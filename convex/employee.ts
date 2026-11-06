@@ -44,7 +44,7 @@ export const myWorkspace = query({
     }));
     const validCurrentShifts = currentShifts.filter((shift): shift is NonNullable<typeof shift> => Boolean(shift));
     const currentShift = validCurrentShifts[0] ?? null;
-    const docsWithUrls = await Promise.all(documents.map(async doc => ({ ...doc, url: await ctx.storage.getUrl(doc.storageId) })));
+    const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
     const wagePeriods = await Promise.all(wageRecords.map(record => ctx.db.get(record.wagePeriodId)));
     const leaveBalancesWithTypes = await Promise.all(leaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" })));
     const attendedDateKeys = new Set(monthEvents.filter(event => event.geofencePassed || event.reviewStatus === "approved").filter(event => event.eventType === "check_in").map(event => dateKey(new Date(event.receivedAt))));

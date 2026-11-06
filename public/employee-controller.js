@@ -107,34 +107,45 @@
       if(work?.team){const teamLine=document.createElement("p");teamLine.className="text-body-md font-body-md text-on-surface";teamLine.textContent=work.team.name+" · "+work.team.shiftName;workCard.append(teamLine);const teamMembers=document.createElement("p");teamMembers.className="text-label-sm font-label-sm text-on-surface-variant mt-1 mb-3";teamMembers.textContent="Team: "+work.team.members.map(m=>m.name).join(", ");workCard.append(teamMembers);}else{const none=document.createElement("p");none.className="text-label-sm font-label-sm text-on-surface-variant";none.textContent="No team assigned today.";workCard.append(none);}
       (work?.assignments??[]).forEach(task=>{const card=document.createElement("article");card.className="rounded-lg border border-outline-variant/50 p-3 mb-3";const heading=document.createElement("p");heading.className="text-body-md font-body-md font-semibold text-on-surface";heading.textContent=task.title;const detail=document.createElement("p");detail.className="text-label-sm font-label-sm text-on-surface-variant mt-1";detail.textContent=task.category+" · "+task.priority;const select=document.createElement("select");select.className="input mt-2";[["not_started","Not Started"],["in_progress","In Progress"],["completed","Completed"]].forEach(([value,label])=>{const o=document.createElement("option");o.value=value;o.textContent=label;select.append(o);});select.value=task.status;select.addEventListener("change",async()=>{const previous=task.status;select.disabled=true;try{const response=await fetch("/api/employee/work",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({progressId:task.progressId,status:select.value})});const payload=await response.json();if(!response.ok)throw Error(payload.error||"Unable to update");task.status=select.value;window.toast?.("Work status updated.");}catch(error){select.value=previous;window.toast?.(error instanceof Error?error.message:"Unable to update work.");}finally{select.disabled=false;}});card.append(heading,detail,select);workCard.append(card);});
       if(!(work?.assignments??[]).length){const empty=document.createElement("p");empty.className="text-label-sm font-label-sm text-on-surface-variant";empty.textContent="No work assignments today.";workCard.append(empty);}document.querySelector("#home")?.prepend(workCard);
-      const docs = workspace.documents ?? [];
-      if (docs.length) {
-        const docContent = document.getElementById("docContent");
-        if (docContent) {
-          docContent.replaceChildren();
-          docs.forEach(doc => {
-            const card = document.createElement("div");
-            card.className = "doc-card";
-            const icon = document.createElement("div");
-            icon.className = "doc-icon";
-            icon.textContent = "description";
-            const copy = document.createElement("div");
-            copy.className = "flex flex-col flex-1 min-w-0";
-            const name = document.createElement("p");
-            name.className = "text-body-md font-body-md font-semibold text-on-surface";
-            name.textContent = doc.originalFileName || doc.documentType;
-            const meta = document.createElement("p");
-            meta.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5";
-            meta.textContent = (doc.documentType || "Document") + " · uploaded " + fmtDate(doc.uploadedAt);
-            copy.append(name, meta);
-            const badge = document.createElement("span");
-            badge.className = "doc-badge " + (doc.reviewStatus === "approved" ? "success" : "warning");
-            badge.textContent = doc.reviewStatus === "approved" ? "Verified" : doc.reviewStatus || "Pending";
-            card.append(icon, copy, badge);
-            docContent.append(card);
-          });
-        }
-      } else empty(document.getElementById("docContent"), "No employee documents have been uploaded yet.");
+      window.__orchidEmployeeDocuments=workspace.documents??[];
+      const docContent=document.getElementById("docContent");
+      const renderEmployeeDocuments=(category="all")=>{
+        if(!docContent)return;
+        const rows=window.__orchidEmployeeDocuments.filter(doc=>category==="all"||String(doc.documentCategory||"").toLowerCase()===category);
+        docContent.replaceChildren();if(!rows.length){empty(docContent,"No documents in this category yet.");return;}
+        rows.forEach(doc=>{
+          const card=document.createElement("div");card.className="doc-card";
+          const icon=document.createElement("div");icon.className="doc-icon";icon.textContent="description";
+          const copy=document.createElement("div");copy.className="flex flex-col flex-1 min-w-0";
+          const name=document.createElement("p");name.className="text-body-md font-body-md font-semibold text-on-surface";name.textContent=doc.documentType||doc.originalFileName;
+          const meta=document.createElement("p");meta.className="text-label-sm font-label-sm text-on-surface-variant mt-0.5";meta.textContent=(doc.documentCategory||"Document")+" · uploaded "+fmtDate(doc.uploadedAt)+(doc.replacesDocumentId?" · replacement":"");copy.append(name,meta);
+          if(doc.reviewNote){const note=document.createElement("p");note.className="text-label-sm text-error mt-1";note.textContent="Review note: "+doc.reviewNote;copy.append(note);}
+          const badge=document.createElement("span");badge.className="doc-badge "+(doc.reviewStatus==="verified"?"success":"warning");badge.textContent=doc.reviewStatus==="verified"?"Verified":doc.reviewStatus==="replaced"?"File removed":doc.reviewStatus==="rejected"?"Rejected":"Pending";card.append(icon,copy,badge);
+          if(doc.reviewStatus!=="replaced"){const view=document.createElement("button");view.type="button";view.className="text-primary text-label-sm font-semibold";view.textContent="View";view.addEventListener("click",()=>window.open("/api/employee/documents/"+encodeURIComponent(doc._id)+"/file","_blank","noopener"));card.append(view);}docContent.append(card);
+        });
+      };
+      window.renderDocs=renderEmployeeDocuments;
+      document.querySelectorAll("#docTabs [data-doc]").forEach(tab=>tab.addEventListener("click",()=>{document.querySelectorAll("#docTabs [data-doc]").forEach(item=>item.classList.toggle("active",item===tab));renderEmployeeDocuments(tab.dataset.doc||"all");}));
+      renderEmployeeDocuments("all");
+      window.openDocs=()=>{window.pushScreen("docsScreen");renderEmployeeDocuments("all");};
+      window.openUploadSheet=()=>document.getElementById("uploadSheet")?.classList.remove("hidden");
+      window.closeUploadSheet=()=>document.getElementById("uploadSheet")?.classList.add("hidden");
+      window.uploadEmployeeDocument=async()=>{
+        const file=document.getElementById("employeeDocumentFile")?.files?.[0],category=document.getElementById("employeeDocumentCategory")?.value||"",type=document.getElementById("employeeDocumentType")?.value?.trim()||"",message=document.getElementById("employeeDocumentMessage"),button=document.getElementById("employeeDocumentUploadButton");
+        const say=value=>{if(message)message.textContent=value;};if(!file||!type){say("Choose a file and enter its document name.");return;}
+        if(!["application/pdf","image/jpeg","image/png"].includes(file.type)){say("Only PDF, JPG and PNG files are supported.");return;}
+        if(file.size<=0||file.size>15*1024*1024){say("The file must be 15 MB or smaller.");return;}
+        button.disabled=true;button.textContent="Uploading…";say("");
+        try{
+          const start=await fetch("/api/employee/documents/upload-url",{method:"POST",credentials:"same-origin"}),startData=await start.json();if(!start.ok)throw Error(startData.error||"Unable to start upload.");
+          const uploaded=await fetch(startData.url,{method:"POST",headers:{"Content-Type":file.type},body:file});if(!uploaded.ok)throw Error("The file upload failed.");
+          const stored=await uploaded.json();
+          const saved=await fetch("/api/employee/documents",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({storageId:stored.storageId,documentCategory:category,documentType:type,originalFileName:file.name,mimeType:file.type})});
+          const result=await saved.json();if(!saved.ok)throw Error(result.error||"Unable to save document details.");
+          window.toast?.("Document submitted for verification.");window.closeUploadSheet();window.location.reload();
+        }catch(error){say(error instanceof Error?error.message:"Unable to upload document.");}
+        finally{button.disabled=false;button.textContent="Upload for review";}
+      };
 
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
