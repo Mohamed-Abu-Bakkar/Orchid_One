@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { CheckCircle2, UserPlus } from "lucide-react";
@@ -24,7 +24,7 @@ export function EmployeeOnboarding() {
   const [error,setError]=useState("");
   const unlinked=useMemo(()=>accounts?.filter(a=>!a.employeeId&&a.role==="employee")??[],[accounts]);
   const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDepartmentId("");setLocationId("");setUserId("");};
-  const submit=async(e:React.FormEvent<HTMLFormElement>)=>{
+  const submit=async(e:FormEvent<HTMLFormElement>)=>{
     e.preventDefault();setSaving(true);setError("");setMessage("");
     try {
       const result=await createEmployee({
