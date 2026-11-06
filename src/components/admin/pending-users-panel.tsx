@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Check, Clock3, X } from "lucide-react";
 import { api } from "@/../convex/_generated/api";
+import type { Id } from "@/../convex/_generated/dataModel";
 
 export function PendingUsersPanel() {
   const users = useQuery(api.users.listPendingUsers, { limit: 50 });
@@ -11,7 +12,7 @@ export function PendingUsersPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  async function decide(userId: (typeof users extends (infer T)[] | undefined ? T extends { _id: infer I } ? I : never : never), status: "active" | "rejected") {
+  async function decide(userId: Id<"users">, status: "active" | "rejected") {
     setBusyId(String(userId));
     setMessage("");
     try {
