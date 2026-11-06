@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { Activity, CalendarDays, Clock3, MapPin, Search, ShieldAlert } from "lucide-react";
+import { Activity, CalendarDays, Clock3, Download, MapPin, Search, ShieldAlert } from "lucide-react";
 
 function localToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
@@ -42,12 +42,34 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
   if (employees === undefined) return <section className="sec"><p className="sub">Loading attendance filters…</p></section>;
 
   const timezone = register?.timezone ?? "Asia/Kolkata";
-  const invalidRange = !fromDate || !toDate || fromDate > toDate;
+  const invalidRange = !fromDate || !toDate || fromDate > toDate;\n  function exportCsv() {
+    if (!register || rows.length === 0) return;
+    const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const lines = [
+      ["Employee", "Employee code", "Date", "Scheduled shifts", "First check-in", "Last check-out", "Event count", "Outside-geofence events", "Pending reviews"],
+      ...rows.map((row: any) => [
+        row.employeeName, row.employeeCode, row.workDate,
+        row.scheduledShifts.map((shift: any) => shift.name).join("; "),
+        row.firstCheckInAt === null ? "" : stamp(row.firstCheckInAt, timezone),
+        row.lastCheckOutAt === null ? "" : stamp(row.lastCheckOutAt, timezone),
+        row.eventCount, row.outsideGeofenceEvents, row.pendingReviews,
+      ]),
+    ];
+    const csv = lines.map(line => line.map(quote).join(",")).join("\\r\\n");
+    const url = URL.createObjectURL(new Blob(["\\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "orchid-attendance-" + fromDate + "-to-" + toDate + ".csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+
 
   return <section className="sec">
     <div className="page-head">
       <div><h2 className="t-h1" style={{ fontSize: 22 }}>Attendance management</h2><p className="sub">Live attendance events recorded by employees through the GPS and geofence workflow.</p></div>
-      <span className="badge badge-neutral"><Activity size={13}/> Convex live data</span>
+      <div className="page-actions"><span className="badge badge-neutral"><Activity size={13}/> Convex live data</span><button className="btn btn-outline" type="button" onClick={exportCsv} disabled={!register || rows.length===0}><Download size={15}/> Export CSV</button></div>
     </div>
 
     <div className="employee-directory-stats">
@@ -73,7 +95,7 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
               <span className="t-caption text-tertiary"><CalendarDays size={13} style={{display:"inline",verticalAlign:"middle"}}/> {register.fromDate} to {register.toDate} · {timezone}</span>
               <span className="t-caption text-tertiary">Maximum range: 31 calendar days</span>
             </div>
-            {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
+            {register.truncated && <p className="form-error" role="status">This result exceeds the 5,000-event display limit. Narrow the date range or select an employee to view a complete subset.</p>}\n            {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
             : <div className="employee-directory-table-wrap"><table className="employee-directory-table">
                 <thead><tr><th>Employee</th><th>Work date</th><th>Scheduled shift</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
                 <tbody>{rows.map((row: any) => <tr key={row.id}>
