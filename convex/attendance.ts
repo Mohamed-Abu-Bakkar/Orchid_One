@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { requireIdentity, requireRole } from "./lib/auth";
 
 const EARTH_RADIUS_M = 6_371_000;
@@ -157,7 +158,7 @@ export const adminRegister = query({
   },
   handler: async (ctx, args) => {
     const admin = await requireRole(ctx, ["supervisor", "superadmin"]);
-    const validDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(value + "T00:00:00Z"));
+    const validDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value;
     if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_ATTENDANCE_DATE_RANGE");
     const span = (Date.parse(args.toDate + "T00:00:00Z") - Date.parse(args.fromDate + "T00:00:00Z")) / 86400000;
     if (span > 30) throw new Error("ATTENDANCE_RANGE_LIMIT_31_DAYS");
@@ -169,22 +170,33 @@ export const adminRegister = query({
     }
     const startAt = localDateStartUtc(args.fromDate, organization.timezone);
     const endAt = localDateStartUtc(nextDate(args.toDate), organization.timezone);
-    const events = await ctx.db.query("attendanceEvents")
+    const [events, scheduledShifts] = await Promise.all([ctx.db.query("attendanceEvents")
       .withIndex("by_org_time", q => q.eq("organizationId", admin.organizationId).gte("receivedAt", startAt).lt("receivedAt", endAt))
       .order("desc")
-      .collect();
+      .collect(), ctx.db.query("shiftAssignments")
+      .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
+      .collect()]);
     const filtered = args.employeeId ? events.filter(event => event.employeeId === args.employeeId) : events;
     const employeeIds = [...new Set(filtered.map(event => String(event.employeeId)))];
     const employeeMap = new Map<string, any>();
     await Promise.all(employeeIds.map(async id => {
-      const employee = await ctx.db.get(id as any);
+      const employee = await ctx.db.get(id as Id<"employees">);
       if (employee && employee.organizationId === admin.organizationId) employeeMap.set(id, employee);
     }));
     const locationIds = [...new Set(filtered.map(event => String(event.locationId)))];
     const locationMap = new Map<string, string>();
     await Promise.all(locationIds.map(async id => {
-      const location = await ctx.db.get(id as any);
+      const location = await ctx.db.get(id as Id<"locations">);
       if (location && location.organizationId === admin.organizationId) locationMap.set(id, location.name);
+    }));
+    const shiftMap = new Map<string, any[]>();
+    await Promise.all(scheduledShifts.map(async assignment => {
+      const shift = await ctx.db.get(assignment.shiftId);
+      if (!shift || shift.organizationId !== admin.organizationId) return;
+      const key = String(assignment.employeeId) + ":" + assignment.workDate;
+      const current = shiftMap.get(key) ?? [];
+      current.push({ name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute });
+      shiftMap.set(key, current);
     }));
     const groups = new Map<string, any>();
     for (const event of filtered) {
@@ -201,6 +213,7 @@ export const adminRegister = query({
           employeeCode: employee.employeeCode,
           departmentId: employee.departmentId,
           locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
+          scheduledShifts: shiftMap.get(key) ?? [],
           workDate,
           firstCheckInAt: null as number | null,
           lastCheckOutAt: null as number | null,
@@ -238,6 +251,7 @@ export const adminRegister = query({
     return {
       fromDate: args.fromDate,
       toDate: args.toDate,
+      timezone: organization.timezone,
       totalEvents: filtered.length,
       recordedDays: rows.length,
       pendingReviews: rows.reduce((sum, row) => sum + row.pendingReviews, 0),
