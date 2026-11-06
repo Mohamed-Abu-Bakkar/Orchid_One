@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -49,3 +49,34 @@ function Dashboard({go,notice}:{go:(id:string)=>void;notice:(s:string)=>void}) {
  </section>;
 }
 function Panel({title,subtitle,icon:Icon,text,action,onAction}:any){return <div className="panel"><div className="panel-head"><span className="t-h3">{title}</span>{action?<button className="section-link" onClick={onAction}>{action}</button>:<span className="t-caption text-tertiary">{subtitle}</span>}</div><div className="panel-body empty-state"><Icon size={26}/><p className="t-body-sm text-secondary">{text}</p></div></div>}
+
+
+function EmployeeManagement() {
+ const employees=useQuery(api.employee.listForAdmin,{});
+ const [search,setSearch]=useState("");
+ const [status,setStatus]=useState("all");
+ const filtered=useMemo(()=> (employees??[]).filter(e=>{
+  const term=search.trim().toLowerCase();
+  const text=[e.employeeCode,e.firstName,e.lastName,e.email,e.phone,e.designation,e.departmentName,e.locationName].join(" ").toLowerCase();
+  return (status==="all"||e.status===status)&&(!term||text.includes(term));
+ }),[employees,search,status]);
+ if(employees===undefined)return <section className="sec"><p className="sub">Loading employee records…</p></section>;
+ const count=(s:string)=>employees.filter(e=>e.status===s).length;
+ const names:Record<string,string>={active:"Active",inactive:"Inactive",pending:"Pending",archived:"Archived"};
+ const types:Record<string,string>={permanent:"Permanent",hourly:"Hourly",daily:"Daily",contract:"Contract"};
+ return <section className="sec">
+  <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Employee directory</h2><p className="sub">All employee records in your Orchid Flowers organization.</p></div><span className="badge badge-neutral">{employees.length} total records</span></div>
+  <div className="employee-directory-stats">
+   {[[ "All employees",employees.length ],["Active",count("active")],["Pending",count("pending")],["Inactive / archived",count("inactive")+count("archived")]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}
+  </div>
+  <div className="panel employee-directory-panel">
+   <div className="employee-directory-toolbar"><div className="input-icon-wrap employee-directory-search"><span className="input-prefix"><Search size={16}/></span><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, ID, department, phone…" aria-label="Search employees"/></div>
+    <label className="employee-status-filter"><span className="t-caption text-tertiary">Status</span><select className="input" value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All statuses ({employees.length})</option>{["active","pending","inactive","archived"].map(s=><option key={s} value={s}>{names[s]} ({count(s)})</option>)}</select></label>
+   </div>
+   <div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Employee</th><th>Department</th><th>Designation</th><th>Employment</th><th>Location</th><th>Joined</th><th>Status</th></tr></thead><tbody>
+    {filtered.map(e=><tr key={e._id}><td><div className="employee-directory-person"><span className="employee-directory-avatar">{e.firstName.slice(0,1)}{e.lastName.slice(0,1)}</span><span><strong>{e.firstName} {e.lastName}</strong><small>{e.employeeCode}</small><small>{e.email||e.phone}</small></span></div></td><td>{e.departmentName}</td><td>{e.designation}</td><td>{types[e.employmentType]??e.employmentType}</td><td>{e.locationName}</td><td>{e.joiningDate||"—"}</td><td><span className={"badge "+(e.status==="active"?"badge-success":"badge-neutral")}>{names[e.status]??e.status}</span></td></tr>)}
+   </tbody></table>{filtered.length===0&&<div className="empty-state"><Users size={26}/><strong>{employees.length===0?"No employee records yet":"No matching employees"}</strong><p>{employees.length===0?"Employee records added to this organization will appear here.":"Try another search term or status filter."}</p></div>}</div>
+   <div className="employee-directory-footer">Showing {filtered.length} of {employees.length} employee records</div>
+  </div>
+ </section>;
+}
