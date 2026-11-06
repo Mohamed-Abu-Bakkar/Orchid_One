@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import type { Id } from "@/../convex/_generated/dataModel";
 import { api } from "@/../convex/_generated/api";
 import { CheckCircle2, Clock3, MapPin, XCircle } from "lucide-react";
 
@@ -12,7 +13,7 @@ export function AttendanceExceptionReview() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
-  async function decide(eventId: (typeof items extends (infer T)[] | undefined ? T : never) extends { _id: infer I } ? I : never, decision: "approved" | "rejected") {
+  async function decide(eventId: Id<"attendanceEvents">, decision: "approved" | "rejected") {
     setBusyId(String(eventId));
     setError("");
     try {
