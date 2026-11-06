@@ -494,28 +494,6 @@
 </div>
 </div>
 </div>
-<nav class="w-full flex flex-shrink-0 justify-around items-center px-2 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-surface border-t border-outline-variant z-[95]">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeAtt()">
-<span class="material-symbols-outlined">home</span>
-<span class="text-label-sm font-label-sm mt-1">Home</span>
-</a>
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">fingerprint</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Attendance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
-<span class="material-symbols-outlined">monitoring</span>
-<span class="text-label-sm font-label-sm mt-1">Performance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openRequests()">
-<span class="material-symbols-outlined">pending_actions</span>
-<span class="text-label-sm font-label-sm mt-1">Requests</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
-<span class="material-symbols-outlined">menu</span>
-<span class="text-label-sm font-label-sm mt-1">More</span>
-</a>
-</nav>
 </div>
 </div>
 <!-- Working Hours Screen -->
@@ -693,28 +671,6 @@
 </div>
 <div class="flex flex-col gap-3" id="reqContent"></div>
 </div>
-<nav class="w-full flex justify-around items-center px-2 py-3 bg-surface border-t border-outline-variant">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeRequests()">
-<span class="material-symbols-outlined">home</span>
-<span class="text-label-sm font-label-sm mt-1">Home</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeRequests();openAtt()">
-<span class="material-symbols-outlined">fingerprint</span>
-<span class="text-label-sm font-label-sm mt-1">Attendance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
-<span class="material-symbols-outlined">monitoring</span>
-<span class="text-label-sm font-label-sm mt-1">Performance</span>
-</a>
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">pending_actions</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Requests</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
-<span class="material-symbols-outlined">menu</span>
-<span class="text-label-sm font-label-sm mt-1">More</span>
-</a>
-</nav>
 </div>
 </div>
 <!-- BottomNavBar (Mobile Only) -->
@@ -870,28 +826,6 @@
 <p class="text-label-sm font-label-sm text-[#EA4335] font-semibold mt-2">Deadline: 2 days remaining</p>
 </div>
 </div>
-<nav class="w-full flex justify-around items-center px-2 py-3 bg-surface border-t border-outline-variant">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closePerformance()">
-<span class="material-symbols-outlined">home</span>
-<span class="text-label-sm font-label-sm mt-1">Home</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closePerformance();openAtt()">
-<span class="material-symbols-outlined">fingerprint</span>
-<span class="text-label-sm font-label-sm mt-1">Attendance</span>
-</a>
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">monitoring</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Performance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closePerformance();openRequests()">
-<span class="material-symbols-outlined">pending_actions</span>
-<span class="text-label-sm font-label-sm mt-1">Requests</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
-<span class="material-symbols-outlined">menu</span>
-<span class="text-label-sm font-label-sm mt-1">More</span>
-</a>
-</nav>
 </div>
 </div>
 <!-- Notifications Screen -->
