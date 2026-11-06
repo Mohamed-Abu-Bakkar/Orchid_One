@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireIdentity } from "./lib/auth";
+import { requireAdmin } from "./lib/auth";
 
 const statusValidator = v.union(
   v.literal("active"),
