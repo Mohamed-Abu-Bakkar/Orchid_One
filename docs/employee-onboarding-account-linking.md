@@ -48,3 +48,23 @@ The organization must have at least one active department and one active work lo
 - Confirm account status and role are unchanged by linking.
 - Confirm audit records are written for creation and linking.
 - Test concurrent employee creation for unique codes.
+
+## Location management
+- Organization → Locations lists the caller organization's locations, including inactive drafts.
+- HR can search an address using OpenStreetMap/Nominatim and select a returned place to populate the address and coordinates. The embedded OpenStreetMap preview displays the selected coordinate pin; HR should verify it before saving.
+- Use current GPS requests browser geolocation permission and captures device coordinates. It does not infer or fill the postal address; HR must provide/search the address separately.
+- Geofence radius is explicitly entered in whole metres and validated from 10 through 1,000 metres. No default radius is treated as approved until HR saves it.
+- Save as draft persists configuration while keeping the location inactive. Save & activate is an explicit action; activation requires a non-empty address, valid latitude/longitude, and valid radius.
+- convex/locations.ts scopes list/update operations to the authenticated user's organization and superadmin/supervisor roles. Configuration and activation changes are audit logged.
+- Active locations are returned by employee.listOnboardingOptions; draft locations remain unavailable for employee assignment.
+- Address search requires network access to Nominatim. GPS capture requires HTTPS and user permission. Map tiles/search results are third-party OpenStreetMap services; verify the pin and address against the actual workplace before activation.
+
+## Location configuration QA checklist
+- Search an address and select a result; verify address, coordinates and map marker.
+- Deny GPS permission, grant GPS permission, and simulate unavailable/timeout cases.
+- Verify invalid latitude/longitude and radius values are rejected by the Convex mutation.
+- Save as draft and confirm the location remains absent from onboarding options.
+- Activate a fully configured location and confirm it appears in onboarding options.
+- Confirm a user from another organization cannot read or configure the location.
+- Confirm non-admin roles cannot list or update locations.
+- Confirm each save/activation writes an audit log.
