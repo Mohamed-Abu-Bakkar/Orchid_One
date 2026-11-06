@@ -83,30 +83,51 @@
 
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
-      const latestAccepted = attendance.find(event => event.geofencePassed || event.reviewStatus === "approved");
+      const acceptedEvents = attendance.filter(event => event.geofencePassed || event.reviewStatus === "approved");
+      const latestAccepted = acceptedEvents[0];
       const pendingReview = latest?.reviewStatus === "pending";
-      const checkedIn = !!latestAccepted && (latestAccepted.eventType === "check_in" || latestAccepted.eventType === "break_end");
+      const checkedIn = !!latestAccepted && latestAccepted.eventType !== "check_out";
+      let sessionStart = null;
+      if (checkedIn) {
+        for (const event of acceptedEvents) {
+          if (event.eventType === "check_out") break;
+          if (event.eventType === "check_in") { sessionStart = event; break; }
+        }
+        if (!sessionStart && latestAccepted.eventType === "check_in") sessionStart = latestAccepted;
+      }
+      const sessionStartedAt = sessionStart ? (sessionStart.receivedAt || sessionStart.clientTimestamp) : null;
+      const formatElapsed = milliseconds => {
+        const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+        const seconds = String(totalSeconds % 60).padStart(2, "0");
+        return hours + ":" + minutes + ":" + seconds;
+      };
+      const updateAttendanceTimer = () => {
+        const elapsed = checkedIn && sessionStartedAt ? Date.now() - sessionStartedAt : null;
+        const display = elapsed === null ? "—" : formatElapsed(elapsed);
+        const stat = document.getElementById("statTodayHrs");
+        const ringTime = document.getElementById("ringTime");
+        if (stat) stat.textContent = display;
+        if (ringTime) ringTime.textContent = display;
+      };
+      if (window.__orchidAttendanceTimer) clearInterval(window.__orchidAttendanceTimer);
+      updateAttendanceTimer();
+      if (checkedIn && sessionStartedAt) window.__orchidAttendanceTimer = setInterval(updateAttendanceTimer, 1000);
       const heroLabel = document.getElementById("heroStateLabel");
       if (heroLabel) heroLabel.textContent = pendingReview ? "Attendance awaiting review" : checkedIn ? "Checked in · working" : "You are not checked in yet";
-      text("#heroStateSub", pendingReview ? "Your outside-geofence attempt does not count until approved." : checkedIn ? "Shift active" : "No active attendance session");
+      text("#heroStateSub", pendingReview ? "Your outside-geofence attempt does not count until approved." : checkedIn ? "Elapsed time includes breaks." : "No active attendance session");
       text("#heroBtn", pendingReview ? "Awaiting Review" : checkedIn ? "Check Out" : "Check In");
       text("#attCheckBtn", pendingReview ? "Awaiting Review" : checkedIn ? "Check Out" : "Check In");
-      const attendanceButtons = [document.getElementById("heroBtn"), document.getElementById("attCheckBtn")];
-      attendanceButtons.forEach(button => { if (button) button.disabled = pendingReview; });
+      [document.getElementById("heroBtn"), document.getElementById("attCheckBtn")].forEach(button => { if (button) button.disabled = pendingReview; });
       const ringSub = document.getElementById("ringSub");
-      if (ringSub) ringSub.textContent = checkedIn ? "Checked in" : "Not checked in";
-      if (latest?.eventType === "check_in" && acceptedLatest) {
-        const when = new Date(latest.clientTimestamp);
-        text("#statTodayHrs", "—");
+      if (ringSub) ringSub.textContent = checkedIn ? "Elapsed time" : "Not checked in";
+      if (sessionStart) {
+        const when = new Date(sessionStartedAt);
         text("#statTodaySub", "Checked in · " + when.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
-      } else {
-        text("#statTodayHrs", "—");
-        text("#statTodaySub", "No completed hours recorded");
-      }
+      } else text("#statTodaySub", "No active attendance session");
       const ring = document.getElementById("heroRing");
       if (ring) ring.classList.toggle("done", checkedIn);
-      const ringTime = document.getElementById("ringTime");
-      if (ringTime) ringTime.textContent = "—";
 
       const leaveRequests = workspace.leaveRequests ?? [];
       const reqContent = document.getElementById("reqContent");
@@ -251,8 +272,11 @@
 
   
   window.toggleCheckIn = () => {
-    const latest = window.__orchidWorkspace?.attendance?.[0];
-    const eventType = latest?.eventType === "check_in" || latest?.eventType === "break_end" ? "check_out" : "check_in";
+    const events = window.__orchidWorkspace?.attendance ?? [];
+    const latest = events[0];
+    if (latest?.reviewStatus === "pending") { window.toast?.("Attendance is awaiting supervisor or admin review."); return; }
+    const latestAccepted = events.find(event => event.geofencePassed || event.reviewStatus === "approved");
+    const eventType = latestAccepted && latestAccepted.eventType !== "check_out" ? "check_out" : "check_in";
     if (!navigator.geolocation) {
       window.toast?.("Location services are not available on this device.");
       return;
