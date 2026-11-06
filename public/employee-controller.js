@@ -18,6 +18,24 @@
   };
   const safe = (value) => value == null || value === "" ? "—" : String(value);
 
+  // Register document upload immediately; it must not wait for workspace hydration.
+  window.uploadEmployeeDocument=async()=>{
+        const file=document.getElementById("employeeDocumentFile")?.files?.[0],category=document.getElementById("employeeDocumentCategory")?.value||"",type=document.getElementById("employeeDocumentType")?.value?.trim()||"",message=document.getElementById("employeeDocumentMessage"),button=document.getElementById("employeeDocumentUploadButton");
+        const say=value=>{if(message)message.textContent=value;};if(!file||!type){say("Choose a file and enter its document name.");return;}
+        if(!["application/pdf","image/jpeg","image/png"].includes(file.type)){say("Only PDF, JPG and PNG files are supported.");return;}
+        if(file.size<=0||file.size>15*1024*1024){say("The file must be 15 MB or smaller.");return;}
+        button.disabled=true;button.textContent="Uploading…";say("");
+        try{
+          const start=await fetch("/api/employee/documents/upload-url",{method:"POST",credentials:"same-origin"}),startData=await start.json();if(!start.ok)throw Error(startData.error||"Unable to start upload.");
+          const uploaded=await fetch(startData.url,{method:"POST",headers:{"Content-Type":file.type},body:file});if(!uploaded.ok)throw Error("The file upload failed.");
+          const stored=await uploaded.json();
+          const saved=await fetch("/api/employee/documents",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({storageId:stored.storageId,documentCategory:category,documentType:type,originalFileName:file.name,mimeType:file.type})});
+          const result=await saved.json();if(!saved.ok)throw Error(result.error||"Unable to save document details.");
+          window.toast?.("Document submitted for verification.");window.closeUploadSheet();window.location.reload();
+        }catch(error){say(error instanceof Error?error.message:"Unable to upload document.");}
+        finally{button.disabled=false;button.textContent="Upload for review";}
+      };
+
   async function hydrate() {
     try {
       const response = await fetch("/api/employee/workspace", { credentials: "same-origin", cache: "no-store" });
@@ -135,22 +153,7 @@
         const label = document.getElementById("employeeDocumentFileLabel");
         if (label) label.textContent = employeeDocumentFile.files?.[0]?.name || "Tap to choose a document";
       });
-      window.uploadEmployeeDocument=async()=>{
-        const file=document.getElementById("employeeDocumentFile")?.files?.[0],category=document.getElementById("employeeDocumentCategory")?.value||"",type=document.getElementById("employeeDocumentType")?.value?.trim()||"",message=document.getElementById("employeeDocumentMessage"),button=document.getElementById("employeeDocumentUploadButton");
-        const say=value=>{if(message)message.textContent=value;};if(!file||!type){say("Choose a file and enter its document name.");return;}
-        if(!["application/pdf","image/jpeg","image/png"].includes(file.type)){say("Only PDF, JPG and PNG files are supported.");return;}
-        if(file.size<=0||file.size>15*1024*1024){say("The file must be 15 MB or smaller.");return;}
-        button.disabled=true;button.textContent="Uploading…";say("");
-        try{
-          const start=await fetch("/api/employee/documents/upload-url",{method:"POST",credentials:"same-origin"}),startData=await start.json();if(!start.ok)throw Error(startData.error||"Unable to start upload.");
-          const uploaded=await fetch(startData.url,{method:"POST",headers:{"Content-Type":file.type},body:file});if(!uploaded.ok)throw Error("The file upload failed.");
-          const stored=await uploaded.json();
-          const saved=await fetch("/api/employee/documents",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({storageId:stored.storageId,documentCategory:category,documentType:type,originalFileName:file.name,mimeType:file.type})});
-          const result=await saved.json();if(!saved.ok)throw Error(result.error||"Unable to save document details.");
-          window.toast?.("Document submitted for verification.");window.closeUploadSheet();window.location.reload();
-        }catch(error){say(error instanceof Error?error.message:"Unable to upload document.");}
-        finally{button.disabled=false;button.textContent="Upload for review";}
-      };
+
 
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
