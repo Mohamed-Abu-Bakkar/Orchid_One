@@ -192,3 +192,173 @@ export const listForAdmin = query({
     }));
   },
 });
+
+
+/** HR lookup data for the onboarding form. */
+export const listOnboardingOptions = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireIdentity(ctx);
+    if (user.role !== "superadmin" && user.role !== "supervisor") throw new Error("FORBIDDEN");
+    const [departments, locations] = await Promise.all([
+      ctx.db.query("departments").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
+      ctx.db.query("locations").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
+    ]);
+    return {
+      departments: departments.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
+      locations: locations.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
+    };
+  },
+});
+
+/** Registered employee-role accounts and their current employee link. */
+export const listAccountsForLinking = query({
+  args: {},
+  handler: async (ctx) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const users = await ctx.db.query("users")
+      .withIndex("by_org", q => q.eq("organizationId", admin.organizationId))
+      .order("desc")
+      .collect();
+    return await Promise.all(users.map(async account => {
+      const employee = account.employeeId ? await ctx.db.get(account.employeeId) : null;
+      return {
+        _id: account._id,
+        fullName: account.fullName ?? "",
+        email: account.email ?? "",
+        role: account.role,
+        accountStatus: account.accountStatus ?? "active",
+        createdAt: account.createdAt,
+        employeeId: account.employeeId ?? null,
+        employeeName: employee && employee.organizationId === admin.organizationId
+          ? `${employee.firstName} ${employee.lastName ?? ""}`.trim()
+          : null,
+        employeeCode: employee && employee.organizationId === admin.organizationId ? employee.employeeCode : null,
+      };
+    }));
+  },
+});
+
+/** Creates an employee and optionally links an already registered account atomically. */
+export const createForAdmin = mutation({
+  args: {
+    firstName: v.string(),
+    lastName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.string(),
+    designation: v.string(),
+    employmentType: v.union(v.literal("permanent"), v.literal("hourly"), v.literal("daily"), v.literal("contract")),
+    status: v.union(v.literal("active"), v.literal("inactive"), v.literal("pending"), v.literal("archived")),
+    joiningDate: v.string(),
+    departmentId: v.id("departments"),
+    locationId: v.id("locations"),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const firstName = args.firstName.trim();
+    const lastName = args.lastName?.trim();
+    const phone = args.phone.trim();
+    const designation = args.designation.trim();
+    const email = args.email?.trim().toLowerCase();
+    if (!firstName || !phone || !designation || !args.joiningDate) throw new Error("REQUIRED_EMPLOYEE_FIELDS");
+    const [department, location] = await Promise.all([
+      ctx.db.get(args.departmentId),
+      ctx.db.get(args.locationId),
+    ]);
+    if (!department || department.organizationId !== admin.organizationId || !department.isActive) throw new Error("INVALID_DEPARTMENT");
+    if (!location || location.organizationId !== admin.organizationId || !location.isActive) throw new Error("INVALID_LOCATION");
+
+    // Scan the organization's retained records so archived codes are never reused.
+    const existingEmployees = await ctx.db.query("employees")
+      .withIndex("by_org_code", q => q.eq("organizationId", admin.organizationId))
+      .collect();
+    const highest = existingEmployees.reduce((max, employee) => {
+      const match = /^ORC-(\d+)$/.exec(employee.employeeCode);
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0);
+    const employeeCode = `ORC-${String(highest + 1).padStart(4, "0")}`;
+    if (existingEmployees.some(employee => employee.employeeCode === employeeCode)) throw new Error("EMPLOYEE_CODE_CONFLICT");
+
+    let linkedUser = null as Awaited<ReturnType<typeof ctx.db.get<"users">>> | null;
+    if (args.userId) {
+      linkedUser = await ctx.db.get(args.userId);
+      if (!linkedUser || linkedUser.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+      if (linkedUser.role !== "employee") throw new Error("ONLY_EMPLOYEE_ACCOUNTS_CAN_BE_LINKED");
+      if (linkedUser.employeeId) throw new Error("ACCOUNT_ALREADY_LINKED");
+    }
+
+    const now = Date.now();
+    const employeeId = await ctx.db.insert("employees", {
+      organizationId: admin.organizationId,
+      locationId: args.locationId,
+      employeeCode,
+      firstName,
+      lastName: lastName || undefined,
+      email: email || undefined,
+      phone,
+      departmentId: args.departmentId,
+      designation,
+      employmentType: args.employmentType,
+      status: args.status,
+      joiningDate: args.joiningDate,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (linkedUser) {
+      await ctx.db.patch(linkedUser._id, { employeeId });
+      await ctx.db.insert("auditLogs", {
+        organizationId: admin.organizationId,
+        actorUserId: admin._id,
+        action: "user.employee.linked",
+        entityType: "user",
+        entityId: String(linkedUser._id),
+        metadata: { employeeId: String(employeeId), employeeCode, source: "onboarding" },
+        createdAt: now,
+      });
+    }
+    await ctx.db.insert("auditLogs", {
+      organizationId: admin.organizationId,
+      actorUserId: admin._id,
+      action: "employee.created",
+      entityType: "employee",
+      entityId: String(employeeId),
+      metadata: { employeeCode, linkedUserId: linkedUser ? String(linkedUser._id) : null },
+      createdAt: now,
+    });
+    return { employeeId, employeeCode, linked: Boolean(linkedUser) };
+  },
+});
+
+/** Links an existing account to an existing employee without changing login status or role. */
+export const linkAccount = mutation({
+  args: { userId: v.id("users"), employeeId: v.id("employees") },
+  handler: async (ctx, args) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const [account, employee] = await Promise.all([ctx.db.get(args.userId), ctx.db.get(args.employeeId)]);
+    if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+    if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
+    if (account.role !== "employee") throw new Error("ONLY_EMPLOYEE_ACCOUNTS_CAN_BE_LINKED");
+    if (account.employeeId) throw new Error("ACCOUNT_ALREADY_LINKED");
+    const linkedUsers = await ctx.db.query("users")
+      .withIndex("by_org_employee", q => q.eq("organizationId", admin.organizationId).eq("employeeId", employee._id))
+      .collect();
+    if (linkedUsers.length) throw new Error("EMPLOYEE_ALREADY_LINKED");
+    const now = Date.now();
+    await ctx.db.patch(account._id, { employeeId: employee._id });
+    await ctx.db.insert("auditLogs", {
+      organizationId: admin.organizationId,
+      actorUserId: admin._id,
+      action: "user.employee.linked",
+      entityType: "user",
+      entityId: String(account._id),
+      metadata: { employeeId: String(employee._id), employeeCode: employee.employeeCode, source: "user-management" },
+      createdAt: now,
+    });
+    return { linked: true };
+  },
+});
