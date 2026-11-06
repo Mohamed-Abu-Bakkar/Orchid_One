@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
+import type { Id } from "@/../convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
 import { EmployeePolicies } from "@/components/employee/employee-policies";
 
@@ -83,8 +84,8 @@ export function EmployeePortal() {
       const uploadUrl = await generateDocumentUploadUrl({});
       const response = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
       if (!response.ok) throw new Error("The file could not be uploaded. Please try again.");
-      const result = await response.json() as { storageId: string };
-      await saveMyDocument({ storageId: result.storageId as never, documentType, originalFileName: file.name, mimeType: file.type });
+      const result = await response.json() as { storageId: Id<"_storage"> };
+      await saveMyDocument({ storageId: result.storageId, documentType, originalFileName: file.name, mimeType: file.type });
       setDocumentMessage("Document uploaded. It is now awaiting HR verification.");
     } catch (cause) {
       setDocumentMessage(cause instanceof Error ? cause.message : "Unable to upload this document.");
