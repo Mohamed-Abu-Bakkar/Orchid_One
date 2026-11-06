@@ -219,6 +219,20 @@ export const adminRegister = query({
       current.push({ name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute });
       shiftMap.set(key, current);
     }));
+    const defaultShiftCache = new Map<string, any>();
+    const shiftsForEmployeeDate = async (employee: any, key: string) => {
+      const assigned = shiftMap.get(key) ?? [];
+      if (assigned.length || !employee.defaultShiftId) return assigned;
+      const id = String(employee.defaultShiftId);
+      let shift = defaultShiftCache.get(id);
+      if (shift === undefined) {
+        shift = await ctx.db.get(employee.defaultShiftId);
+        defaultShiftCache.set(id, shift ?? null);
+      }
+      return shift && shift.organizationId === admin.organizationId
+        ? [{ name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute }]
+        : [];
+    };
     const groups = new Map<string, any>();
     for (const event of filtered) {
       const employee = employeeMap.get(String(event.employeeId));
@@ -234,7 +248,7 @@ export const adminRegister = query({
           employeeCode: employee.employeeCode,
           departmentId: employee.departmentId,
           locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
-          scheduledShifts: shiftMap.get(key) ?? [],
+          scheduledShifts: await shiftsForEmployeeDate(employee, key),
           workDate,
           firstCheckInAt: null as number | null,
           lastCheckOutAt: null as number | null,
