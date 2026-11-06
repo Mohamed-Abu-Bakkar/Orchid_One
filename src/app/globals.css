@@ -162,3 +162,29 @@
 .location-attribution{margin:12px 0 0}
 @media(max-width:800px){.location-layout{grid-template-columns:1fr}}
 @media(max-width:520px){.location-coordinate-grid{grid-template-columns:1fr}.location-action-row,.location-save-actions{flex-direction:column}.location-action-row .btn,.location-save-actions .btn{justify-content:center}}
+
+
+/* Monthly wage configuration */
+.wage-scope-note{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;margin:0 0 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface-secondary);color:var(--text-secondary);font-size:12px;line-height:1.55}
+.wage-scope-note svg{flex-shrink:0;color:var(--primary)}
+.wage-scope-note strong{color:var(--text-primary)}
+.wage-config-grid{align-items:start}
+.wage-form{display:grid;gap:14px}
+.wage-form .policy-field .input,.wage-line .policy-field .input{width:100%;min-height:40px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);font:inherit;font-size:12px}
+.wage-component-heading,.wage-line-top,.wage-employee-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.wage-component-heading>strong{font-size:12px;color:var(--text-primary)}
+.wage-line{display:grid;gap:11px;padding:13px;border:1px solid var(--border);border-radius:9px;background:var(--surface-secondary)}
+.wage-line-top>strong{font-size:12px;color:var(--text-primary)}
+.wage-component-list,.wage-record-list{display:grid;gap:0}
+.wage-component-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--border)}
+.wage-component-item>div{display:grid;gap:4px;flex:1;min-width:0}
+.wage-component-item strong,.wage-employee-heading strong{font-size:12px;color:var(--text-primary)}
+.wage-component-item small,.wage-employee-heading small{font-size:10px;color:var(--text-tertiary)}
+.wage-component-item .section-link{display:inline-flex;align-items:center;gap:4px}
+.wage-employee-record{padding:15px 16px;border-bottom:1px solid var(--border)}
+.wage-employee-record:last-child{border-bottom:0}
+.wage-employee-heading{margin-bottom:10px}
+.wage-employee-heading>div{display:grid;gap:4px}
+.wage-history-row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;padding:8px 0;font-size:11px;color:var(--text-secondary);border-top:1px dashed var(--border)}
+.wage-history-row strong{color:var(--text-primary)}
+@media(max-width:760px){.wage-history-row{grid-template-columns:1fr 1fr}.wage-history-row span:last-child{grid-column:1/-1}.wage-component-item{align-items:flex-start;flex-wrap:wrap}.wage-component-item>div{flex-basis:100%}}
