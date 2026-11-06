@@ -199,3 +199,17 @@
 .pwa-install-action{border:0;border-radius:8px;padding:9px 13px;background:#5a285f;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .pwa-install-dismiss{width:28px;height:28px;border:0;background:transparent;color:#756b77;font-size:22px;line-height:1;cursor:pointer}
 @media(min-width:700px){.pwa-install-banner{left:auto;right:24px;bottom:24px;margin:0}}
+
+
+/* Attendance register */
+.attendance-event-history{min-width:250px;max-width:460px;padding:10px 0;white-space:normal}
+.attendance-event-row{display:grid;grid-template-columns:minmax(120px,1fr) auto;gap:5px 12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.attendance-event-row:last-child{border-bottom:0}
+.attendance-event-row>div{display:grid;gap:3px}
+.attendance-event-row strong{font-size:12px;text-transform:capitalize;color:var(--text-primary)}
+.attendance-event-row small{font-size:10px;color:var(--text-tertiary)}
+.attendance-event-row>small{grid-column:1/-1}
+.employee-directory-table details summary{cursor:pointer;color:var(--primary);font-size:11px;font-weight:700;list-style-position:inside}
+.employee-directory-toolbar .policy-field{min-width:145px}
+.employee-directory-toolbar .policy-field .input{min-height:40px}
+@media(max-width:900px){.employee-directory-toolbar{flex-wrap:wrap}.employee-directory-toolbar .policy-field{flex:1 1 170px}.employee-directory-search{flex:1 1 100%}}
