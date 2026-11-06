@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
+import { EmployeePolicies } from "@/components/employee/employee-policies";
 
 type Tab = "home" | "attendance" | "documents" | "requests" | "more";
 
