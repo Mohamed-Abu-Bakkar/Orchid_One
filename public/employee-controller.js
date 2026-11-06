@@ -386,3 +386,6 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once: true });
   else hydrate();
 })();
+
+/* PWA: register the static-asset service worker (Next pages register via RegisterSW). */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function(){});

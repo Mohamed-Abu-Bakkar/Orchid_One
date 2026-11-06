@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     .replaceAll('href="assets/', 'href="/employee/assets/')
     .replaceAll('src="assets/', 'src="/employee/assets/')
     .replace('<link rel="manifest" href="manifest.json"/>', '<link rel="manifest" href="/manifest.json" crossorigin="use-credentials"/>')
+    .replace("</head>", '<meta name="theme-color" content="#5a285f"/>\n  </head>')
     .replace("</body>", '<script src="/employee-controller.js" defer></script>\n</body>');
 
   return new NextResponse(html, {
