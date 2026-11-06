@@ -211,6 +211,47 @@ export const listOnboardingOptions = query({
   },
 });
 
+
+/** Creates an active department for the caller's organization. */
+export const createDepartmentForAdmin = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const name = args.name.trim().replace(/\\s+/g, " ");
+    if (!name || name.length > 80) throw new Error("INVALID_DEPARTMENT_NAME");
+    const existing = await ctx.db.query("departments").withIndex("by_org_code", q => q.eq("organizationId", admin.organizationId)).collect();
+    if (existing.some(item => item.name.trim().toLowerCase() === name.toLowerCase())) throw new Error("DEPARTMENT_ALREADY_EXISTS");
+    const baseCode = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "DEPT";
+    const used = new Set(existing.map(item => item.code.toUpperCase()));
+    let code = baseCode, suffix = 2;
+    while (used.has(code)) code = `${baseCode.slice(0, 20)}-${suffix++}`;
+    const departmentId = await ctx.db.insert("departments", { organizationId: admin.organizationId, name, code, isActive: true });
+    await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: "department.created", entityType: "department", entityId: String(departmentId), metadata: { name, code, source: "employee-onboarding" }, createdAt: Date.now() });
+    return { departmentId, name };
+  },
+});
+
+/** Creates an inactive location draft until address and GPS geofence setup is completed. */
+export const createLocationDraftForAdmin = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const name = args.name.trim().replace(/\\s+/g, " ");
+    if (!name || name.length > 80) throw new Error("INVALID_LOCATION_NAME");
+    const existing = await ctx.db.query("locations").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
+    if (existing.some(item => item.name.trim().toLowerCase() === name.toLowerCase())) throw new Error("LOCATION_ALREADY_EXISTS");
+    const baseCode = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "LOC";
+    const used = new Set(existing.map(item => item.code.toUpperCase()));
+    let code = baseCode, suffix = 2;
+    while (used.has(code)) code = `${baseCode.slice(0, 20)}-${suffix++}`;
+    const locationId = await ctx.db.insert("locations", { organizationId: admin.organizationId, name, code, address: "", latitude: 0, longitude: 0, geofenceRadiusM: 0, isActive: false, createdAt: Date.now() });
+    await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: "location.draft_created", entityType: "location", entityId: String(locationId), metadata: { name, code, requiresAddressAndGeofenceSetup: true, source: "employee-onboarding" }, createdAt: Date.now() });
+    return { locationId, name, isActive: false };
+  },
+});
+
 /** Registered employee-role accounts and their current employee link. */
 export const listAccountsForLinking = query({
   args: {},
