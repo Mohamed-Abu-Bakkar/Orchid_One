@@ -184,16 +184,18 @@ export const adminRegister = query({
             .order("desc").take(5001),
       ctx.db.query("shiftAssignments")
         .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
-        .collect(),
+        .take(5001),
       args.employeeId
         ? ctx.db.query("attendanceDays")
             .withIndex("by_employee_date", q => q.eq("employeeId", args.employeeId!).gte("workDate", args.fromDate).lte("workDate", args.toDate))
-            .collect()
+            .take(5001)
         : ctx.db.query("attendanceDays")
             .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
-            .collect(),
+            .take(5001),
     ]);
     const hasMoreEvents = events.length > 5000;
+    const hasMoreSchedules = scheduledShifts.length > 5000;
+    const hasMoreDays = attendanceDays.length > 5000;
     const filtered = events.slice(0, 5000);
     const filteredDays = args.employeeId ? attendanceDays.filter(day => day.employeeId === args.employeeId) : attendanceDays;
     const employeeIds = [...new Set([...filtered.map(event => String(event.employeeId)), ...filteredDays.map(day => String(day.employeeId))])];
@@ -298,7 +300,7 @@ export const adminRegister = query({
       toDate: args.toDate,
       timezone: organization.timezone,
       totalEvents: filtered.length,
-      truncated: hasMoreEvents,
+      truncated: hasMoreEvents || hasMoreSchedules || hasMoreDays,
       recordedDays: rows.length,
       pendingReviews: rows.reduce((sum, row) => sum + row.pendingReviews, 0),
       outsideGeofenceEvents: rows.reduce((sum, row) => sum + row.outsideGeofenceEvents, 0),
