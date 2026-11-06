@@ -15,7 +15,12 @@ function clock(value: number | null, timeZone: string) {
   }).format(new Date(value));
 }
 
-function duration(value: number | null | undefined) {\n  if (value === null || value === undefined) return "—";\n  return Math.floor(value / 60) + "h " + String(value % 60).padStart(2, "0") + "m";\n}\n\nfunction stamp(value: number, timeZone: string) {
+function duration(value: number | null | undefined) {
+  if (value === null || value === undefined) return "—";
+  return Math.floor(value / 60) + "h " + String(value % 60).padStart(2, "0") + "m";
+}
+
+function stamp(value: number, timeZone: string) {
   return new Intl.DateTimeFormat("en-IN", {
     timeZone, day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
@@ -56,7 +61,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
         row.eventCount, row.outsideGeofenceEvents, row.pendingReviews,
       ]),
     ];
-    const csv = lines.map(line => line.map(quote).join(",")).join("\r\n");
+    const csv = lines.map(line => line.map(quote).join(",")).join("\r
+");
     const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
@@ -106,6 +112,9 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
                   <td>{row.scheduledShifts.length ? row.scheduledShifts.map((shift: any) => shift.name + " (" + String(Math.floor(shift.startMinute / 60)).padStart(2, "0") + ":" + String(shift.startMinute % 60).padStart(2, "0") + ")").join(", ") : "Not scheduled"}</td>
                   <td>{clock(row.firstCheckInAt, timezone)}</td>
                   <td>{clock(row.lastCheckOutAt, timezone)}</td>
+                  <td>{duration(row.payableMinutes)}</td>
+                  <td>{duration(row.breakMinutes)}</td>
+                  <td><span className="badge badge-neutral">{String(row.status).replace("_", " ")}</span></td>
                   <td>{row.eventCount}</td>
                   <td>{row.outsideGeofenceEvents ? <span className="badge badge-warning"><MapPin size={12}/> {row.outsideGeofenceEvents} exception(s)</span> : <span className="badge badge-success">Passed</span>}</td>
                   <td>{row.pendingReviews ? <span className="badge badge-warning">{row.pendingReviews} pending</span> : row.rejectedEvents ? <span className="badge badge-warning">{row.rejectedEvents} rejected</span> : <span className="badge badge-neutral">{row.status === "present" ? "Recorded" : "Events only"}</span>}</td>
