@@ -21,13 +21,14 @@ export function EmployeeOnboarding() {
   const [joiningDate,setJoiningDate]=useState("");
   const [departmentId,setDepartmentId]=useState("");
   const [locationId,setLocationId]=useState("");
+  const [defaultShiftId,setDefaultShiftId]=useState("");
   const [userId,setUserId]=useState("");
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
   const [optionMessage,setOptionMessage]=useState("");
   const unlinked=useMemo(()=>accounts?.filter(a=>!a.employeeId&&a.role==="employee")??[],[accounts]);
-  const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDepartmentId("");setLocationId("");setUserId("");};
+  const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDepartmentId("");setLocationId("");setDefaultShiftId("");setUserId("");};
 
   const submit=async(e:FormEvent<HTMLFormElement>)=>{
     e.preventDefault();setSaving(true);setError("");setMessage("");
@@ -36,7 +37,7 @@ export function EmployeeOnboarding() {
         firstName,lastName:lastName||undefined,email:email||undefined,phone,designation,
         employmentType:employmentType as "permanent"|"hourly"|"daily"|"contract",
         status:status as "active"|"inactive"|"pending"|"archived",joiningDate,
-        departmentId:departmentId as any,locationId:locationId as any,userId:userId?userId as any:undefined
+        departmentId:departmentId as any,locationId:locationId as any,defaultShiftId:defaultShiftId?defaultShiftId as any:undefined,userId:userId?userId as any:undefined
       });
       setMessage(`Employee ${result.employeeCode} created${result.linked?" and account linked":". Account can be linked later from User Management."}`);
       reset();
@@ -58,6 +59,7 @@ export function EmployeeOnboarding() {
           <label className="policy-field">Joining date *<input className="input" type="date" required value={joiningDate} onChange={e=>setJoiningDate(e.target.value)} /></label>
           <div className="onboarding-master-field"><CreatableSelect label="Department *" value={departmentId} options={options.departments.map(d=>({value:d._id,label:d.name}))} placeholder="Select department" required onChange={setDepartmentId} createLabel="Create department" onCreate={async name=>{const result=await createDepartment({name});setOptionMessage(`Department "${result.name}" created and selected.`);return {value:result.departmentId,label:result.name};}}/></div>
           <div className="onboarding-master-field"><CreatableSelect label="Work location *" value={locationId} options={options.locations.map(l=>({value:l._id,label:l.name}))} placeholder="Select configured location" required onChange={setLocationId} createLabel="Create location draft" onCreate={async name=>{await createLocationDraft({name});setOptionMessage(`Location "${name}" created as a draft. Configure its address and GPS geofence in Locations before assigning employees.`);return null;}}/><p className="t-caption text-tertiary">New locations remain inactive until address and GPS geofence details are configured.</p></div>
+          <label className="policy-field">Default shift (optional)<select className="input" value={defaultShiftId} onChange={e=>setDefaultShiftId(e.target.value)}><option value="">No default shift yet</option>{options.shifts.map(s=><option key={s._id} value={s._id}>{s.name}</option>)}</select></label>
           <label className="policy-field">Employment type *<select className="input" value={employmentType} onChange={e=>setEmploymentType(e.target.value)}><option value="permanent">Permanent</option><option value="hourly">Hourly</option><option value="daily">Daily</option><option value="contract">Contract</option></select></label>
           <label className="policy-field">Employee status *<select className="input" value={status} onChange={e=>setStatus(e.target.value)}><option value="pending">Pending</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
         </div>
