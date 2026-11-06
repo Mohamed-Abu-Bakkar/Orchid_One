@@ -1,0 +1,28 @@
+"use client";
+import { useState } from "react";
+import { Plus, X, Check } from "lucide-react";
+
+export type CreatableOption={value:string;label:string};
+type Props={
+ label:string;value:string;options:CreatableOption[];placeholder:string;
+ onChange:(value:string)=>void;
+ onCreate:(name:string)=>Promise<CreatableOption>;
+ createLabel?:string;disabled?:boolean;required?:boolean;
+};
+export function CreatableSelect({label,value,options,placeholder,onChange,onCreate,createLabel="Create new",disabled,required}:Props){
+ const [creating,setCreating]=useState(false),[name,setName]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ async function create(){setBusy(true);setError("");try{const option=await onCreate(name.trim());onChange(option.value);setName("");setCreating(false);}catch(e){setError(e instanceof Error?e.message:"Unable to create option.");}finally{setBusy(false);}}
+ return <div className="col gap-2">
+  <label className="policy-field">{label}
+   <select className="input" value={value} required={required} disabled={disabled} onChange={e=>{if(e.target.value==="__create_new__"){setCreating(true);setError("");}else onChange(e.target.value);}}>
+    <option value="">{placeholder}</option>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}<option value="__create_new__">＋ {createLabel}</option>
+   </select>
+  </label>
+  {creating&&<div className="card p-3 col gap-2" role="group" aria-label={createLabel}>
+   <div className="row justify-between"><strong className="t-body-sm">{createLabel}</strong><button type="button" className="icon-btn" aria-label="Cancel creation" onClick={()=>{setCreating(false);setName("");setError("");}}><X size={15}/></button></div>
+   <input className="input" autoFocus maxLength={80} value={name} onChange={e=>setName(e.target.value)} placeholder={label+" name"} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(name.trim())void create();}}}/>
+   {error&&<p className="auth-error" role="alert">{error}</p>}
+   <div className="row gap-2"><button type="button" className="btn btn-primary btn-sm" disabled={!name.trim()||busy} onClick={()=>void create()}><Check size={14}/>{busy?"Creating…":"Create & select"}</button><button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={()=>setCreating(false)}>Cancel</button></div>
+  </div>}
+ </div>;
+}
