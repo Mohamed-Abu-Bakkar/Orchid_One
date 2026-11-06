@@ -56,6 +56,7 @@ function Dashboard({go}:{go:(id:string)=>void}) {
   ["Active employees",data.employee.active,"Currently active",UserRound],
   ["Present today",data.attendance.present,"Attendance day records",Activity],
   ["Late today",data.attendance.late,"Recorded late status",Clock3],
+  ["On leave today",data.leave.approvedToday,"Approved leave requests covering today",CalendarDays],
   ["Payable hours",minutes(data.attendance.payableMinutes),"From attendance-day records",Clock3],
   ["Attendance exceptions",data.attendance.exception,"Exception and pending-review statuses",CheckCircle2],
  ];
