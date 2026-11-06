@@ -449,7 +449,15 @@ export function EmployeeMockReplica() {
 <span className="text-body-lg font-body-lg font-semibold text-on-surface">This week</span>
 <span className="text-label-sm font-label-sm text-on-surface-variant">10 – 16 Aug</span>
 </div>
-<div className="flex items-end gap-2 h-32" id="weekBars"></div>
+<div className="flex items-end gap-2 h-32" id="weekBars">
+<div className="bar main" style={{height:"97.59036144578313%"}} title="8.1 hrs"></div>
+<div className="bar main" style={{height:"97.59036144578313%"}} title="8.1 hrs"></div>
+<div className="bar main" style={{height:"100%"}} title="8.3 hrs"></div>
+<div className="bar main" style={{height:"91.56626506024095%"}} title="7.6 hrs"></div>
+<div className="bar main" style={{height:"89.1566265060241%"}} title="7.4 hrs"></div>
+<div className="bar " style={{height:"0%"}} title="0 hrs"></div>
+<div className="bar " style={{height:"0%"}} title="0 hrs"></div>
+</div>
 <div className="flex justify-between mt-2">
 <span className="text-label-sm font-label-sm text-on-surface-variant">Mon</span>
 <span className="text-label-sm font-label-sm text-on-surface-variant">Tue</span>
@@ -485,7 +493,13 @@ export function EmployeeMockReplica() {
 </div>
 {/* Daily breakdown */}
 <p className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-4">Daily breakdown</p>
-<div className="bento-card p-0 overflow-hidden mt-2" id="dailyHours"></div>
+<div className="bento-card p-0 overflow-hidden mt-2" id="dailyHours">
+<div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer"><div className="flex flex-col flex-1 min-w-0"><p className="text-body-md font-body-md font-medium text-on-surface">Mon · 10 Aug</p><p className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In 05:58 · Out 14:02</p></div><div className="flex flex-col items-end flex-shrink-0"><p className="text-body-md font-body-md font-medium text-on-surface">8.1 hrs</p><p className="text-label-sm font-label-sm text-on-surface-variant">₹977</p></div></div>
+<div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer"><div className="flex flex-col flex-1 min-w-0"><p className="text-body-md font-body-md font-medium text-on-surface">Tue · 11 Aug</p><p className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In 05:54 · Out 14:00</p></div><div className="flex flex-col items-end flex-shrink-0"><p className="text-body-md font-body-md font-medium text-on-surface">8.1 hrs</p><p className="text-label-sm font-label-sm text-on-surface-variant">₹977</p></div></div>
+<div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer"><div className="flex flex-col flex-1 min-w-0"><p className="text-body-md font-body-md font-medium text-on-surface">Wed · 12 Aug</p><p className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In 05:50 · Out 14:05</p></div><div className="flex flex-col items-end flex-shrink-0"><p className="text-body-md font-body-md font-medium text-on-surface">8.3 hrs</p><p className="text-label-sm font-label-sm text-on-surface-variant">₹1005</p></div></div>
+<div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer"><div className="flex flex-col flex-1 min-w-0"><p className="text-body-md font-body-md font-medium text-on-surface">Thu · 13 Aug</p><p className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In 06:20 · Out 14:00</p></div><div className="flex flex-col items-end flex-shrink-0"><p className="text-body-md font-body-md font-medium text-on-surface">7.6 hrs</p><p className="text-label-sm font-label-sm text-on-surface-variant">₹912</p></div></div>
+<div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer"><div className="flex flex-col flex-1 min-w-0"><p className="text-body-md font-body-md font-medium text-on-surface">Fri · 14 Aug</p><p className="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In — · Out —</p></div><div className="flex flex-col items-end flex-shrink-0"><p className="text-body-md font-body-md font-medium text-on-surface">— hrs</p><p className="text-label-sm font-label-sm text-on-surface-variant">—</p></div></div>
+</div>
 </div>
 </div>
 </div>
