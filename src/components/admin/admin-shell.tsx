@@ -49,15 +49,15 @@ function Dashboard({go}:{go:(id:string)=>void}) {
  const data=useQuery(api.dashboard.getOverview,{});
  if(data===undefined)return <section className="sec"><p className="sub">Loading dashboard records…</p></section>;
  const minutes=(value:number)=>`${Math.floor(value/60)}h ${value%60}m`;
- const dateLabel=(value:string)=>new Date(value+`T00:00:00`).toLocaleDateString(undefined,{day:"numeric",month:"short"});
+ const dateLabel=(value:string)=>new Date(value+`T00:00:00Z`).toLocaleDateString(undefined,{day:"numeric",month:"short",timeZone:"UTC"});
  const activityLabel=(value:string)=>value.replace(/[._]/g," ").replace(/\b\w/g,char=>char.toUpperCase());
  const stats=[
   ["Total employees",data.employee.total,"All employee records",Users],
   ["Active employees",data.employee.active,"Currently active",UserRound],
   ["Present today",data.attendance.present,"Attendance day records",Activity],
   ["Late today",data.attendance.late,"Recorded late status",Clock3],
-  ["On leave today",data.leave.approvedToday,"Approved requests covering today",CalendarDays],
-  ["Pending reviews",data.approvals.workflowRequests+data.leave.pendingRequests+data.overtime.pendingRequests+data.approvals.geofenceExceptions,"Across configured request sources",CheckCircle2],
+  ["Payable hours",minutes(data.attendance.payableMinutes),"From attendance-day records",Clock3],
+  ["Attendance exceptions",data.attendance.exception,"Exception and pending-review statuses",CheckCircle2],
  ];
  return <section className="sec">
   <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Workforce overview</h2><p className="sub">Live records from Orchid Flowers · {dateLabel(data.today)}</p></div><div className="page-actions"><button className="btn btn-primary" onClick={()=>go("employees")}><Plus size={16}/> Employee directory</button></div></div>
