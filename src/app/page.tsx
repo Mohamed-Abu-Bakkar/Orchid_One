@@ -1,3 +1,5 @@
-import { EmployeeMockReplica } from "@/components/employee/employee-mock-replica";
+import { redirect } from "next/navigation";
 
-export default function Home() { return <EmployeeMockReplica />; }
+export default function Home() {
+  redirect("/employee");
+}
