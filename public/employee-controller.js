@@ -25,6 +25,10 @@
         window.location.replace("/login?next=/");
         return;
       }
+      if (response.status === 403) {
+        window.location.replace("/profile-pending");
+        return;
+      }
       if (!response.ok) throw new Error("Unable to load employee workspace");
       const { workspace, policies, work } = await response.json();
       window.__orchidWorkspace = workspace;

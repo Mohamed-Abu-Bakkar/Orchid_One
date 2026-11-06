@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConvexAuth, useMutation } from "convex/react";
+import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 
 type State = "checking" | "pending" | "error";
@@ -10,6 +12,8 @@ export function ProfilePendingClient() {
   const router = useRouter();
   const [state, setState] = useState<State>("checking");
   const [email, setEmail] = useState<string | null>(null);
+  const ensureUserProfile = useMutation(api.account.ensureUserProfile);
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
 
   const check = useCallback(async () => {
     setState("checking");
@@ -34,6 +38,10 @@ export function ProfilePendingClient() {
         router.replace("/login");
         return;
       }
+      if (workspaceResponse.status === 403) {
+        setState("pending");
+        return;
+      }
       if (!workspaceResponse.ok) {
         setState("error");
         return;
@@ -52,6 +60,13 @@ export function ProfilePendingClient() {
   useEffect(() => {
     void check();
   }, [check]);
+
+  // Backfill the account profile row for sessions created before provisioning
+  // was available, so HR can see and link this account from User Management.
+  useEffect(() => {
+    if (convexAuthLoading || !isAuthenticated) return;
+    ensureUserProfile({}).catch(() => {});
+  }, [convexAuthLoading, isAuthenticated, ensureUserProfile]);
 
   async function signOut() {
     try {

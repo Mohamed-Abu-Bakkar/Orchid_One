@@ -18,6 +18,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[employee workspace api]", error);
+    if (error instanceof Error && error.message.includes("FORBIDDEN")) {
+      return NextResponse.json({ error: "PROFILE_NOT_LINKED" }, { status: 403 });
+    }
     return NextResponse.json({ error: "WORKSPACE_UNAVAILABLE" }, { status: 500 });
   }
 }

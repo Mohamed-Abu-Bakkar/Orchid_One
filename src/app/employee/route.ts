@@ -1,15 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/auth-server";
+import { employeeDashboardGuard } from "@/lib/employee-dashboard-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.redirect(new URL("/login?next=/employee", request.url));
-  }
+  const guard = await employeeDashboardGuard(request, "/employee");
+  if (guard) return guard;
 
   const filePath = join(process.cwd(), "OrchidHRM", "employee_mobileApp.html");
   let html = await readFile(filePath, "utf8");
