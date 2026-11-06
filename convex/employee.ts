@@ -176,7 +176,7 @@ export const listForAdmin = query({
         status: employee.status,
         joiningDate: employee.joiningDate,
         departmentName: department?.name ?? "Unassigned",
-        locationName: location?.name ?? "Unassigned",
+        locationName: location?.name ?? "Unassigned",\n        defaultShiftName: defaultShift?.name ?? "Not assigned",
       };
     }));
   },
