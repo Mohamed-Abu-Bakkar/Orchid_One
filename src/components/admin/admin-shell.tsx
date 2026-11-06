@@ -17,7 +17,8 @@ import orchidLogo from "../../../OrchidHRM/assets/android/launchericon-192x192.p
 import { Activity, Bell, BookOpen, Building2, CalendarDays, ChartNoAxesCombined, CheckCircle2, Clock3, Download, Flower2, Folder, GraduationCap, Grid2X2, Megaphone, MapPin, Menu, Plus, Search, Settings, Shield, Star, UserRound, Users, Wallet, X, Zap } from "lucide-react";
 
 const groups = [
- {group:"Overview",items:[["dashboard","Dashboard",Grid2X2],["notifications","Notifications",Bell,"4"]]},
+//  {group:"Overview",items:[["dashboard","Dashboard",Grid2X2],["notifications","Notifications",Bell,"4"]]},
+{group:"Overview",items:[["dashboard","Dashboard",Grid2X2]]},
  {group:"People",items:[["employees","Employees",Users],["recruitment","Recruitment",UserRound,"2"],["onboarding","Onboarding",GraduationCap,"1"],["documents","Documents",Folder]]},
  {group:"Workforce",items:[["attendance","Attendance",Activity],["attendance-exceptions","Geofence Exceptions",MapPin],["hourly","Hourly Workforce",Clock3],["overtime","Overtime",Zap,"2"],["wages","Wage Management",Wallet],["shifts","Shifts & Schedules",CalendarDays],["teams-work","Teams & Work",Users]]},
  {group:"Employee Experience",items:[["leave","Leave",CalendarDays,"2"],["performance","Performance",Star]]},
