@@ -8,6 +8,7 @@ import { Plus, Wallet, UserRound, Settings2, Archive, CheckCircle2 } from "lucid
 type Line = { componentId: string; amount: string; reason: string };
 const money = (paise?: number) => paise === undefined ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(paise / 100);
 const toPaise = (value: string) => Math.round(Number(value) * 100);
+const localDate = () => { const date = new Date(); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-"); };
 
 export function WageManagement() {
   const data = useQuery(api.wages.listForAdmin, {});
@@ -15,7 +16,7 @@ export function WageManagement() {
   const setComponentActive = useMutation(api.wages.setSalaryComponentActive);
   const saveCompensation = useMutation(api.wages.saveEmployeeCompensation);
   const [employeeId, setEmployeeId] = useState("");
-  const [effectiveFrom, setEffectiveFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [effectiveFrom, setEffectiveFrom] = useState(localDate);
   const [fixedAmount, setFixedAmount] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [componentName, setComponentName] = useState("");
@@ -48,6 +49,7 @@ export function WageManagement() {
     if (!employeeId) { setError("Select a permanent employee."); return; }
     const fixed = fixedAmount.trim() === "" ? undefined : toPaise(fixedAmount);
     if (fixed !== undefined && (!Number.isFinite(fixed) || fixed < 0)) { setError("Enter a valid fixed monthly amount."); return; }
+    if (lines.some(line => line.amount.trim() === "")) { setError("Enter an amount for every selected salary component."); return; }
     const payload = lines.map(line => ({ componentId: line.componentId as any, amountPaise: toPaise(line.amount), ...(line.reason.trim() ? { reason: line.reason.trim() } : {}) }));
     if (payload.some(line => !Number.isSafeInteger(line.amountPaise) || line.amountPaise < 0)) { setError("Enter a valid amount for every salary component."); return; }
     if (fixed === undefined && payload.length === 0) { setError("Enter a fixed monthly amount or add at least one component."); return; }
