@@ -1,5 +1,5 @@
-import AdminShell from "@/components/admin/admin-shell";
+import { EmployeePortal } from "@/components/employee/employee-portal";
 
 export default function Home() {
-  return <AdminShell />;
+  return <EmployeePortal />;
 }
