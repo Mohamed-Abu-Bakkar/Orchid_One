@@ -48,6 +48,61 @@
       const roleLine = document.querySelector("h2.text-headline-lg-mobile + p");
       if (roleLine) roleLine.textContent = [p.designation, workspace.department?.name, workspace.location?.name].filter(Boolean).join(" · ");
 
+      const teamDate = document.getElementById("employeeTeamDate");
+      if (teamDate) teamDate.textContent = new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+      const teamContent = document.getElementById("employeeTeamContent");
+      if (teamContent) {
+        teamContent.replaceChildren();
+        if (!work?.team) {
+          empty(teamContent, "You are not assigned to a team for today's shift.");
+        } else {
+          const team = work.team;
+          const heading = document.createElement("div");
+          heading.className = "flex items-center justify-between gap-2 mb-3";
+          const title = document.createElement("p");
+          title.className = "text-body-md font-body-md font-semibold text-on-surface";
+          title.textContent = team.name;
+          const shiftName = document.createElement("span");
+          shiftName.className = "text-label-sm font-label-sm text-primary";
+          shiftName.textContent = team.shiftName;
+          heading.append(title, shiftName);
+          teamContent.append(heading);
+          const memberList = document.createElement("div");
+          memberList.className = "flex flex-col gap-3";
+          const members = team.members ?? [];
+          if (!members.length) empty(memberList, "No team members are assigned for this date.");
+          members.forEach((member, index) => {
+            const row = document.createElement("div");
+            row.className = "flex items-center gap-3 p-2 rounded-lg bg-surface-container-low";
+            const initials = document.createElement("div");
+            initials.className = "w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-label-md flex-shrink-0";
+            initials.textContent = (member.name || "?").split(/\\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+            const details = document.createElement("div");
+            details.className = "flex-1 min-w-0";
+            const name = document.createElement("p");
+            name.className = "text-body-md font-body-md font-semibold text-on-surface";
+            name.textContent = member.name || "Employee";
+            if (member.employeeCode && p.employeeCode && member.employeeCode === p.employeeCode) {
+              const you = document.createElement("span");
+              you.className = "text-label-sm text-primary font-semibold";
+              you.textContent = " (You)";
+              name.append(you);
+            }
+            const code = document.createElement("p");
+            code.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5";
+            code.textContent = member.employeeCode ? "Employee ID · " + member.employeeCode : "Team member";
+            details.append(name, code);
+            row.append(initials, details);
+            memberList.append(row);
+          });
+          teamContent.append(memberList);
+          const count = document.createElement("p");
+          count.className = "text-label-sm font-label-sm text-on-surface-variant mt-3";
+          count.textContent = members.length + (members.length === 1 ? " member" : " members");
+          teamContent.append(count);
+        }
+      }
+
       const workCard=document.createElement("section");workCard.className="bento-card mt-4";const workTitle=document.createElement("h3");workTitle.className="text-title-md font-title-md font-semibold text-primary mb-3";workTitle.textContent="My team & work";workCard.append(workTitle);
       if(work?.team){const teamLine=document.createElement("p");teamLine.className="text-body-md font-body-md text-on-surface";teamLine.textContent=work.team.name+" · "+work.team.shiftName;workCard.append(teamLine);const teamMembers=document.createElement("p");teamMembers.className="text-label-sm font-label-sm text-on-surface-variant mt-1 mb-3";teamMembers.textContent="Team: "+work.team.members.map(m=>m.name).join(", ");workCard.append(teamMembers);}else{const none=document.createElement("p");none.className="text-label-sm font-label-sm text-on-surface-variant";none.textContent="No team assigned today.";workCard.append(none);}
       (work?.assignments??[]).forEach(task=>{const card=document.createElement("article");card.className="rounded-lg border border-outline-variant/50 p-3 mb-3";const heading=document.createElement("p");heading.className="text-body-md font-body-md font-semibold text-on-surface";heading.textContent=task.title;const detail=document.createElement("p");detail.className="text-label-sm font-label-sm text-on-surface-variant mt-1";detail.textContent=task.category+" · "+task.priority;const select=document.createElement("select");select.className="input mt-2";[["not_started","Not Started"],["in_progress","In Progress"],["completed","Completed"]].forEach(([value,label])=>{const o=document.createElement("option");o.value=value;o.textContent=label;select.append(o);});select.value=task.status;select.addEventListener("change",async()=>{const previous=task.status;select.disabled=true;try{const response=await fetch("/api/employee/work",{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({progressId:task.progressId,status:select.value})});const payload=await response.json();if(!response.ok)throw Error(payload.error||"Unable to update");task.status=select.value;window.toast?.("Work status updated.");}catch(error){select.value=previous;window.toast?.(error instanceof Error?error.message:"Unable to update work.");}finally{select.disabled=false;}});card.append(heading,detail,select);workCard.append(card);});
