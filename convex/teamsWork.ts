@@ -6,7 +6,6 @@ const dateOk=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s);
 const statuses=v.union(v.literal("not_started"),v.literal("in_progress"),v.literal("completed"));
 const dayNumber=(date:string)=>Math.floor(Date.parse(date+"T00:00:00Z")/86400000);
 const dateFromDay=(day:number)=>new Date(day*86400000).toISOString().slice(0,10);
-const dateFromDay=(day:number)=>new Date(day*86400000).toISOString().slice(0,10);
 const shiftInterval=(shift:{startMinute:number;endMinute:number},day:number)=>({start:day*1440+shift.startMinute,end:day*1440+(shift.endMinute<=shift.startMinute?shift.endMinute+1440:shift.endMinute)});
 const overlaps=(a:{start:number;end:number},b:{start:number;end:number})=>a.start<b.end&&b.start<a.end;
 
