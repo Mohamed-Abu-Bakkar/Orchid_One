@@ -215,3 +215,21 @@
 @media(max-width:900px){.employee-directory-toolbar{flex-wrap:wrap}.employee-directory-toolbar .policy-field{flex:1 1 170px}.employee-directory-search{flex:1 1 100%}}
 
 .oe-attendance-pending{margin:10px 0 0;padding:10px 12px;border-radius:9px;background:#fff2d9;color:#7b4b00;font-size:12px;line-height:1.5}
+
+
+/* Self-service password change */
+.orchid-password-backdrop{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:18px;background:rgba(25,16,28,.58)}
+.orchid-password-dialog{width:min(100%,460px);max-height:min(90vh,720px);overflow:auto;padding:22px;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:0 24px 70px rgba(20,10,24,.25);color:var(--text-primary)}
+.orchid-password-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+.orchid-password-heading h2{margin:5px 0;font-size:20px;font-weight:700}
+.orchid-password-heading p:last-child{margin:0;color:var(--text-secondary);font-size:12px;line-height:1.5}
+.orchid-password-form{display:grid;gap:13px}
+.orchid-password-form label{display:grid;gap:6px;color:var(--text-secondary);font-size:12px;font-weight:600}
+.orchid-password-form input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);font:inherit;font-size:13px}
+.orchid-password-form input:focus{outline:2px solid var(--primary);outline-offset:1px}
+.orchid-password-hint{margin:0;color:var(--text-tertiary);font-size:11px;line-height:1.5}
+.orchid-password-message{margin:0;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5}
+.orchid-password-message.error{background:#fff0f0;color:#9a2525}
+.orchid-password-message.success{background:#edf8ef;color:#236b35}
+.orchid-password-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:5px}
+@media(max-width:520px){.orchid-password-dialog{padding:18px}.orchid-password-actions{flex-direction:column-reverse}.orchid-password-actions .btn{justify-content:center}}
