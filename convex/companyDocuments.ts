@@ -70,10 +70,14 @@ export const listForAdmin = query({
   args: {},
   handler: async (ctx) => {
     const admin = await requireAdmin(ctx);
-    return ctx.db.query("companyDocuments")
+    const documents = await ctx.db.query("companyDocuments")
       .withIndex("by_org_uploaded", q => q.eq("organizationId", admin.organizationId))
       .order("desc")
       .collect();
+    return Promise.all(documents.map(async document => ({
+      ...document,
+      url: await ctx.storage.getUrl(document.storageId),
+    })));
   },
 });
 
