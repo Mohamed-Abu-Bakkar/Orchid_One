@@ -89,7 +89,7 @@ function Dashboard({go}:{go:(id:string)=>void}) {
     {data.work.assignments===0?<div className="empty-state"><CheckCircle2 size={24}/><p>No work assignments recorded for today.</p></div>:<div className="employee-directory-stats">{[["Assignments",data.work.assignments],["Completed",data.work.completed],["In progress",data.work.inProgress],["Not started",data.work.notStarted]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}</div>}
    </div></div>
    <div className="panel"><div className="panel-head"><span className="t-h3">Recruitment</span><button className="section-link" onClick={()=>go("recruitment")}>Open</button></div><div className="panel-body">
-    {data.recruitment.candidates===0?<div className="empty-state"><UserRound size={24}/><p>No candidate records.</p></div>:<div className="employee-directory-stats">{[["Candidates",data.recruitment.candidates],["Active pipeline",data.recruitment.activePipeline],["Interviews",data.recruitment.interviews]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}</div>}
+    {data.recruitment.candidates===0?<div className="empty-state"><UserRound size={24}/><p>No candidate records.</p></div>:<div className="employee-directory-stats">{[["Candidates",data.recruitment.candidates],["Interviews",data.recruitment.interviews]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}</div>}
    </div></div>
   </div>
   <div className="grid-2-equal mt-6">
