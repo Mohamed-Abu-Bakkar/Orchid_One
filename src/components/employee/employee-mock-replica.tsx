@@ -19,7 +19,7 @@ export function EmployeeMockReplica() {
   if(key==="pushScreen"&&arg){const next=arg as Screen;setScreen(next);setNavStack(stack=>[...stack,next]);return}
   if(screenMap[key]){const next=screenMap[key];setScreen(next);setNavStack(stack=>["openAtt","openRequests","openPerformance","openNotifications","openHelpdesk","openMore","openPolicies"].includes(key)?[next]:[...stack,next]);return}
   if(key.startsWith("close")){const next=key==="closeNewRequest"?"reqScreen":key==="closePolicyDetail"?"polScreen":"home";setScreen(next);setNavStack(stack=>stack.length>1?stack.slice(0,-1):["home"]);return}
-  if(key==="goBack"){setNavStack(stack=>{const next=stack.length>1?stack.slice(0,-1):["home"];setScreen(next[next.length-1]);return next});return}
+  if(key==="goBack"){setNavStack(stack=>{const next:Screen[]=stack.length>1?stack.slice(0,-1):["home"];setScreen(next[next.length-1]);return next});return}
   if(key==="openUploadSheet"){setSheet("uploadSheet");return}
   if(key==="closeUploadSheet"||key==="closeFeedbackSheet"){setSheet(null);return}
   if(key==="openFeedbackSheet"){setSheet("feedbackSheet");return}
