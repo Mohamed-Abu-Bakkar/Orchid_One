@@ -24,10 +24,15 @@ export function EmployeePortal() {
     session.data && account?.status === "active" && account.role === "employee" ? {} : "skip",
   );
   const punch = useMutation(api.attendance.recordPunch);
+  const generateDocumentUploadUrl = useMutation(api.employee.generateDocumentUploadUrl);
+  const saveMyDocument = useMutation(api.employee.saveMyDocument);
   const [tab, setTab] = useState<Tab>("home");
   const [panel, setPanel] = useState<Panel>("home");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [documentBusy, setDocumentBusy] = useState(false);
+  const [documentType, setDocumentType] = useState("Identity");
+  const [documentMessage, setDocumentMessage] = useState("");
   const [clock, setClock] = useState(() => new Date());
 
   useEffect(() => {
@@ -63,6 +68,29 @@ export function EmployeePortal() {
     await authClient.signOut();
     router.replace("/login");
     router.refresh();
+  }
+
+  async function uploadDocument(file: File) {
+    if (!workspace?.linked) return;
+    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    if (!allowed.includes(file.type)) {
+      setDocumentMessage("Choose a PDF, JPG or PNG document.");
+      return;
+    }
+    setDocumentBusy(true);
+    setDocumentMessage("");
+    try {
+      const uploadUrl = await generateDocumentUploadUrl({});
+      const response = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      if (!response.ok) throw new Error("The file could not be uploaded. Please try again.");
+      const result = await response.json() as { storageId: string };
+      await saveMyDocument({ storageId: result.storageId as never, documentType, originalFileName: file.name, mimeType: file.type });
+      setDocumentMessage("Document uploaded. It is now awaiting HR verification.");
+    } catch (cause) {
+      setDocumentMessage(cause instanceof Error ? cause.message : "Unable to upload this document.");
+    } finally {
+      setDocumentBusy(false);
+    }
   }
 
   async function recordAttendance() {
@@ -167,7 +195,7 @@ export function EmployeePortal() {
 
         {panel === "requests" && <><div className="oe-page-heading"><p className="oe-eyebrow">MY WORK</p><h1>My Requests</h1><p>Track leave and overtime requests.</p></div><div className="oe-stats-grid oe-request-stats"><div className="oe-stat-card"><span>Pending</span><strong>{workspace?.linked ? workspace.leaveRequests.filter(item => item.status === "pending").length : "—"}</strong><small>Awaiting review</small></div><div className="oe-stat-card"><span>Approved</span><strong>{workspace?.linked ? workspace.leaveRequests.filter(item => item.status === "approved").length : "—"}</strong><small>Approved leave requests</small></div></div><div className="oe-section-heading"><h2>Leave requests</h2></div><div className="oe-list-card">{workspace?.linked && workspace.leaveRequests.length ? workspace.leaveRequests.map(item => <div className="oe-list-row" key={item._id}><span className="oe-list-icon">▤</span><span className="oe-list-copy"><strong>{dateLabel(item.fromDate)} – {dateLabel(item.toDate)}</strong><small>{item.requestedDays} day(s) · {item.reason}</small></span><span className={`oe-status ${item.status === "approved" ? "oe-status-success" : item.status === "rejected" ? "oe-status-danger" : "oe-status-warning"}`}>{item.status}</span></div>) : <div className="oe-empty"><span>▤</span><strong>No requests submitted</strong><p>Your leave requests will appear here once submitted through the configured HR workflow.</p></div>}</div><div className="oe-section-heading"><h2>Leave balances</h2></div><div className="oe-list-card">{workspace?.linked && workspace.leaveBalances.length ? workspace.leaveBalances.map(item => <div className="oe-list-row" key={item._id}><span className="oe-list-icon">◫</span><span className="oe-list-copy"><strong>{item.leaveTypeName}</strong><small>{item.periodYear} · {item.used} used · {item.pending} pending</small></span><span className="oe-status oe-status-neutral">{Math.max(0, item.allocated - item.used - item.pending)} left</span></div>) : <div className="oe-empty"><strong>No leave balance configured</strong><p>HR has not assigned leave balances to your profile.</p></div>}</div></>}
 
-        {panel === "documents" && <><div className="oe-page-heading"><p className="oe-eyebrow">MY RECORDS</p><h1>Documents</h1><p>Your employee documents and verification status.</p></div><div className="oe-list-card">{workspace?.linked && workspace.documents.length ? workspace.documents.map(doc => <div className="oe-list-row" key={doc._id}><span className="oe-list-icon">▧</span><span className="oe-list-copy"><strong>{doc.documentType}</strong><small>{doc.originalFileName} · {dateLabel(doc.uploadedAt)}</small></span><span className={`oe-status ${doc.reviewStatus === "verified" ? "oe-status-success" : doc.reviewStatus === "rejected" ? "oe-status-danger" : "oe-status-warning"}`}>{doc.reviewStatus}</span>{doc.url && <a className="oe-open-link" href={doc.url} target="_blank" rel="noreferrer">Open</a>}</div>) : <div className="oe-empty"><span>▧</span><strong>No documents available</strong><p>Documents uploaded and assigned by HR will appear here.</p></div>}</div></>}
+        {panel === "documents" && <><div className="oe-page-heading"><p className="oe-eyebrow">MY RECORDS</p><h1>Documents</h1><p>Your employee documents and verification status.</p></div>{workspace?.linked && <section className="oe-upload-card"><div><strong>Upload a document</strong><p>PDF, JPG or PNG · submitted files are sent to HR for verification.</p></div><select value={documentType} onChange={event => setDocumentType(event.target.value)} aria-label="Document type"><option>Identity</option><option>Education</option><option>Address proof</option><option>Other</option></select><label className="oe-upload-button">{documentBusy ? "Uploading…" : "Choose file"}<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" disabled={documentBusy} onChange={event => { const file = event.target.files?.[0]; if (file) void uploadDocument(file); event.currentTarget.value = ""; }} /></label>{documentMessage && <p className="oe-feedback" role="status">{documentMessage}</p>}</section>}<div className="oe-list-card">{workspace?.linked && workspace.documents.length ? workspace.documents.map(doc => <div className="oe-list-row" key={doc._id}><span className="oe-list-icon">▧</span><span className="oe-list-copy"><strong>{doc.documentType}</strong><small>{doc.originalFileName} · {dateLabel(doc.uploadedAt)}</small></span><span className={`oe-status ${doc.reviewStatus === "verified" ? "oe-status-success" : doc.reviewStatus === "rejected" ? "oe-status-danger" : "oe-status-warning"}`}>{doc.reviewStatus}</span>{doc.url && <a className="oe-open-link" href={doc.url} target="_blank" rel="noreferrer">Open</a>}</div>) : <div className="oe-empty"><span>▧</span><strong>No documents available</strong><p>Documents uploaded and assigned by HR will appear here.</p></div>}</div></>}
 
         {panel === "payslips" && <><div className="oe-page-heading"><p className="oe-eyebrow">MY PAY</p><h1>Payslips & wages</h1><p>View wage records published for your employee profile.</p></div><div className="oe-list-card">{workspace?.linked && workspace.wageRecords.length ? workspace.wageRecords.map(item => <div className="oe-list-row" key={item._id}><span className="oe-list-icon">₹</span><span className="oe-list-copy"><strong>{item.period ? `${dateLabel(item.period.fromDate)} – ${dateLabel(item.period.toDate)}` : "Wage period"}</strong><small>{item.payableUnits} payable units · {item.status.replace("_", " ")}</small></span><strong className="oe-wage-value">{money(item.totalPaise)}</strong></div>) : <div className="oe-empty"><span>₹</span><strong>No wage records published</strong><p>Your payslips will appear here after a wage period has been calculated and released.</p></div>}</div></>}
 
