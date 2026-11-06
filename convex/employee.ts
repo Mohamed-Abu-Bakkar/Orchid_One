@@ -150,3 +150,45 @@ export const saveMyDocument = mutation({
     return documentId;
   },
 });
+
+
+/**
+ * Admin directory: returns every employee status for the caller's organization.
+ * Personal and compensation-sensitive fields are intentionally excluded.
+ */
+export const listForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireIdentity(ctx);
+    if (user.role !== "superadmin" && user.role !== "supervisor") {
+      throw new Error("FORBIDDEN");
+    }
+
+    const employees = await ctx.db
+      .query("employees")
+      .withIndex("by_org_code", (q) => q.eq("organizationId", user.organizationId))
+      .order("asc")
+      .collect();
+
+    return await Promise.all(employees.map(async (employee) => {
+      const [department, location] = await Promise.all([
+        ctx.db.get(employee.departmentId),
+        ctx.db.get(employee.locationId),
+      ]);
+      return {
+        _id: employee._id,
+        employeeCode: employee.employeeCode,
+        firstName: employee.firstName,
+        lastName: employee.lastName ?? "",
+        email: employee.email ?? "",
+        phone: employee.phone,
+        designation: employee.designation,
+        employmentType: employee.employmentType,
+        status: employee.status,
+        joiningDate: employee.joiningDate,
+        departmentName: department?.name ?? "Unassigned",
+        locationName: location?.name ?? "Unassigned",
+      };
+    }));
+  },
+});
