@@ -166,6 +166,15 @@
       text("#ringSub", checkedIn ? "Working time" : "Today"); text("#statTodaySub", checkedIn ? "Currently working" : "Recorded today");
       const ring = document.getElementById("heroRing"); if (ring) ring.classList.toggle("done", checkedIn);
       const shift = workspace.shift, shiftLabel = document.getElementById("employeeShiftLabel");
+      const formatShiftTime = (minute) => {
+        if (typeof minute !== "number" || !Number.isFinite(minute)) return "—";
+        const normalized = ((minute % 1440) + 1440) % 1440;
+        return String(Math.floor(normalized / 60)).padStart(2, "0") + ":" + String(normalized % 60).padStart(2, "0");
+      };
+      text("#employeeShiftName", shift?.name ?? "No shift assigned");
+      text("#employeeShiftHours", shift ? formatShiftTime(shift.startMinute) + " – " + formatShiftTime(shift.endMinute) : "—");
+      text("#employeeShiftBreak", shift && typeof shift.breakMinutes === "number" ? shift.breakMinutes + " min" : "—");
+      text("#employeeShiftCheckout", shift ? formatShiftTime(shift.endMinute) : "—");
       if (shiftLabel) shiftLabel.textContent = shift ? shift.name + " · " + [shift.startMinute, shift.endMinute].map(value => String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0")).join(" – ") : "No shift assigned today";
       const clockDate = () => { const now = new Date(); text("#heroClock", now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })); text("#heroDate", now.toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })); };
       clockDate(); if (window.__orchidClockTimer) clearInterval(window.__orchidClockTimer); window.__orchidClockTimer = setInterval(clockDate, 1000);
