@@ -22,7 +22,7 @@ export function EmployeePortal() {
   const account = useQuery(api.account.getMyAccountStatus, session.data ? {} : "skip");
   const workspace = useQuery(
     api.employee.myWorkspace,
-    session.data && account?.status === "active" && account.role === "employee" ? {} : "skip",
+    session.data && account?.status === "active" && (account.role === "employee" || account.role === "superadmin") ? {} : "skip",
   );
   const punch = useMutation(api.attendance.recordPunch);
   const generateDocumentUploadUrl = useMutation(api.employee.generateDocumentUploadUrl);
@@ -141,7 +141,7 @@ export function EmployeePortal() {
   }
   if (!account) return <main className="auth-page"><section className="auth-card"><h1>Account setup required</h1><p className="auth-subtitle">Your login is valid, but your Orchid account profile is not available. Please contact the system administrator.</p><button className="auth-submit" onClick={signOut}>Sign out</button></section></main>;
   if (account.status === "suspended") { router.replace("/suspended"); return <main className="employee-loading"><p>Opening account status…</p></main>; }
-  if (account.role !== "employee") { router.replace("/admin"); return <main className="employee-loading"><p>Opening your workspace…</p></main>; }
+  if (account.role !== "employee" && account.role !== "superadmin") { router.replace("/admin"); return <main className="employee-loading"><p>Opening your workspace…</p></main>; }
 
   const profile = workspace?.linked ? workspace.profile : null;
   const fullName = profile ? [profile.firstName, profile.lastName].filter(Boolean).join(" ") : session.data.user.name || "Employee";
@@ -157,7 +157,7 @@ export function EmployeePortal() {
       <header className="oe-topbar">
         <div className="oe-topbar-inner">
           <div className="oe-brand-block"><span className="oe-brand">Orchid One</span><span className="oe-identity">{profile?.employeeCode || "Employee"}{workspace?.linked && workspace.department ? ` · ${workspace.department.name}` : ""}</span></div>
-          <div className="oe-top-actions">
+          <div className="oe-top-actions">{account.role === "superadmin" && <button className="oe-secondary-button" type="button" onClick={() => router.push("/admin")}>Admin Dashboard</button>}
             <button className="oe-icon-button oe-notification-button" aria-label="Notifications" onClick={() => open("notifications")}>♧{workspace?.linked && workspace.notifications.some(item => !item.readAt) && <i />}</button>
             <button className="oe-avatar" aria-label="Open profile" onClick={() => open("profile")}>{fullName.split(/\s+/).map(part => part[0]).slice(0, 2).join("").toUpperCase()}</button>
           </div>
