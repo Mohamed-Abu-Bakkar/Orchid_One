@@ -356,7 +356,7 @@
 </div>
 </main>
 <!-- My Documents Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="docsScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="docsScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closeDocs()">
@@ -410,7 +410,7 @@
 </div>
 </div>
 <!-- Attendance Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="attScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="attScreen">
 <div class="flex flex-col h-full">
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex flex-col">
@@ -519,7 +519,7 @@
 </div>
 </div>
 <!-- Working Hours Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="hoursScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="hoursScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closeHours()">
@@ -582,7 +582,7 @@
 </div>
 </div>
 <!-- Payslips Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="payScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="payScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closePayslips()">
@@ -662,7 +662,7 @@
 </div>
 </div>
 <!-- Requests Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="reqScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="reqScreen">
 <div class="flex flex-col h-full">
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex flex-col">
@@ -718,7 +718,7 @@
 </div>
 </div>
 <!-- BottomNavBar (Mobile Only) -->
-<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface dark:bg-surface-container border-t border-outline-variant shadow-lg pb-safe">
+<nav class="fixed bottom-0 w-full z-[95] flex justify-around items-center px-2 py-3 bg-surface dark:bg-surface-container border-t border-outline-variant shadow-lg pb-safe">
 <a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
 <span class="material-symbols-outlined icon-filled">home</span>
 <span class="text-label-sm font-label-sm text-primary font-bold">Home</span>
@@ -741,7 +741,7 @@
 </a>
 </nav>
 <!-- Performance Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="analyticsScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="analyticsScreen">
 <div class="flex flex-col h-full">
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex flex-col">
@@ -895,7 +895,7 @@
 </div>
 </div>
 <!-- Notifications Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="notifScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="notifScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -924,7 +924,7 @@
 </div>
 </div>
 <!-- New Request Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="newReqScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="newReqScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -994,7 +994,7 @@ Submit Request
 </div>
 </div>
 <!-- Helpdesk Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="helpScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="helpScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1071,7 +1071,7 @@ Submit Request
 </div>
 </div>
 <!-- More Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="moreScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="moreScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1200,7 +1200,7 @@ Submit Request
 </div>
 </div>
 <!-- Policies Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="polScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="polScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1224,7 +1224,7 @@ Submit Request
 </div>
 </div>
 <!-- Policy Detail Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="polDetailScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="polDetailScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
