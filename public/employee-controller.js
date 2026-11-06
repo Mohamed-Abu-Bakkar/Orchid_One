@@ -101,19 +101,101 @@
 
       const leaveRequests = workspace.leaveRequests ?? [];
       const reqContent = document.getElementById("reqContent");
-      if (!leaveRequests.length) empty(reqContent, "No leave requests have been submitted.");
+      if (reqContent) {
+        reqContent.replaceChildren();
+        if (!leaveRequests.length) empty(reqContent, "No leave requests have been submitted.");
+        leaveRequests.forEach(request => {
+          const card = document.createElement("article");
+          card.className = "bento-card flex items-center gap-3";
+          const copy = document.createElement("div");
+          copy.className = "flex flex-col flex-1 min-w-0";
+          const title = document.createElement("p");
+          title.className = "text-body-md font-body-md font-medium text-on-surface";
+          const leaveType = workspace.leaveBalances?.find(item => String(item.leaveTypeId) === String(request.leaveTypeId))?.leaveTypeName || "Leave";
+          title.textContent = leaveType + " request";
+          const meta = document.createElement("p");
+          meta.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5";
+          meta.textContent = fmtDate(request.fromDate) + " – " + fmtDate(request.toDate) + " · " + request.requestedDays + " day(s)";
+          copy.append(title, meta);
+          const badge = document.createElement("span");
+          badge.className = "flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold " + (request.status === "approved" ? "bg-[#e6f4ea] text-[#1E8E4E]" : request.status === "rejected" ? "bg-[#fde8e8] text-[#B3261E]" : "bg-secondary-fixed text-secondary");
+          badge.textContent = request.status;
+          card.append(copy, badge);
+          reqContent.append(card);
+        });
+      }
+
       const dailyHours = document.getElementById("dailyHours");
-      if (dailyHours && !attendance.length) empty(dailyHours, "No attendance records are available yet.");
+      if (dailyHours) empty(dailyHours, attendance.length ? "Attendance events are available in the attendance screen." : "No attendance records are available yet.");
+      const weekBars = document.getElementById("weekBars");
+      if (weekBars) empty(weekBars, "Working-hour totals are not calculated from raw punch events.");
 
       const wageRecords = workspace.wageRecords ?? [];
       const payScreen = document.getElementById("payScreen");
-      if (payScreen && !wageRecords.length) {
-        const content = payScreen.querySelector(".grid, .flex.flex-col.gap-3");
-        if (content) empty(content, "No payslips are available yet.");
+      if (payScreen) {
+        const body = payScreen.querySelector(".flex-1.overflow-y-auto");
+        if (body) {
+          body.replaceChildren();
+          if (!wageRecords.length) empty(body, "No payslips are available yet.");
+          wageRecords.forEach(record => {
+            const card = document.createElement("article");
+            card.className = "bento-card";
+            const title = document.createElement("p");
+            title.className = "text-body-md font-body-md font-semibold text-primary";
+            title.textContent = record.period ? fmtDate(record.period.fromDate) + " – " + fmtDate(record.period.toDate) : "Wage record";
+            const amount = document.createElement("p");
+            amount.className = "text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2";
+            amount.textContent = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(record.totalPaise / 100);
+            const status = document.createElement("p");
+            status.className = "text-label-sm font-label-sm text-on-surface-variant mt-1";
+            status.textContent = "Status: " + record.status;
+            card.append(title, amount, status);
+            body.append(card);
+          });
+        }
       }
 
       const notificationList = document.getElementById("notifList");
-      if (!(workspace.notifications ?? []).length) empty(notificationList, "You have no notifications.");
+      if (notificationList) {
+        notificationList.replaceChildren();
+        const notifications = workspace.notifications ?? [];
+        if (!notifications.length) empty(notificationList, "You have no notifications.");
+        notifications.forEach(item => {
+          const card = document.createElement("article");
+          card.className = "bento-card";
+          const title = document.createElement("p");
+          title.className = "text-body-md font-body-md font-semibold text-on-surface";
+          title.textContent = item.title;
+          const body = document.createElement("p");
+          body.className = "text-label-sm font-label-sm text-on-surface-variant mt-1";
+          body.textContent = item.body;
+          const time = document.createElement("p");
+          time.className = "text-label-sm font-label-sm text-on-surface-variant mt-2";
+          time.textContent = fmtDate(item.createdAt);
+          card.append(title, body, time);
+          notificationList.append(card);
+        });
+      }
+
+      const balances = workspace.leaveBalances ?? [];
+      const leaveBalanceTotal = balances.reduce((sum, item) => sum + Math.max(0, item.allocated - item.used), 0);
+      const statCards = document.querySelectorAll("#home .bento-card");
+      statCards.forEach(card => {
+        const label = card.querySelector("p");
+        if (!label) return;
+        if (label.textContent?.toLowerCase().includes("today's hours")) {
+          const value = card.querySelectorAll("p")[1];
+          if (value) value.textContent = "—";
+        }
+        if (label.textContent?.toLowerCase().includes("leave balance")) {
+          const value = card.querySelectorAll("p")[1];
+          if (value) value.textContent = String(leaveBalanceTotal);
+        }
+        if (label.textContent?.toLowerCase().includes("estimated wage")) {
+          const value = card.querySelectorAll("p")[1];
+          if (value) value.textContent = wageRecords.length ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(wageRecords[0].totalPaise / 100) : "—";
+        }
+      });
 
       const policyList = document.getElementById("polList");
       if (policyList) {
