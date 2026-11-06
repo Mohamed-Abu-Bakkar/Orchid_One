@@ -70,6 +70,13 @@ export const setEmployeeDefaultShift=mutation({args:{employeeId:v.id("employees"
  if(a.shiftId){const shift=await ctx.db.get(a.shiftId);if(!shift||shift.organizationId!==u.organizationId||!shift.isActive)throw Error("SHIFT_NOT_AVAILABLE");}
  const previous=employee.defaultShiftId??null;
  await ctx.db.patch(employee._id,{defaultShiftId:a.shiftId??undefined,updatedAt:Date.now()});
+ const memberships=await ctx.db.query("teamMemberships").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id)).collect();
+ for(const membership of memberships.filter(row=>row.isActive)){
+  const dated=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id).eq("workDate",membership.workDate)).collect();
+  if(dated.length)continue;
+  const team=await ctx.db.get(membership.teamId);
+  if(!team||team.shiftId!==a.shiftId)await ctx.db.patch(membership._id,{isActive:false});
+ }
  await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"employee.default_shift_updated",entityType:"employee",entityId:String(employee._id),metadata:{previousShiftId:previous?String(previous):null,newShiftId:a.shiftId?String(a.shiftId):null},createdAt:Date.now()});
  return true;
 }});
