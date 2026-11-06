@@ -12,7 +12,7 @@ export const myWorkspace = query({
     if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") return emptyWorkspace;
     const now = new Date();
     const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(date);
-    const today = dateKey(now), monthStart = today.slice(0, 7) + "-01", monthEnd = today.slice(0, 7) + "-31";
+    const today = dateKey(now), monthStart = today.slice(0, 7) + "-01";
     const dayOffset = (value: string, days: number) => { const date = new Date(value + "T00:00:00Z"); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
     const weekStartDate = new Date(today + "T00:00:00Z"), weekday = (weekStartDate.getUTCDay() + 6) % 7;
     weekStartDate.setUTCDate(weekStartDate.getUTCDate() - weekday);
