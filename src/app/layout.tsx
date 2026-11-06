@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
 import { PwaServiceWorker } from "@/components/pwa-service-worker";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { getToken } from "@/lib/auth-server";
 import "./globals.css";
 
@@ -35,6 +36,7 @@ export default async function RootLayout({
     <html lang="en">
       <body>
         <PwaServiceWorker />
+        <PwaInstallBanner />
         <ConvexClientProvider initialToken={initialToken}>
           {children}
         </ConvexClientProvider>
