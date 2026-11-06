@@ -27,8 +27,8 @@ export const getOverview = query({
     const [
       employees, departments, locations, shifts, attendanceToday, attendanceTrend,
       leaveRequests, overtimeRequests, approvalRequests, attendanceExceptions,
-      candidates, interviews, holidays, assignments, policies, companyDocuments,
-      wagePeriods, wageRecords, notifications, recentAuditLogs,
+      candidates, holidays, assignments, policies, companyDocuments,
+      wagePeriods, notifications, recentAuditLogs,
     ] = await Promise.all([
       ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", admin.organizationId)).collect(),
       ctx.db.query("departments").withIndex("by_org_code", q => q.eq("organizationId", admin.organizationId)).collect(),
@@ -41,13 +41,11 @@ export const getOverview = query({
       ctx.db.query("approvalRequests").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId).eq("status", "pending")).collect(),
       ctx.db.query("attendanceEvents").withIndex("by_org_review_time", q => q.eq("organizationId", admin.organizationId).eq("reviewStatus", "pending")).collect(),
       ctx.db.query("candidates").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId)).collect(),
-      ctx.db.query("interviews").collect(),
       ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("date", today)).order("asc").take(10),
       ctx.db.query("workAssignments").withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).eq("workDate", today)).collect(),
       ctx.db.query("policies").withIndex("by_org_status", q => q.eq("organizationId", admin.organizationId)).collect(),
       ctx.db.query("companyDocuments").withIndex("by_org_uploaded", q => q.eq("organizationId", admin.organizationId)).collect(),
       ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", admin.organizationId)).collect(),
-      ctx.db.query("wageRecords").collect(),
       ctx.db.query("notifications").withIndex("by_user", q => q.eq("userId", admin._id)).order("desc").take(8),
       ctx.db.query("auditLogs").withIndex("by_org_time", q => q.eq("organizationId", admin.organizationId)).order("desc").take(8),
     ]);
@@ -77,17 +75,20 @@ export const getOverview = query({
         exception: rows.filter(row => row.status === "exception" || row.status === "pending_review").length,
       };
     });
-    const orgInterviews = interviews.filter(interview => candidates.some(candidate =>
-      String(candidate._id) === String(interview.candidateId)
-    ));
+    const orgInterviews = (await Promise.all(candidates.map(candidate =>
+      ctx.db.query("interviews").withIndex("by_candidate", q => q.eq("candidateId", candidate._id)).collect()
+    ))).flat();
     const pendingCandidateCount = candidates.filter(candidate =>
       !["rejected", "hired", "joined", "withdrawn"].includes(candidate.status.toLowerCase())
     ).length;
     const orgWagePeriods = new Set(wagePeriods.map(period => String(period._id)));
-    const orgWageRecords = wageRecords.filter(record =>
-      orgWagePeriods.has(String(record.wagePeriodId)) && orgEmployeeIds.has(String(record.employeeId))
-    );
+    const orgWageRecords = (await Promise.all(wagePeriods.map(period =>
+      ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()
+    ))).flat().filter(record => orgEmployeeIds.has(String(record.employeeId)));
     const todayAssignments = assignments.filter(assignment => assignment.isActive);
+    const assignmentProgress = (await Promise.all(todayAssignments.map(assignment =>
+      ctx.db.query("workAssignmentProgress").withIndex("by_assignment", q => q.eq("assignmentId", assignment._id)).collect()
+    ))).flat();
 
     return {
       generatedAt: now,
@@ -127,9 +128,9 @@ export const getOverview = query({
       },
       work: {
         assignments: todayAssignments.length,
-        completed: 0,
-        inProgress: 0,
-        notStarted: 0,
+        completed: assignmentProgress.filter(progress => progress.status === "completed").length,
+        inProgress: assignmentProgress.filter(progress => progress.status === "in_progress").length,
+        notStarted: assignmentProgress.filter(progress => progress.status === "not_started").length,
       },
       policies: {
         published: policies.filter(policy => policy.status === "published").length,
