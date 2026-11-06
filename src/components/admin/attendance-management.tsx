@@ -52,12 +52,13 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
     if (!register || rows.length === 0) return;
     const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
     const lines = [
-      ["Employee", "Employee code", "Date", "Scheduled shifts", "First check-in", "Last check-out", "Event count", "Outside-geofence events", "Pending reviews"],
+      ["Employee", "Employee code", "Date", "Scheduled shifts", "First check-in", "Last check-out", "Payable minutes (stored)", "Break minutes (stored)", "Attendance status", "Event count", "Outside-geofence events", "Pending reviews"],
       ...rows.map((row: any) => [
         row.employeeName, row.employeeCode, row.workDate,
         row.scheduledShifts.map((shift: any) => shift.name).join("; "),
         row.firstCheckInAt === null ? "" : stamp(row.firstCheckInAt, timezone),
         row.lastCheckOutAt === null ? "" : stamp(row.lastCheckOutAt, timezone),
+        row.payableMinutes ?? "", row.breakMinutes ?? "", row.status,
         row.eventCount, row.outsideGeofenceEvents, row.pendingReviews,
       ]),
     ];
