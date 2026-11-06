@@ -282,9 +282,8 @@ export const createForAdmin = mutation({
     const employeeCode = `ORC-${String(highest + 1).padStart(4, "0")}`;
     if (existingEmployees.some(employee => employee.employeeCode === employeeCode)) throw new Error("EMPLOYEE_CODE_CONFLICT");
 
-    let linkedUser = null as Awaited<ReturnType<typeof ctx.db.get<"users">>> | null;
+    const linkedUser = args.userId ? await ctx.db.get(args.userId) : null;
     if (args.userId) {
-      linkedUser = await ctx.db.get(args.userId);
       if (!linkedUser || linkedUser.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
       if (linkedUser.role !== "employee") throw new Error("ONLY_EMPLOYEE_ACCOUNTS_CAN_BE_LINKED");
       if (linkedUser.employeeId) throw new Error("ACCOUNT_ALREADY_LINKED");
