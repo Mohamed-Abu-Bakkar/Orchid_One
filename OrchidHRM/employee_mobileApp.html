@@ -271,11 +271,11 @@
 <div class="absolute inset-0 bg-gradient-to-br from-primary-fixed to-surface opacity-30"></div>
 <div class="w-full z-10 flex items-center justify-between">
 <span class="flex items-center gap-1.5 px-2.5 py-1 bg-secondary-fixed text-on-secondary-fixed rounded-full text-label-sm font-label-sm font-medium">
-<span class="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span>Morning Shift · 06:00 – 14:00
+<span class="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span><span id="employeeShiftLabel">Shift not assigned</span>
 </span>
 </div>
-<p class="z-10 text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold tracking-tight mt-5 font-tabular-nums" id="heroClock">06:00:00</p>
-<p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1" id="heroDate">Thursday, 14 Aug 2026</p>
+<p class="z-10 text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold tracking-tight mt-5 font-tabular-nums" id="heroClock">--:--:--</p>
+<p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1" id="heroDate"></p>
 <div class="z-10 my-7 flex items-center justify-center" id="heroRingWrap">
 <div class="hero-ring" id="heroRing"><span class="material-symbols-outlined text-primary text-[40px] relative z-10" style="font-variation-settings: 'FILL' 0;">fingerprint</span></div>
 </div>
@@ -287,23 +287,23 @@
 <div class="grid grid-cols-2 gap-3">
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Today's hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">0.0</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Not checked in</p>
+<p id="statTodayHrs" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statTodaySub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No attendance summary</p>
 </div>
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Month attendance</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">18 / 22</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">82% attendance</p>
+<p id="statMonthAttendance" class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statMonthAttendanceSub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No monthly summary</p>
 </div>
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Leave balance</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">8</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Casual leave</p>
+<p id="statLeaveBalance" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statLeaveBalanceSub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No leave balance</p>
 </div>
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">This week's wage</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">₹4,800</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">40 hrs · submitted</p>
+<p id="statWeeklyWage" class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statWeeklyWageSub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No approved wage for this week</p>
 </div>
 </div>
 <!-- Quick Actions -->
@@ -328,7 +328,7 @@
 </div>
 <!-- Upcoming -->
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-1">Upcoming</p>
-<div class="bento-card p-0 overflow-hidden">
+<div class="bento-card p-0 overflow-hidden" id="upcomingList">
 <div class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer">
 <div class="flex flex-col flex-1 min-w-0">
 <p class="text-body-md font-body-md font-medium text-on-surface">Independence Day</p>

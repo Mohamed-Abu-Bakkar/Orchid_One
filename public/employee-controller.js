@@ -84,51 +84,60 @@
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
       const acceptedEvents = attendance.filter(event => event.geofencePassed || event.reviewStatus === "approved");
-      const latestAccepted = acceptedEvents[0];
       const pendingReview = latest?.reviewStatus === "pending";
-      const checkedIn = !!latestAccepted && latestAccepted.eventType !== "check_out";
-      let sessionStart = null;
-      if (checkedIn) {
-        for (const event of acceptedEvents) {
-          if (event.eventType === "check_out") break;
-          if (event.eventType === "check_in") { sessionStart = event; break; }
+      const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+      const todayEvents = acceptedEvents.filter(event => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(event.receivedAt || event.clientTimestamp)) === todayKey).sort((x, y) => x.receivedAt - y.receivedAt);
+      const latestToday = todayEvents[todayEvents.length - 1];
+      const checkedIn = !!latestToday && latestToday.eventType !== "check_out";
+      const formatElapsed = milliseconds => { const seconds = Math.max(0, Math.floor(milliseconds / 1000)); return [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60].map(value => String(value).padStart(2, "0")).join(":"); };
+      const calculateTodayMilliseconds = () => {
+        let openWork = null, total = 0;
+        for (const event of todayEvents) {
+          const at = event.receivedAt || event.clientTimestamp;
+          if (event.eventType === "check_in" || event.eventType === "break_end") openWork = at;
+          if ((event.eventType === "break_start" || event.eventType === "check_out") && openWork !== null) { total += Math.max(0, at - openWork); openWork = null; }
         }
-        if (!sessionStart && latestAccepted.eventType === "check_in") sessionStart = latestAccepted;
-      }
-      const sessionStartedAt = sessionStart ? (sessionStart.receivedAt || sessionStart.clientTimestamp) : null;
-      const formatElapsed = milliseconds => {
-        const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-        const seconds = String(totalSeconds % 60).padStart(2, "0");
-        return hours + ":" + minutes + ":" + seconds;
+        if (openWork !== null) total += Math.max(0, Date.now() - openWork);
+        return total;
       };
-      const updateAttendanceTimer = () => {
-        const elapsed = checkedIn && sessionStartedAt ? Date.now() - sessionStartedAt : null;
-        const display = elapsed === null ? "—" : formatElapsed(elapsed);
-        const stat = document.getElementById("statTodayHrs");
-        const ringTime = document.getElementById("ringTime");
-        if (stat) stat.textContent = display;
-        if (ringTime) ringTime.textContent = display;
-      };
+      const updateAttendanceTimer = () => { const display = formatElapsed(calculateTodayMilliseconds()); text("#statTodayHrs", display); text("#ringTime", display); };
       if (window.__orchidAttendanceTimer) clearInterval(window.__orchidAttendanceTimer);
-      updateAttendanceTimer();
-      if (checkedIn && sessionStartedAt) window.__orchidAttendanceTimer = setInterval(updateAttendanceTimer, 1000);
-      const heroLabel = document.getElementById("heroStateLabel");
-      if (heroLabel) heroLabel.textContent = pendingReview ? "Attendance awaiting review" : checkedIn ? "Checked in · working" : "You are not checked in yet";
-      text("#heroStateSub", pendingReview ? "Your outside-geofence attempt does not count until approved." : checkedIn ? "Elapsed time includes breaks." : "No active attendance session");
+      updateAttendanceTimer(); window.__orchidAttendanceTimer = setInterval(updateAttendanceTimer, 1000);
+      text("#heroStateLabel", pendingReview ? "Attendance awaiting review" : checkedIn ? (latestToday.eventType === "break_start" ? "You are on break" : "Checked in · working") : "You are not checked in yet");
+      text("#heroStateSub", pendingReview ? "Your outside-geofence attempt does not count until approved." : checkedIn ? "Working time excludes recorded breaks." : "No active attendance session");
       text("#heroBtn", pendingReview ? "Awaiting Review" : checkedIn ? "Check Out" : "Check In");
       text("#attCheckBtn", pendingReview ? "Awaiting Review" : checkedIn ? "Check Out" : "Check In");
       [document.getElementById("heroBtn"), document.getElementById("attCheckBtn")].forEach(button => { if (button) button.disabled = pendingReview; });
-      const ringSub = document.getElementById("ringSub");
-      if (ringSub) ringSub.textContent = checkedIn ? "Elapsed time" : "Not checked in";
-      if (sessionStart) {
-        const when = new Date(sessionStartedAt);
-        text("#statTodaySub", "Checked in · " + when.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
-      } else text("#statTodaySub", "No active attendance session");
-      const ring = document.getElementById("heroRing");
-      if (ring) ring.classList.toggle("done", checkedIn);
-
+      text("#ringSub", checkedIn ? "Working time" : "Today"); text("#statTodaySub", checkedIn ? "Currently working" : "Recorded today");
+      const ring = document.getElementById("heroRing"); if (ring) ring.classList.toggle("done", checkedIn);
+      const shift = workspace.shift, shiftLabel = document.getElementById("employeeShiftLabel");
+      if (shiftLabel) shiftLabel.textContent = shift ? shift.name + " · " + [shift.startMinute, shift.endMinute].map(value => String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0")).join(" – ") : "No shift assigned today";
+      const clockDate = () => { const now = new Date(); text("#heroClock", now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })); text("#heroDate", now.toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })); };
+      clockDate(); if (window.__orchidClockTimer) clearInterval(window.__orchidClockTimer); window.__orchidClockTimer = setInterval(clockDate, 1000);
+      const summary = workspace.attendanceSummary;
+      text("#statMonthAttendance", summary?.scheduledDays ? summary.attendedDays + " / " + summary.scheduledDays : "—");
+      text("#statMonthAttendanceSub", summary?.scheduledDays ? (summary.percentage ?? 0) + "% attendance" : "No scheduled shifts this month");
+      const balances = workspace.leaveBalances ?? [];
+      const availableLeave = balances.reduce((sum, item) => sum + Math.max(0, item.allocated - item.used - item.pending), 0);
+      text("#statLeaveBalance", balances.length ? String(availableLeave) : "—");
+      text("#statLeaveBalanceSub", balances.length ? balances.map(item => item.leaveTypeName).join(", ") : "No leave balance configured");
+      const weeklyWage = workspace.weeklyWage;
+      text("#statWeeklyWage", weeklyWage ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(weeklyWage.totalPaise / 100) : "—");
+      text("#statWeeklyWageSub", weeklyWage ? weeklyWage.payableUnits + " payable units · " + weeklyWage.status : "No approved wage for this week");
+      const upcomingList = document.getElementById("upcomingList");
+      if (upcomingList) {
+        upcomingList.replaceChildren(); const upcoming = workspace.upcoming ?? [];
+        if (!upcoming.length) empty(upcomingList, "No upcoming holidays, birthdays or shift changes.");
+        upcoming.forEach((item, index) => {
+          if (index) { const divider = document.createElement("div"); divider.className = "h-px bg-outline-variant/30 mx-4"; upcomingList.append(divider); }
+          const row = document.createElement("div"); row.className = "flex items-center justify-between gap-3 px-4 py-3";
+          const copy = document.createElement("div"); copy.className = "flex flex-col flex-1 min-w-0";
+          const title = document.createElement("p"); title.className = "text-body-md font-body-md font-medium text-on-surface"; title.textContent = item.title;
+          const detail = document.createElement("p"); detail.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5"; detail.textContent = item.subtitle; copy.append(title, detail);
+          const date = document.createElement("span"); date.className = "flex-shrink-0 px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant text-[10px] font-medium tracking-wide"; date.textContent = fmtDate(item.date);
+          row.append(copy, date); upcomingList.append(row);
+        });
+      }
       const leaveRequests = workspace.leaveRequests ?? [];
       const reqContent = document.getElementById("reqContent");
       if (reqContent) {
@@ -206,25 +215,6 @@
           notificationList.append(card);
         });
       }
-
-      const balances = workspace.leaveBalances ?? [];
-      const leaveBalanceTotal = balances.reduce((sum, item) => sum + Math.max(0, item.allocated - item.used), 0);
-      const statCards = document.querySelectorAll("#home .bento-card");
-      statCards.forEach(card => {
-        const label = card.querySelector("p");
-        if (!label) return;
-        if (label.textContent?.toLowerCase().includes("today's hours")) {
-          // The live attendance timer above owns this value while a session is active.
-        }
-        if (label.textContent?.toLowerCase().includes("leave balance")) {
-          const value = card.querySelectorAll("p")[1];
-          if (value) value.textContent = String(leaveBalanceTotal);
-        }
-        if (label.textContent?.toLowerCase().includes("estimated wage")) {
-          const value = card.querySelectorAll("p")[1];
-          if (value) value.textContent = wageRecords.length ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(wageRecords[0].totalPaise / 100) : "—";
-        }
-      });
 
       window.__orchidPolicies = Array.isArray(policies) ? policies : [];
       const policyList = document.getElementById("polList");

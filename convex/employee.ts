@@ -6,89 +6,66 @@ export const myWorkspace = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
-    if (!user.employeeId) {
-      return {
-        linked: false as const,
-        profile: null,
-        department: null,
-        location: null,
-        shift: null,
-        attendance: [],
-        leaveBalances: [],
-        leaveRequests: [],
-        documents: [],
-        wageRecords: [],
-        notifications: [],
-      };
-    }
-
+    const emptyWorkspace = { linked: false as const, profile: null, department: null, location: null, shift: null, attendance: [], attendanceSummary: null, todayAttendance: null, upcoming: [], leaveBalances: [], leaveRequests: [], documents: [], wageRecords: [], weeklyWage: null, notifications: [] };
+    if (!user.employeeId) return emptyWorkspace;
     const employee = await ctx.db.get(user.employeeId);
-    if (!employee || employee.organizationId !== user.organizationId) {
-      return {
-        linked: false as const,
-        profile: null,
-        department: null,
-        location: null,
-        shift: null,
-        attendance: [],
-        leaveBalances: [],
-        leaveRequests: [],
-        documents: [],
-        wageRecords: [],
-        notifications: [],
-      };
-    }
-
-    const [department, location, attendance, leaveBalances, leaveRequests, documents, wageRecords, notifications] =
-      await Promise.all([
-        ctx.db.get(employee.departmentId),
-        ctx.db.get(employee.locationId),
-        ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").take(30),
-        ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id)).order("desc").take(20),
-        ctx.db.query("leaveRequests").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
-        ctx.db.query("employeeDocuments").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
-        ctx.db.query("wageRecords").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(12),
-        ctx.db.query("notifications").withIndex("by_user", q => q.eq("userId", user._id)).order("desc").take(30),
-      ]);
-
-    const latestShiftAssignment = await ctx.db.query("shiftAssignments")
-      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id))
-      .order("desc")
-      .first();
-    const shift = latestShiftAssignment ? await ctx.db.get(latestShiftAssignment.shiftId) : null;
-
-    const docsWithUrls = await Promise.all(documents.map(async doc => ({
-      ...doc,
-      url: await ctx.storage.getUrl(doc.storageId),
-    })));
-
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") return emptyWorkspace;
+    const now = new Date();
+    const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(date);
+    const today = dateKey(now), monthStart = today.slice(0, 7) + "-01", monthEnd = today.slice(0, 7) + "-31";
+    const dayOffset = (value: string, days: number) => { const date = new Date(value + "T00:00:00Z"); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
+    const weekStartDate = new Date(now), weekday = (weekStartDate.getDay() + 6) % 7;
+    weekStartDate.setDate(weekStartDate.getDate() - weekday);
+    const weekStart = dateKey(weekStartDate), weekEnd = dayOffset(weekStart, 6), upcomingEnd = dayOffset(today, 14);
+    const [department, location, attendance, leaveBalances, leaveRequests, documents, wageRecords, notifications, monthDays, monthShifts, todayShiftAssignment, upcomingShifts, holidays, organizationEmployees] = await Promise.all([
+      ctx.db.get(employee.departmentId), ctx.db.get(employee.locationId),
+      ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").take(100),
+      ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id)).order("desc").take(20),
+      ctx.db.query("leaveRequests").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
+      ctx.db.query("employeeDocuments").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
+      ctx.db.query("wageRecords").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(12),
+      ctx.db.query("notifications").withIndex("by_user", q => q.eq("userId", user._id)).order("desc").take(30),
+      ctx.db.query("attendanceDays").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
+      ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
+      ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", today)).first(),
+      ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gt("workDate", today).lte("workDate", upcomingEnd)).collect(),
+      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", today).lte("date", upcomingEnd)).collect(),
+      ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
+    ]);
+    const currentShift = todayShiftAssignment ? await ctx.db.get(todayShiftAssignment.shiftId) : null;
+    const docsWithUrls = await Promise.all(documents.map(async doc => ({ ...doc, url: await ctx.storage.getUrl(doc.storageId) })));
     const wagePeriods = await Promise.all(wageRecords.map(record => ctx.db.get(record.wagePeriodId)));
-
+    const leaveBalancesWithTypes = await Promise.all(leaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" })));
+    const attendedDays = monthDays.filter(day => day.status === "present" || day.status === "late").length;
+    const scheduledDays = monthShifts.length;
+    const todayAttendance = monthDays.find(day => day.workDate === today) ?? null;
+    const weeklyWage = wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
+      .find(record => record.period?.periodType === "weekly" && (record.status === "approved" || record.status === "locked") && record.period.fromDate <= weekEnd && record.period.toDate >= weekStart) ?? null;
+    const upcoming: { type: string; title: string; date: string; subtitle: string }[] = [];
+    for (const holiday of holidays) if (!holiday.locationId || holiday.locationId === employee.locationId) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date, subtitle: "Company holiday" });
+    for (const colleague of organizationEmployees) {
+      if (colleague.status !== "active" || !colleague.dateOfBirth) continue;
+      const birthday = colleague.dateOfBirth.slice(5, 10);
+      for (let offset = 0; offset <= 14; offset++) {
+        const date = dayOffset(today, offset);
+        if (date.slice(5, 10) === birthday) { upcoming.push({ type: "birthday", title: "Birthday · " + [colleague.firstName, colleague.lastName].filter(Boolean).join(" "), date, subtitle: colleague.departmentId === employee.departmentId ? "Your department" : "Orchid Flowers" }); break; }
+      }
+    }
+    for (const assignment of upcomingShifts) {
+      const shift = await ctx.db.get(assignment.shiftId);
+      if (shift) upcoming.push({ type: "shift", title: shift.name, date: assignment.workDate, subtitle: "Scheduled shift · " + String(Math.floor(shift.startMinute / 60)).padStart(2, "0") + ":" + String(shift.startMinute % 60).padStart(2, "0") });
+    }
+    upcoming.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
     return {
       linked: true as const,
-      profile: {
-        id: employee._id,
-        employeeCode: employee.employeeCode,
-        firstName: employee.firstName,
-        lastName: employee.lastName ?? "",
-        email: employee.email ?? user.email ?? "",
-        phone: employee.phone,
-        designation: employee.designation,
-        employmentType: employee.employmentType,
-        status: employee.status,
-        joiningDate: employee.joiningDate,
-      },
+      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address } : null,
-      shift: shift ? { name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute, breakMinutes: shift.breakMinutes } : null,
-      attendance,
-      leaveBalances: await Promise.all(leaveBalances.map(async balance => {
-        const leaveType = await ctx.db.get(balance.leaveTypeId);
-        return { ...balance, leaveTypeName: leaveType?.name ?? "Leave" };
-      })),
-      leaveRequests,
-      documents: docsWithUrls,
-      wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status } : null })),
+      shift: currentShift ? { name: currentShift.name, startMinute: currentShift.startMinute, endMinute: currentShift.endMinute, breakMinutes: currentShift.breakMinutes, workDate: today } : null,
+      attendance, attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, todayAttendance, upcoming,
+      leaveBalances: leaveBalancesWithTypes, leaveRequests, documents: docsWithUrls,
+      wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
+      weeklyWage: weeklyWage ? { totalPaise: weeklyWage.totalPaise, payableUnits: weeklyWage.payableUnits, employmentType: weeklyWage.employmentType, status: weeklyWage.status, period: weeklyWage.period ? { fromDate: weeklyWage.period.fromDate, toDate: weeklyWage.period.toDate } : null } : null,
       notifications,
     };
   },
