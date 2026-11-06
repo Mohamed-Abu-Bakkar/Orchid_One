@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { Archive, FileText, Eye, Upload, X } from "lucide-react";
+import { CreatableSelect } from "@/components/admin/creatable-select";
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const categories = ["General", "HR", "Attendance", "Leave", "Safety", "Wages", "Training", "Other"];
@@ -15,6 +16,8 @@ export function CompanyDocumentManagement() {
   const generateUploadUrl = useMutation(api.companyDocuments.generateUploadUrl);
   const createDocument = useMutation(api.companyDocuments.create);
   const archiveDocument = useMutation(api.companyDocuments.archive);
+  const customCategories = useQuery(api.adminOptions.listOptions, { fieldKey: "document_category" });
+  const createCategory = useMutation(api.adminOptions.createOption);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("General");
   const [description, setDescription] = useState("");
@@ -86,7 +89,7 @@ export function CompanyDocumentManagement() {
       <div className="panel-head"><span className="t-h3">Upload a document</span><span className="badge badge-neutral">PDF, JPG, PNG · Max 15 MB</span></div>
       <form className="panel-body" onSubmit={upload} style={{ display: "grid", gap: 14 }}>
         <label className="policy-field">Document title<input className="input" value={title} maxLength={160} onChange={event => setTitle(event.target.value)} placeholder="e.g. Employee handbook" required /></label>
-        <label className="policy-field">Category<select className="input" value={category} onChange={event => setCategory(event.target.value)}>{categories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <CreatableSelect label="Category" value={category} options={[...new Set([...categories,...(customCategories??[]).map(item=>item.label)])].map(item=>({value:item,label:item}))} placeholder="Select category" onChange={setCategory} createLabel="Create document category" onCreate={async name=>createCategory({fieldKey:"document_category",name})}/>
         <label className="policy-field">Description (optional)<textarea className="input" rows={2} value={description} onChange={event => setDescription(event.target.value)} placeholder="Briefly describe this document" /></label>
         <div
           role="button"
