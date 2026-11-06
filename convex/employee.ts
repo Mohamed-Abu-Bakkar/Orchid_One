@@ -20,6 +20,7 @@ export const myWorkspace = query({
     const monthStartAt = new Date(monthStart + "T00:00:00+05:30");
     const nextMonthDate = new Date(monthStart + "T00:00:00Z");
     nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+    const monthEnd = dayOffset(nextMonthDate.toISOString().slice(0, 10), -1);
     const nextMonthStartAt = new Date(nextMonthDate.toISOString().slice(0, 10) + "T00:00:00+05:30");
     const [department, location, attendance, leaveBalances, leaveRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignment, upcomingShifts, holidays, organizationEmployees] = await Promise.all([
       ctx.db.get(employee.departmentId), ctx.db.get(employee.locationId),
