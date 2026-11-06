@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, X, Check } from "lucide-react";
+import { X, Check } from "lucide-react";
 export type CreatableOption={value:string;label:string};
 type Props={label:string;value:string;options:CreatableOption[];placeholder:string;onChange:(value:string)=>void;onCreate:(name:string)=>Promise<CreatableOption|null>;createLabel?:string;disabled?:boolean;required?:boolean;allowCreate?:boolean;};
 export function CreatableSelect({label,value,options,placeholder,onChange,onCreate,createLabel="Create new",disabled,required,allowCreate=true}:Props){
