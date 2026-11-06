@@ -22,6 +22,17 @@ export function TeamWorkManagement(){
  return <section className="sec">
  <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Teams & work assignments</h2><p className="sub">Create shift teams and allocate daily work.</p></div><input className="input" type="date" value={date} onChange={e=>{setDate(e.target.value);setMembers([]);setShiftEmployee("");setDefaultShift("");setDateShiftIds([]);}}/></div>
  {notice&&<p className="panel panel-body" role="status">{notice}</p>}
+ <div className="panel mt-4"><div className="panel-head"><b>Employee shift assignments</b></div><div className="panel-body col gap-3">
+ <p className="t-caption text-tertiary">Set a normal default shift, then schedule one or more non-overlapping shifts for this date. Date-specific shifts replace the default for that date.</p>
+ <CreatableSelect label="Employee" value={shiftEmployee} options={employeeOptions} placeholder="Select employee" onChange={v=>{setShiftEmployee(v);const employee=data.employees.find((e:any)=>e._id===v);setDefaultShift(employee?.defaultShiftId??"");setDateShiftIds(employee?.scheduledShiftIds??[]);}}/>
+ {selectedShiftEmployee&&<>
+ <label className="policy-field">Default shift<select className="input" value={defaultShift} onChange={e=>setDefaultShift(e.target.value)}><option value="">No default shift</option>{shiftOptions.map((s:any)=><option key={s.value} value={s.value}>{s.label}</option>)}</select></label>
+ <button className="btn btn-outline" type="button" onClick={()=>void run(()=>saveDefaultShift({employeeId:shiftEmployee as any,shiftId:defaultShift?defaultShift as any:null}),"Default shift updated.")}>Save default shift</button>
+ <div className="col gap-2"><b className="t-body-sm">Date-specific shifts · {date}</b>{shiftOptions.map((s:any)=><label className="row gap-2" key={s.value}><input type="checkbox" checked={dateShiftIds.includes(s.value)} onChange={e=>setDateShiftIds(old=>e.target.checked?[...old,s.value]:old.filter(id=>id!==s.value))}/>{s.label}</label>)}
+ <p className="t-caption text-tertiary">{dateShiftIds.length===0?"No date-specific shifts selected; the default shift applies.":"Selected shifts replace the default shift for this date."}</p>
+ <button className="btn btn-primary" type="button" onClick={()=>void run(()=>saveDateShifts({employeeId:shiftEmployee as any,workDate:date,shiftIds:dateShiftIds as any}),"Date-specific shifts saved.")}>Save date shifts ({dateShiftIds.length})</button></div>
+ </>}
+ </div></div>
  <div className="grid-2-equal mt-4">
  <div className="panel"><div className="panel-head"><b>Create team</b></div><div className="panel-body col gap-3"><input className="input" placeholder="Team name" value={name} onChange={e=>setName(e.target.value)}/>
  <CreatableSelect label="Shift" value={shift} options={shiftOptions} placeholder="Select shift" onChange={setShift} createLabel="Create shift" onCreateRequested={()=>setShowShift(true)}/>
