@@ -29,11 +29,7 @@
       const { workspace, policies, work } = await response.json();
       window.__orchidWorkspace = workspace;
       if (!workspace?.linked || !workspace.profile) {
-        document.querySelectorAll("#home > div, #attScreen, #hoursScreen, #payScreen, #reqScreen, #docsScreen, #analyticsScreen, #notifScreen, #polScreen").forEach(node => node.classList.add("hidden"));
-        const main = document.createElement("main");
-        main.className = "min-h-screen flex items-center justify-center p-6 bg-surface";
-        main.innerHTML = '<section class="bento-card max-w-sm text-center"><span class="material-symbols-outlined text-primary text-4xl">person_off</span><h1 class="text-title-md font-title-md font-semibold text-primary mt-3">Employee profile not linked</h1><p class="text-body-md font-body-md text-on-surface-variant mt-2">Your login is active, but HR has not linked an employee record yet. Please contact your HR administrator.</p><button class="mt-5 bg-primary text-white rounded-lg px-5 py-2.5" onclick="fetch(\'/api/auth/sign-out\',{method:\'POST\'}).finally(()=>location.href=\'/login\')">Sign out</button></section>';
-        document.body.append(main);
+        window.location.replace("/profile-pending");
         return;
       }
 
