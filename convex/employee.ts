@@ -18,8 +18,9 @@ export const myWorkspace = query({
     weekStartDate.setUTCDate(weekStartDate.getUTCDate() - weekday);
     const weekStart = dateKey(weekStartDate), weekEnd = dayOffset(weekStart, 6), upcomingEnd = dayOffset(today, 14);
     const monthStartAt = new Date(monthStart + "T00:00:00+05:30");
-    const nextMonthStartAt = new Date(monthStartAt);
-    nextMonthStartAt.setUTCMonth(nextMonthStartAt.getUTCMonth() + 1);
+    const nextMonthDate = new Date(monthStart + "T00:00:00Z");
+    nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+    const nextMonthStartAt = new Date(nextMonthDate.toISOString().slice(0, 10) + "T00:00:00+05:30");
     const [department, location, attendance, leaveBalances, leaveRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignment, upcomingShifts, holidays, organizationEmployees] = await Promise.all([
       ctx.db.get(employee.departmentId), ctx.db.get(employee.locationId),
       ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").take(100),
