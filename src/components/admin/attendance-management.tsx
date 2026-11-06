@@ -23,7 +23,7 @@ function stamp(value: number, timeZone: string) {
 }
 
 
-export function AttendanceManagement() {
+export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: () => void }) {
   const today = localToday();
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
@@ -75,10 +75,11 @@ export function AttendanceManagement() {
             </div>
             {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
             : <div className="employee-directory-table-wrap"><table className="employee-directory-table">
-                <thead><tr><th>Employee</th><th>Work date</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
+                <thead><tr><th>Employee</th><th>Work date</th><th>Scheduled shift</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
                 <tbody>{rows.map((row: any) => <tr key={row.id}>
                   <td><strong>{row.employeeName}</strong><small>{row.employeeCode}</small><small>{row.locationName}</small></td>
                   <td>{row.workDate}</td>
+                  <td>{row.scheduledShifts.length ? row.scheduledShifts.map((shift: any) => shift.name + " (" + String(Math.floor(shift.startMinute / 60)).padStart(2, "0") + ":" + String(shift.startMinute % 60).padStart(2, "0") + ")").join(", ") : "Not scheduled"}</td>
                   <td>{clock(row.firstCheckInAt, timezone)}</td>
                   <td>{clock(row.lastCheckOutAt, timezone)}</td>
                   <td>{row.eventCount}</td>
@@ -97,7 +98,7 @@ export function AttendanceManagement() {
 
     <div className="panel mt-4"><div className="panel-body row gap-3">
       <ShieldAlert size={20}/><div><strong className="t-body-sm">Review geofence exceptions separately</strong><p className="t-caption text-tertiary">Outside-geofence punches remain recorded and require an authorized supervisor or admin decision.</p></div>
-      <a className="section-link" href="/admin?section=attendance-exceptions">Open exception review</a>
+      <button className="section-link" type="button" onClick={onOpenExceptions}>Open exception review</button>
     </div></div>
   </section>;
 }
