@@ -67,7 +67,20 @@ export const setEmployeeDefaultShift=mutation({args:{employeeId:v.id("employees"
  const u=await requireAdmin(ctx),employee=await ctx.db.get(a.employeeId);
  if(!employee||employee.organizationId!==u.organizationId)throw Error("EMPLOYEE_NOT_FOUND");
  if(employee.status!=="active")throw Error("EMPLOYEE_NOT_ACTIVE");
- if(a.shiftId){const shift=await ctx.db.get(a.shiftId);if(!shift||shift.organizationId!==u.organizationId||!shift.isActive)throw Error("SHIFT_NOT_AVAILABLE");}
+ let nextDefault=null;
+ if(a.shiftId){nextDefault=await ctx.db.get(a.shiftId);if(!nextDefault||nextDefault.organizationId!==u.organizationId||!nextDefault.isActive)throw Error("SHIFT_NOT_AVAILABLE");}
+ if(nextDefault){
+  const dated=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id)).collect();
+  const datedDays=new Set(dated.map(row=>row.workDate));
+  for(const row of dated){
+   const scheduled=await ctx.db.get(row.shiftId);if(!scheduled)continue;
+   for(const adjacentDay of [dayNumber(row.workDate)-1,dayNumber(row.workDate)+1]){
+    const adjacentDate=dateFromDay(adjacentDay);
+    if(datedDays.has(adjacentDate))continue;
+    if(overlaps(shiftInterval(scheduled,dayNumber(row.workDate)),shiftInterval(nextDefault,adjacentDay)))throw Error("SHIFTS_OVERLAP");
+   }
+  }
+ }
  const previous=employee.defaultShiftId??null;
  await ctx.db.patch(employee._id,{defaultShiftId:a.shiftId??undefined,updatedAt:Date.now()});
  const memberships=await ctx.db.query("teamMemberships").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id)).collect();
