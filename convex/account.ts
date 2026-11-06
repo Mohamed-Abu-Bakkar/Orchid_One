@@ -52,6 +52,8 @@ export const ensurePendingProfile = mutation({
     await ctx.db.insert("users", {
       organizationId: organization._id,
       authSubject: identity.subject,
+      fullName: identity.name,
+      email: identity.email,
       role: "employee",
       accountStatus: "pending",
       isActive: false,
