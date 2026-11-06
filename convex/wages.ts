@@ -82,7 +82,8 @@ export const saveEmployeeCompensation = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAdmin(ctx);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.effectiveFrom) || Number.isNaN(Date.parse(args.effectiveFrom))) throw new Error("INVALID_EFFECTIVE_DATE");
+    const effectiveDate = new Date(args.effectiveFrom + "T00:00:00.000Z");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.effectiveFrom) || Number.isNaN(effectiveDate.getTime()) || effectiveDate.toISOString().slice(0, 10) !== args.effectiveFrom) throw new Error("INVALID_EFFECTIVE_DATE");
     const employee = await ctx.db.get(args.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.employmentType !== "permanent") throw new Error("PERMANENT_EMPLOYEE_REQUIRED");
     if (employee.status !== "active") throw new Error("EMPLOYEE_NOT_ACTIVE");
