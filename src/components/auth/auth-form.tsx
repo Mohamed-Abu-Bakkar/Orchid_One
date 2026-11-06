@@ -30,6 +30,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
         const profile = await ensureUserProfile({});
         if (cancelled) return;
 
+        console.info("[Orchid One][Auth] Login role:", profile.role, "| Account status:", profile.status);
+
         if (profile.status === "suspended") {
           await authClient.signOut();
           if (!cancelled) setError("This account is suspended. Contact the Orchid Flowers administrator.");
