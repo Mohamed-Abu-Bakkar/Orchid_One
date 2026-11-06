@@ -5,7 +5,6 @@ import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { PolicyManagement } from "@/components/admin/policy-management";
 import { CompanyDocumentManagement } from "@/components/admin/company-document-management";
-import { EmployeeManagement } from "@/components/admin/employee-management";
 import orchidLogo from "../../../OrchidHRM/assets/android/launchericon-192x192.png";
 import { Activity, Bell, BookOpen, Building2, CalendarDays, ChartNoAxesCombined, CheckCircle2, Clock3, Download, Flower2, Folder, GraduationCap, Grid2X2, Megaphone, Menu, Plus, Search, Settings, Shield, Star, UserRound, Users, Wallet, X, Zap } from "lucide-react";
 
