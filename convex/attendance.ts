@@ -197,7 +197,8 @@ export const adminRegister = query({
     const hasMoreSchedules = scheduledShifts.length > 5000;
     const hasMoreDays = attendanceDays.length > 5000;
     const filtered = events.slice(0, 5000);
-    const filteredDays = args.employeeId ? attendanceDays.filter(day => day.employeeId === args.employeeId) : attendanceDays;
+    const attendanceDayWindow = attendanceDays.slice(0, 5000);
+    const filteredDays = args.employeeId ? attendanceDayWindow.filter(day => day.employeeId === args.employeeId) : attendanceDayWindow;
     const employeeIds = [...new Set([...filtered.map(event => String(event.employeeId)), ...filteredDays.map(day => String(day.employeeId))])];
     const employeeMap = new Map<string, any>();
     await Promise.all(employeeIds.map(async id => {
@@ -211,7 +212,7 @@ export const adminRegister = query({
       if (location && location.organizationId === admin.organizationId) locationMap.set(id, location.name);
     }));
     const shiftMap = new Map<string, any[]>();
-    await Promise.all(scheduledShifts.map(async assignment => {
+    await Promise.all(scheduledShifts.slice(0, 5000).map(async assignment => {
       const shift = await ctx.db.get(assignment.shiftId);
       if (!shift || shift.organizationId !== admin.organizationId) return;
       const key = String(assignment.employeeId) + ":" + assignment.workDate;
