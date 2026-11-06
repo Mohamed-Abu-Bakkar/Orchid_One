@@ -119,3 +119,130 @@ export const myRecentEvents = query({
       .order("desc").take(Math.min(Math.max(limit ?? 20, 1), 50));
   },
 });
+
+
+function localDateStartUtc(date: string, timeZone: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  let guess = Date.UTC(year, month - 1, day);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date(guess));
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    const represented = Date.UTC(
+      Number(values.year), Number(values.month) - 1, Number(values.day),
+      Number(values.hour), Number(values.minute), Number(values.second),
+    );
+    const target = Date.UTC(year, month - 1, day);
+    const difference = represented - target;
+    if (difference === 0) break;
+    guess -= difference;
+  }
+  return guess;
+}
+
+function nextDate(date: string): string {
+  const value = new Date(date + "T00:00:00Z");
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value.toISOString().slice(0, 10);
+}
+
+/** Organization-scoped event register. It reports recorded events, not inferred absences or wage calculations. */
+export const adminRegister = query({
+  args: {
+    fromDate: v.string(),
+    toDate: v.string(),
+    employeeId: v.optional(v.id("employees")),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireRole(ctx, ["supervisor", "superadmin"]);
+    const validDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(value + "T00:00:00Z"));
+    if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_ATTENDANCE_DATE_RANGE");
+    const span = (Date.parse(args.toDate + "T00:00:00Z") - Date.parse(args.fromDate + "T00:00:00Z")) / 86400000;
+    if (span > 30) throw new Error("ATTENDANCE_RANGE_LIMIT_31_DAYS");
+    const organization = await ctx.db.get(admin.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
+    if (args.employeeId) {
+      const employee = await ctx.db.get(args.employeeId);
+      if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
+    }
+    const startAt = localDateStartUtc(args.fromDate, organization.timezone);
+    const endAt = localDateStartUtc(nextDate(args.toDate), organization.timezone);
+    const events = await ctx.db.query("attendanceEvents")
+      .withIndex("by_org_time", q => q.eq("organizationId", admin.organizationId).gte("receivedAt", startAt).lt("receivedAt", endAt))
+      .order("desc")
+      .collect();
+    const filtered = args.employeeId ? events.filter(event => event.employeeId === args.employeeId) : events;
+    const employeeIds = [...new Set(filtered.map(event => String(event.employeeId)))];
+    const employeeMap = new Map<string, any>();
+    await Promise.all(employeeIds.map(async id => {
+      const employee = await ctx.db.get(id as any);
+      if (employee && employee.organizationId === admin.organizationId) employeeMap.set(id, employee);
+    }));
+    const locationIds = [...new Set(filtered.map(event => String(event.locationId)))];
+    const locationMap = new Map<string, string>();
+    await Promise.all(locationIds.map(async id => {
+      const location = await ctx.db.get(id as any);
+      if (location && location.organizationId === admin.organizationId) locationMap.set(id, location.name);
+    }));
+    const groups = new Map<string, any>();
+    for (const event of filtered) {
+      const employee = employeeMap.get(String(event.employeeId));
+      if (!employee) continue;
+      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt));
+      const key = String(event.employeeId) + ":" + workDate;
+      let row = groups.get(key);
+      if (!row) {
+        row = {
+          id: key,
+          employeeId: event.employeeId,
+          employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
+          employeeCode: employee.employeeCode,
+          departmentId: employee.departmentId,
+          locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
+          workDate,
+          firstCheckInAt: null as number | null,
+          lastCheckOutAt: null as number | null,
+          eventCount: 0,
+          pendingReviews: 0,
+          rejectedEvents: 0,
+          outsideGeofenceEvents: 0,
+          events: [] as any[],
+        };
+        groups.set(key, row);
+      }
+      row.eventCount++;
+      if (event.eventType === "check_in" && (row.firstCheckInAt === null || event.receivedAt < row.firstCheckInAt)) row.firstCheckInAt = event.receivedAt;
+      if (event.eventType === "check_out" && (row.lastCheckOutAt === null || event.receivedAt > row.lastCheckOutAt)) row.lastCheckOutAt = event.receivedAt;
+      if (event.reviewStatus === "pending") row.pendingReviews++;
+      if (event.reviewStatus === "rejected") row.rejectedEvents++;
+      if (!event.geofencePassed) row.outsideGeofenceEvents++;
+      row.events.push({
+        _id: event._id,
+        eventType: event.eventType,
+        receivedAt: event.receivedAt,
+        clientTimestamp: event.clientTimestamp,
+        geofencePassed: event.geofencePassed,
+        reviewStatus: event.reviewStatus ?? "not_required",
+        exceptionCode: event.exceptionCode ?? null,
+        accuracyM: event.accuracyM,
+        locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
+      });
+    }
+    const rows = [...groups.values()].map(row => ({
+      ...row,
+      status: row.pendingReviews ? "pending_review" : row.rejectedEvents ? "rejected" : row.firstCheckInAt !== null ? "present" : "event_recorded",
+      events: row.events.sort((a: any, b: any) => a.receivedAt - b.receivedAt),
+    })).sort((a, b) => b.workDate.localeCompare(a.workDate) || a.employeeName.localeCompare(b.employeeName));
+    return {
+      fromDate: args.fromDate,
+      toDate: args.toDate,
+      totalEvents: filtered.length,
+      recordedDays: rows.length,
+      pendingReviews: rows.reduce((sum, row) => sum + row.pendingReviews, 0),
+      outsideGeofenceEvents: rows.reduce((sum, row) => sum + row.outsideGeofenceEvents, 0),
+      rows,
+    };
+  },
+});
