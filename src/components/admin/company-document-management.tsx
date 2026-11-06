@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
+import type { Id } from "@/../convex/_generated/dataModel";
 import { Archive, FileText, Upload } from "lucide-react";
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
@@ -45,7 +46,7 @@ export function CompanyDocumentManagement() {
         title: title.trim(),
         category,
         description: description.trim() || undefined,
-        storageId: result.storageId as never,
+        storageId: result.storageId as Id<"_storage">,
         originalFileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
