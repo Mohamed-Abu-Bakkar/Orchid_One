@@ -84,7 +84,7 @@ export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees
  const targetDay=dayNumber(a.workDate);
  const adjacent=existing.filter(row=>row.workDate!==a.workDate&&Math.abs(dayNumber(row.workDate)-targetDay)<=1);
  const adjacentIntervals=await Promise.all(adjacent.map(async row=>{const shift=await ctx.db.get(row.shiftId);return shift?shiftInterval(shift,dayNumber(row.workDate)):null;}));
- const candidates=selected.filter((s):s is NonNullable<typeof s>=>Boolean(s)).map(s=>shiftInterval(s,targetDay));
+ const candidates=selected.map(s=>{if(!s)throw Error("SHIFT_NOT_AVAILABLE");return shiftInterval(s,targetDay);});
  for(let i=0;i<candidates.length;i++){
   if(candidates.some((other,j)=>i!==j&&overlaps(candidates[i],other)))throw Error("SHIFTS_OVERLAP");
   if(adjacentIntervals.some(other=>other&&overlaps(candidates[i],other)))throw Error("SHIFTS_OVERLAP");
@@ -92,6 +92,11 @@ export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees
  const current=existing.filter(row=>row.workDate===a.workDate);
  for(const row of current)await ctx.db.delete(row._id);
  for(const shiftId of a.shiftIds)await ctx.db.insert("shiftAssignments",{organizationId:u.organizationId,employeeId:employee._id,shiftId,workDate:a.workDate,assignedBy:u._id});
+ const memberships=await ctx.db.query("teamMemberships").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id).eq("workDate",a.workDate)).collect();
+ for(const membership of memberships.filter(row=>row.isActive)){
+  const team=await ctx.db.get(membership.teamId);
+  if(!team||!a.shiftIds.includes(team.shiftId))await ctx.db.patch(membership._id,{isActive:false});
+ }
  await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"employee.date_shifts_updated",entityType:"employee",entityId:String(employee._id),metadata:{workDate:a.workDate,previousShiftIds:current.map(row=>String(row.shiftId)),newShiftIds:a.shiftIds.map(String)},createdAt:Date.now()});
  return true;
 }});
