@@ -45,16 +45,67 @@ export default function AdminShell() {
   </div>
  </div>;
 }
-function Dashboard({go,notice}:{go:(id:string)=>void;notice:(s:string)=>void}) {
- const items:any[]=[["Total employees","—","Live employee records",Users,"var(--primary-light)","var(--primary)"],["Present today","—","Attendance records",Activity,"var(--success-bg)","var(--success-dark)"],["On leave","—","Approved leave records",CalendarDays,"var(--warning-bg)","var(--warning)"],["Hours today","—","Approved attendance hours",Clock3,"var(--info-bg)","var(--info)"],["Pending approvals","—","Requests awaiting review",CheckCircle2,"var(--error-bg)","var(--error)"],["Week wage est.","—","Approved wage run",Wallet,"var(--success-bg)","var(--success-dark)"]];
- return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Workforce overview</h2><p className="sub">Your Orchid Flowers people and workforce activity at a glance.</p></div><div className="page-actions"><button className="btn btn-outline" onClick={()=>notice("Reports become available when live records are connected.")}><Download size={16}/> Export</button><button className="btn btn-primary" onClick={()=>go("employees")}><Plus size={16}/> Quick add</button></div></div>
- <div className="kpi-grid">{items.map(([label,value,sub,Icon,bg,color])=><div className="kpi card" key={label}><span className="kpi-icon" style={{background:bg,color}}><Icon size={18}/></span><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span><span className="kpi-sub">{sub}</span></div>)}</div>
- <div className="grid-2-equal mt-6"><Panel title="Attendance trend" subtitle="Last 14 days" icon={Activity} text="Attendance analytics will appear when verified attendance records are available."/><Panel title="Workforce mix" subtitle="By employment type" icon={Users} text="Permanent, contract and hourly workforce distribution will be calculated from employee records."/></div>
- <div className="grid-2-equal mt-6"><Panel title="Pending approvals" action="Review" onAction={()=>go("leave")} icon={CheckCircle2} text="Connect the approval workflow to see pending requests."/><Panel title="Hiring pipeline" action="Open" onAction={()=>go("recruitment")} icon={UserRound} text="Candidate stages will appear after recruitment records are connected."/></div>
+function Dashboard({go}:{go:(id:string)=>void}) {
+ const data=useQuery(api.dashboard.getOverview,{});
+ if(data===undefined)return <section className="sec"><p className="sub">Loading dashboard records…</p></section>;
+ const minutes=(value:number)=>`${Math.floor(value/60)}h ${value%60}m`;
+ const dateLabel=(value:string)=>new Date(value+`T00:00:00`).toLocaleDateString(undefined,{day:"numeric",month:"short"});
+ const activityLabel=(value:string)=>value.replace(/[._]/g," ").replace(/\b\w/g,char=>char.toUpperCase());
+ const stats=[
+  ["Total employees",data.employee.total,"All employee records",Users],
+  ["Active employees",data.employee.active,"Currently active",UserRound],
+  ["Present today",data.attendance.present,"Attendance day records",Activity],
+  ["Late today",data.attendance.late,"Recorded late status",Clock3],
+  ["On leave today",data.leave.approvedToday,"Approved requests covering today",CalendarDays],
+  ["Pending reviews",data.approvals.workflowRequests+data.leave.pendingRequests+data.overtime.pendingRequests+data.approvals.geofenceExceptions,"Across configured request sources",CheckCircle2],
+ ];
+ return <section className="sec">
+  <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Workforce overview</h2><p className="sub">Live records from Orchid Flowers · {dateLabel(data.today)}</p></div><div className="page-actions"><button className="btn btn-primary" onClick={()=>go("employees")}><Plus size={16}/> Employee directory</button></div></div>
+  <div className="kpi-grid">{stats.map(([label,value,sub,Icon]:any)=><div className="kpi card" key={label}><span className="kpi-icon"><Icon size={18}/></span><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span><span className="kpi-sub">{sub}</span></div>)}</div>
+  <div className="grid-2-equal mt-6">
+   <div className="panel"><div className="panel-head"><span className="t-h3">Attendance today</span><span className="t-caption text-tertiary">{data.attendance.recordedEmployees} records</span></div><div className="panel-body">
+    {data.attendance.recordedEmployees===0?<div className="empty-state"><Activity size={24}/><p>No attendance-day records for today.</p></div>:<div className="employee-directory-stats">
+     {[[ "Present",data.attendance.present ],["Late",data.attendance.late],["Absent",data.attendance.absent],["Exceptions",data.attendance.exception]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}
+    </div>}
+    <p className="t-body-sm text-secondary" style={{marginTop:14}}>Payable time recorded: {minutes(data.attendance.payableMinutes)}</p>
+   </div></div>
+   <div className="panel"><div className="panel-head"><span className="t-h3">Workforce composition</span><span className="t-caption text-tertiary">Active employees</span></div><div className="panel-body">
+    {data.employee.active===0?<div className="empty-state"><Users size={24}/><p>No active employee records.</p></div>:data.employee.employmentMix.map(item=><div className="row" key={item.type} style={{justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span className="t-body-sm">{activityLabel(item.type)}</span><strong>{item.count}</strong></div>)}
+   </div></div>
+  </div>
+  <div className="grid-2-equal mt-6">
+   <div className="panel"><div className="panel-head"><span className="t-h3">Attendance · 14 days</span></div><div className="panel-body">
+    {data.attendance.trend.every(day=>day.present+day.late+day.absent+day.exception===0)?<div className="empty-state"><Activity size={24}/><p>No attendance history in this period.</p></div>:<div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Date</th><th>Present</th><th>Late</th><th>Absent</th><th>Exceptions</th></tr></thead><tbody>{data.attendance.trend.map(day=><tr key={day.date}><td>{dateLabel(day.date)}</td><td>{day.present}</td><td>{day.late}</td><td>{day.absent}</td><td>{day.exception}</td></tr>)}</tbody></table></div>}
+   </div></div>
+   <div className="panel"><div className="panel-head"><span className="t-h3">Pending items</span></div><div className="panel-body">
+    {data.approvals.workflowRequests+data.leave.pendingRequests+data.overtime.pendingRequests+data.approvals.geofenceExceptions===0?<div className="empty-state"><CheckCircle2 size={24}/><p>No pending approval or review records.</p></div>:<>
+     {[["Workflow approvals",data.approvals.workflowRequests],["Leave requests",data.leave.pendingRequests],["Overtime requests",data.overtime.pendingRequests],["Geofence exceptions",data.approvals.geofenceExceptions]].map(([label,value]:any)=><div className="row" key={label} style={{justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span className="t-body-sm">{label}</span><strong>{value}</strong></div>)}
+    </>}
+   </div></div>
+  </div>
+  <div className="grid-2-equal mt-6">
+   <div className="panel"><div className="panel-head"><span className="t-h3">Work assignments today</span><button className="section-link" onClick={()=>go("teams-work")}>Open</button></div><div className="panel-body">
+    {data.work.assignments===0?<div className="empty-state"><CheckCircle2 size={24}/><p>No work assignments recorded for today.</p></div>:<div className="employee-directory-stats">{[["Assignments",data.work.assignments],["Completed",data.work.completed],["In progress",data.work.inProgress],["Not started",data.work.notStarted]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}</div>}
+   </div></div>
+   <div className="panel"><div className="panel-head"><span className="t-h3">Recruitment</span><button className="section-link" onClick={()=>go("recruitment")}>Open</button></div><div className="panel-body">
+    {data.recruitment.candidates===0?<div className="empty-state"><UserRound size={24}/><p>No candidate records.</p></div>:<div className="employee-directory-stats">{[["Candidates",data.recruitment.candidates],["Active pipeline",data.recruitment.activePipeline],["Interviews",data.recruitment.interviews]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}</div>}
+   </div></div>
+  </div>
+  <div className="grid-2-equal mt-6">
+   <div className="panel"><div className="panel-head"><span className="t-h3">Organization setup</span></div><div className="panel-body">{[["Departments",data.organization.departments],["Active locations",data.organization.locations],["Active shifts",data.organization.shifts]].map(([label,value]:any)=><div className="row" key={label} style={{justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span className="t-body-sm">{label}</span><strong>{value}</strong></div>)}</div></div>
+   <div className="panel"><div className="panel-head"><span className="t-h3">Wage records</span><button className="section-link" onClick={()=>go("wages")}>Open</button></div><div className="panel-body">{data.wages.periods===0&&data.wages.records===0?<div className="empty-state"><Wallet size={24}/><p>No wage period or wage records.</p></div>:<div className="employee-directory-stats">{[["Periods",data.wages.periods],["Records",data.wages.records],["Pending approval",data.wages.pendingApproval],["Approved",data.wages.approved]].map(([label,value]:any)=><div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}</div>}</div></div>
+  </div>
+  <div className="grid-2-equal mt-6">
+   <div className="panel"><div className="panel-head"><span className="t-h3">Policies & documents</span></div><div className="panel-body">{data.policies.published+data.policies.drafts+data.policies.archived+data.documents.published+data.documents.archived===0?<div className="empty-state"><BookOpen size={24}/><p>No policy or company document records.</p></div>:<>{[["Published policies",data.policies.published],["Draft policies",data.policies.drafts],["Archived policies",data.policies.archived],["Published documents",data.documents.published],["Archived documents",data.documents.archived]].map(([label,value]:any)=><div className="row" key={label} style={{justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span className="t-body-sm">{label}</span><strong>{value}</strong></div>)}</>}</div></div>
+   <div className="panel"><div className="panel-head"><span className="t-h3">Upcoming holidays</span></div><div className="panel-body">{data.holidays.length===0?<div className="empty-state"><CalendarDays size={24}/><p>No upcoming holiday records.</p></div>:data.holidays.map(holiday=><div className="row" key={holiday.date+holiday.name} style={{justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span className="t-body-sm">{holiday.name}</span><strong>{dateLabel(holiday.date)}</strong></div>)}</div></div>
+  </div>
+  <div className="grid-2-equal mt-6">
+   <div className="panel"><div className="panel-head"><span className="t-h3">Recent notifications</span><button className="section-link" onClick={()=>go("notifications")}>Open</button></div><div className="panel-body">{data.notifications.length===0?<div className="empty-state"><Bell size={24}/><p>No notification records.</p></div>:data.notifications.map(item=><div key={item._id} style={{padding:"10px 0",borderBottom:"1px solid var(--border)"}}><div className="row" style={{justifyContent:"space-between"}}><strong className="t-body-sm">{item.title}</strong><span className="t-caption text-tertiary">{item.read?"Read":"Unread"}</span></div><p className="t-caption text-secondary">{item.body}</p></div>)}</div></div>
+   <div className="panel"><div className="panel-head"><span className="t-h3">Recent activity</span></div><div className="panel-body">{data.recentActivity.length===0?<div className="empty-state"><Activity size={24}/><p>No audit activity records.</p></div>:data.recentActivity.map(item=><div key={item._id} style={{padding:"10px 0",borderBottom:"1px solid var(--border)"}}><strong className="t-body-sm">{activityLabel(item.action)}</strong><p className="t-caption text-tertiary">{activityLabel(item.entityType)} · {new Date(item.createdAt).toLocaleString()}</p></div>)}</div></div>
+  </div>
+  <p className="t-caption text-tertiary" style={{marginTop:18}}>Dashboard data refreshed from the organization database · {new Date(data.generatedAt).toLocaleTimeString()}</p>
  </section>;
 }
-function Panel({title,subtitle,icon:Icon,text,action,onAction}:any){return <div className="panel"><div className="panel-head"><span className="t-h3">{title}</span>{action?<button className="section-link" onClick={onAction}>{action}</button>:<span className="t-caption text-tertiary">{subtitle}</span>}</div><div className="panel-body empty-state"><Icon size={26}/><p className="t-body-sm text-secondary">{text}</p></div></div>}
-
 
 function EmployeeManagement() {
  const employees=useQuery(api.employee.listForAdmin,{});
