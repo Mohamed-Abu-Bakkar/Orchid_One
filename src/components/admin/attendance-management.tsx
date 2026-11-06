@@ -84,7 +84,7 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
                   <td>{clock(row.lastCheckOutAt, timezone)}</td>
                   <td>{row.eventCount}</td>
                   <td>{row.outsideGeofenceEvents ? <span className="badge badge-warning"><MapPin size={12}/> {row.outsideGeofenceEvents} exception(s)</span> : <span className="badge badge-success">Passed</span>}</td>
-                  <td>{row.pendingReviews ? <span className="badge badge-warning">{row.pendingReviews} pending</span> : row.rejectedEvents ? <span className="badge badge-danger">{row.rejectedEvents} rejected</span> : <span className="badge badge-neutral">{row.status === "present" ? "Recorded" : "Events only"}</span>}</td>
+                  <td>{row.pendingReviews ? <span className="badge badge-warning">{row.pendingReviews} pending</span> : row.rejectedEvents ? <span className="badge badge-warning">{row.rejectedEvents} rejected</span> : <span className="badge badge-neutral">{row.status === "present" ? "Recorded" : "Events only"}</span>}</td>
                   <td><details><summary className="section-link">Event history</summary><div className="attendance-event-history">{row.events.map((event: any) => <div className="attendance-event-row" key={event._id}>
                     <div><strong>{event.eventType.replace("_", " ")}</strong><small>{stamp(event.receivedAt, timezone)}</small></div>
                     <span className={"badge "+(event.geofencePassed ? "badge-success" : "badge-warning")}>{event.geofencePassed ? "Inside geofence" : event.reviewStatus.replace("_", " ")}</span>
