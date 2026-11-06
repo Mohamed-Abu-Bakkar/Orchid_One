@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Plus, Wallet, UserRound, Settings2, Archive, CheckCircle2 } from "lucide-react";
@@ -25,7 +25,6 @@ export function WageManagement() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const employee = useMemo(() => data?.employees.find(item => item._id === employeeId), [data, employeeId]);
   const activeComponents = data?.components.filter(item => item.isActive) ?? [];
   const selectedComponents = new Set(lines.map(line => line.componentId));
 
