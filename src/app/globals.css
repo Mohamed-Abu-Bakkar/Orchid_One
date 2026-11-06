@@ -10,3 +10,44 @@
 .sb-item{width:100%;border:0;text-align:left;background:transparent;font-family:inherit}
 @media(max-width:1024px){#hamburger{display:inline-flex}.sidebar{position:fixed;inset:0 auto 0 0;z-index:70;transform:translateX(-100%);transition:transform .25s;box-shadow:var(--shadow-lg)}.sidebar.open{transform:translateX(0)}.main-col{width:100%}.content{padding:20px}}
 @media(max-width:640px){.topbar{padding:0 14px}.content{padding:16px}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi{padding:14px}.kpi .kpi-val{font-size:22px}.page-head{align-items:flex-start}.page-actions{width:100%}}
+
+
+/* Authentication and employee portal */
+.auth-page{min-height:100dvh;display:grid;place-items:center;padding:24px;background:#fcf9f8;color:#1b1c1c;font-family:Inter,Arial,sans-serif}
+.auth-card{width:min(100%,440px);padding:36px;background:#fff;border:1px solid #eadfea;border-radius:18px;box-shadow:0 18px 55px rgba(74,18,84,.08)}
+.auth-brand{display:flex;align-items:center;gap:10px;color:#4a1254;font-weight:800;letter-spacing:.08em;font-size:13px;margin-bottom:34px}
+.auth-mark{width:38px;height:38px;border-radius:12px;background:#f2daff;display:grid;place-items:center;font-size:24px}
+.auth-eyebrow{font-size:11px;letter-spacing:.16em;font-weight:700;color:#83488b;margin:0 0 9px}
+.auth-card h1{font:700 27px/1.2 Manrope,Inter,sans-serif;color:#241827;margin:0 0 10px}
+.auth-subtitle{font-size:14px;line-height:1.65;color:#756b77;margin:0 0 25px}
+.auth-form{display:grid;gap:16px}
+.auth-form label{display:grid;gap:7px;font-size:12px;font-weight:700;color:#514653}
+.auth-form input{width:100%;height:46px;padding:0 13px;border:1px solid #d8ccd9;border-radius:9px;background:#fff;color:#241827;font:400 14px Inter,Arial,sans-serif;outline:none}
+.auth-form input:focus{border-color:#83488b;box-shadow:0 0 0 3px rgba(131,72,139,.12)}
+.auth-submit{width:100%;min-height:46px;display:flex;align-items:center;justify-content:center;border:0;border-radius:9px;background:#4a1254;color:#fff;text-decoration:none;font:700 13px Inter,Arial,sans-serif;cursor:pointer;margin-top:4px}
+.auth-submit:disabled{opacity:.6;cursor:wait}
+.auth-error{margin:0;padding:10px 12px;border-radius:8px;background:#fff0ef;color:#a32727;font-size:12px;line-height:1.5}
+.auth-switch{text-align:center;margin:21px 0 0;color:#756b77;font-size:12px}
+.auth-switch a{color:#632b6c;font-weight:700;text-decoration:none}
+.auth-footnote{text-align:center;margin:19px 0 0;color:#958b97;font-size:11px;line-height:1.5}
+.status-card{text-align:center}
+.status-card .auth-submit{margin-top:20px}
+.status-icon{display:inline-grid;place-items:center;width:54px;height:54px;border-radius:50%;background:#f2daff;color:#4a1254;font-size:26px;margin-bottom:20px}
+.employee-page{min-height:100dvh;background:#fcf9f8;color:#1b1c1c;font-family:Inter,Arial,sans-serif;padding-bottom:88px}
+.employee-header{background:#4a1254;color:#fff;padding:22px 20px 28px;border-radius:0 0 22px 22px}
+.employee-header-inner,.employee-content{width:min(100%,720px);margin:0 auto}
+.employee-header-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.employee-brand{font:800 12px Manrope,Inter,sans-serif;letter-spacing:.12em}
+.employee-logout{border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;border-radius:8px;padding:8px 11px;font-size:11px}
+.employee-greeting{margin:28px 0 5px;font:700 25px Manrope,Inter,sans-serif}
+.employee-header-sub{margin:0;color:#ead9ed;font-size:12px}
+.employee-content{padding:20px 16px}
+.employee-card{background:#fff;border:1px solid #e7dfe8;border-radius:13px;padding:17px;margin-bottom:14px;box-shadow:0 4px 12px rgba(74,18,84,.035)}
+.employee-card-title{font:700 14px Manrope,Inter,sans-serif;margin:0 0 6px;color:#342538}
+.employee-muted{font-size:12px;color:#807580;line-height:1.6;margin:0}
+.employee-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f2daff;color:#4a1254;font-size:10px;font-weight:700}
+.employee-tabs{position:fixed;z-index:30;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e8e0e8;display:flex;justify-content:center;padding:10px 8px calc(10px + env(safe-area-inset-bottom))}
+.employee-tabs button{flex:1;max-width:140px;border:0;background:transparent;color:#807580;font-size:10px;padding:7px 2px}
+.employee-tabs button.active{color:#4a1254;font-weight:700}
+.employee-tabs span{display:block;font-size:19px;margin-bottom:3px}
+@media(max-width:480px){.auth-card{padding:27px 22px}.auth-card h1{font-size:24px}}
