@@ -213,3 +213,5 @@
 .employee-directory-toolbar .policy-field{min-width:145px}
 .employee-directory-toolbar .policy-field .input{min-height:40px}
 @media(max-width:900px){.employee-directory-toolbar{flex-wrap:wrap}.employee-directory-toolbar .policy-field{flex:1 1 170px}.employee-directory-search{flex:1 1 100%}}
+
+.oe-attendance-pending{margin:10px 0 0;padding:10px 12px;border-radius:9px;background:#fff2d9;color:#7b4b00;font-size:12px;line-height:1.5}

@@ -7,6 +7,7 @@ The admin Attendance page reads attendance records from the organization's Conve
 - Date-range register, limited to 31 calendar days per request.
 - Optional employee filter and text search.
 - Employee/day grouping based on the organization's configured timezone.
+- Existing persisted `attendanceDays` summaries are included, including their stored status, payable minutes, break minutes and correction note. These are displayed as stored; this module does not recalculate them.
 - Actual check-in, check-out, break-start and break-end event history.
 - First recorded check-in and last recorded check-out timestamps.
 - Scheduled date-specific shifts where present.
@@ -19,10 +20,11 @@ The admin Attendance page reads attendance records from the organization's Conve
 ## Data integrity
 
 - `attendanceEvents` remains the immutable source event stream for this view.
-- The register does not create attendance rows or fill missing days.
+- The register does not create attendance rows or fill missing days. It combines existing `attendanceEvents` and `attendanceDays` records only.
 - A day without a recorded event is not displayed as absent.
 - A failed geofence event remains visible as an exception; it is not silently discarded.
 - Existing review decisions are reflected in the register.
+- The employee portal uses the existing GPS punch mutation, shows all assigned shifts for the day, excludes pending/rejected punches from its elapsed-time display, and blocks further punches while a geofence exception is pending review.
 - The register uses server-received timestamps and the organization's configured timezone for day grouping.
 
 ## Deliberately not calculated yet
@@ -50,3 +52,4 @@ Before enabling those calculations, confirm:
 - Cross-organization employee IDs: reject.
 - Supervisor and superadmin: may view the organization register; employee role cannot.
 - CSV: exports the currently filtered rows and uses proper CSV quoting.
+- Persisted `attendanceDays` with no punch events: still appear as a stored daily summary.

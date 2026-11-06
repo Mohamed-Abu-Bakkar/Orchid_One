@@ -197,7 +197,8 @@ export const adminRegister = query({
     const hasMoreSchedules = scheduledShifts.length > 5000;
     const hasMoreDays = attendanceDays.length > 5000;
     const filtered = events.slice(0, 5000);
-    const filteredDays = args.employeeId ? attendanceDays.filter(day => day.employeeId === args.employeeId) : attendanceDays;
+    const attendanceDayWindow = attendanceDays.slice(0, 5000);
+    const filteredDays = args.employeeId ? attendanceDayWindow.filter(day => day.employeeId === args.employeeId) : attendanceDayWindow;
     const employeeIds = [...new Set([...filtered.map(event => String(event.employeeId)), ...filteredDays.map(day => String(day.employeeId))])];
     const employeeMap = new Map<string, any>();
     await Promise.all(employeeIds.map(async id => {
@@ -211,7 +212,7 @@ export const adminRegister = query({
       if (location && location.organizationId === admin.organizationId) locationMap.set(id, location.name);
     }));
     const shiftMap = new Map<string, any[]>();
-    await Promise.all(scheduledShifts.map(async assignment => {
+    await Promise.all(scheduledShifts.slice(0, 5000).map(async assignment => {
       const shift = await ctx.db.get(assignment.shiftId);
       if (!shift || shift.organizationId !== admin.organizationId) return;
       const key = String(assignment.employeeId) + ":" + assignment.workDate;
@@ -219,6 +220,20 @@ export const adminRegister = query({
       current.push({ name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute });
       shiftMap.set(key, current);
     }));
+    const defaultShiftCache = new Map<string, any>();
+    const shiftsForEmployeeDate = async (employee: any, key: string) => {
+      const assigned = shiftMap.get(key) ?? [];
+      if (assigned.length || !employee.defaultShiftId) return assigned;
+      const id = String(employee.defaultShiftId);
+      let shift = defaultShiftCache.get(id);
+      if (shift === undefined) {
+        shift = await ctx.db.get(employee.defaultShiftId);
+        defaultShiftCache.set(id, shift ?? null);
+      }
+      return shift && shift.organizationId === admin.organizationId
+        ? [{ name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute }]
+        : [];
+    };
     const groups = new Map<string, any>();
     for (const event of filtered) {
       const employee = employeeMap.get(String(event.employeeId));
@@ -234,7 +249,7 @@ export const adminRegister = query({
           employeeCode: employee.employeeCode,
           departmentId: employee.departmentId,
           locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
-          scheduledShifts: shiftMap.get(key) ?? [],
+          scheduledShifts: await shiftsForEmployeeDate(employee, key),
           workDate,
           firstCheckInAt: null as number | null,
           lastCheckOutAt: null as number | null,
@@ -275,7 +290,7 @@ export const adminRegister = query({
           employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
           employeeCode: employee.employeeCode, departmentId: employee.departmentId,
           locationName: locationMap.get(String(employee.locationId)) ?? "Unknown location",
-          scheduledShifts: shiftMap.get(key) ?? [], workDate: day.workDate,
+          scheduledShifts: await shiftsForEmployeeDate(employee, key), workDate: day.workDate,
           firstCheckInAt: null as number | null, lastCheckOutAt: null as number | null,
           eventCount: 0, pendingReviews: 0, rejectedEvents: 0, outsideGeofenceEvents: 0,
           events: [] as any[],
