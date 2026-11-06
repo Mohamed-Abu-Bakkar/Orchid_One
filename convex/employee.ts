@@ -160,9 +160,10 @@ export const listForAdmin = query({
       .collect();
 
     return await Promise.all(employees.map(async (employee) => {
-      const [department, location] = await Promise.all([
+      const [department, location, defaultShift] = await Promise.all([
         ctx.db.get(employee.departmentId),
         ctx.db.get(employee.locationId),
+        employee.defaultShiftId ? ctx.db.get(employee.defaultShiftId) : null,
       ]);
       return {
         _id: employee._id,
@@ -176,7 +177,8 @@ export const listForAdmin = query({
         status: employee.status,
         joiningDate: employee.joiningDate,
         departmentName: department?.name ?? "Unassigned",
-        locationName: location?.name ?? "Unassigned",\n        defaultShiftName: defaultShift?.name ?? "Not assigned",
+        locationName: location?.name ?? "Unassigned",
+        defaultShiftName: defaultShift?.name ?? "Not assigned",
       };
     }));
   },
