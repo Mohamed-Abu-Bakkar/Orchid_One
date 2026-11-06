@@ -27,6 +27,7 @@
       }
       if (!response.ok) throw new Error("Unable to load employee workspace");
       const { workspace, policies } = await response.json();
+      window.__orchidWorkspace = workspace;
       if (!workspace?.linked || !workspace.profile) {
         document.querySelectorAll("#home > div, #attScreen, #hoursScreen, #payScreen, #reqScreen, #docsScreen, #analyticsScreen, #notifScreen, #polScreen").forEach(node => node.classList.add("hidden"));
         const main = document.createElement("main");
@@ -239,6 +240,49 @@
       document.querySelector(".p-4.flex.flex-col.gap-3")?.prepend(notice);
     }
   }
+
+  
+  window.toggleCheckIn = () => {
+    const latest = window.__orchidWorkspace?.attendance?.[0];
+    const eventType = latest?.eventType === "check_in" || latest?.eventType === "break_end" ? "check_out" : "check_in";
+    if (!navigator.geolocation) {
+      window.toast?.("Location services are not available on this device.");
+      return;
+    }
+    window.toast?.("Verifying your location…");
+    navigator.geolocation.getCurrentPosition(async position => {
+      try {
+        const response = await fetch("/api/employee/workspace", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventType,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracyM: position.coords.accuracy,
+            clientTimestamp: Date.now(),
+            idempotencyKey: crypto.randomUUID(),
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "ATTENDANCE_PUNCH_FAILED");
+        if (result.requiresReview) {
+          window.toast?.("Punch recorded outside the configured geofence and requires review.");
+        } else {
+          window.toast?.(eventType === "check_in" ? "Checked in successfully." : "Checked out successfully.");
+        }
+        window.location.reload();
+      } catch (error) {
+        console.error("[Orchid attendance]", error);
+        window.toast?.(error instanceof Error ? error.message : "Unable to record attendance.");
+      }
+    }, error => {
+      window.toast?.(error.code === 1 ? "Location permission is required to record attendance." : "Unable to verify your location.");
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  };
+  window.submitNewRequest = () => window.toast?.("Request submission is not enabled until the leave workflow is configured.");
+  window.confirmPolicyRead = () => window.toast?.("Policy acknowledgement will be enabled when the policy action is connected.");
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once: true });
   else hydrate();
