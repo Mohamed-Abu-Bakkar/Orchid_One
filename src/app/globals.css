@@ -76,3 +76,5 @@
 .policy-open-link{display:inline-flex;align-items:center;gap:5px;color:var(--primary);font-size:11px;font-weight:700;text-decoration:none}
 .btn-sm{min-height:30px;padding:6px 10px;font-size:11px}
 @media(max-width:640px){.policy-form-grid{grid-template-columns:1fr}.policy-row{flex-wrap:wrap}.policy-row-main{flex-basis:calc(100% - 52px)}.policy-report-row{align-items:flex-start;flex-direction:column}}
+
+@import "../styles/orchid-employee.css";
