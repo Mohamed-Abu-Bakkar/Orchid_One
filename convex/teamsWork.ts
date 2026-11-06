@@ -92,7 +92,8 @@ export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees
  const targetDay=dayNumber(a.workDate);
  const adjacent=existing.filter(row=>row.workDate!==a.workDate&&Math.abs(dayNumber(row.workDate)-targetDay)<=1);
  const adjacentIntervals=await Promise.all(adjacent.map(async row=>{const shift=await ctx.db.get(row.shiftId);return shift?shiftInterval(shift,dayNumber(row.workDate)):null;}));
- const candidates=selected.map(s=>{if(!s)throw Error("SHIFT_NOT_AVAILABLE");return shiftInterval(s,targetDay);});
+ const effectiveCandidates=selected.length?selected:(employee.defaultShiftId?[await ctx.db.get(employee.defaultShiftId)]:[]);
+ const candidates=effectiveCandidates.map(s=>{if(!s)throw Error("SHIFT_NOT_AVAILABLE");return shiftInterval(s,targetDay);});
  for(let i=0;i<candidates.length;i++){
   if(candidates.some((other,j)=>i!==j&&overlaps(candidates[i],other)))throw Error("SHIFTS_OVERLAP");
   if(adjacentIntervals.some(other=>other&&overlaps(candidates[i],other)))throw Error("SHIFTS_OVERLAP");
