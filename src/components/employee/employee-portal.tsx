@@ -81,10 +81,9 @@ export function EmployeePortal() {
   if (!account) {
     return <main className="auth-page"><section className="auth-card"><h1>Account setup required</h1><p className="auth-subtitle">Your login is valid, but an Orchid Flowers account profile has not been provisioned. Contact the system administrator.</p><button className="auth-submit" onClick={signOut}>Sign out</button></section></main>;
   }
-  if (account.status !== "active") {
-    const target = account.status === "rejected" ? "/rejected" : account.status === "suspended" ? "/suspended" : "/pending-approval";
-    router.replace(target);
-    return <main className="auth-page"><section className="auth-card"><p className="auth-subtitle">Redirecting to your account status…</p></section></main>;
+  if (account.status === "suspended") {
+    router.replace("/suspended");
+    return <main className="auth-page"><section className="auth-card"><p className="auth-subtitle">This account is suspended.</p></section></main>;
   }
   if (account.role !== "employee") {
     router.replace("/admin");
