@@ -42,11 +42,9 @@ export const ensureUserProfile = mutation({
       .unique();
 
     if (existing) {
-      const status = existing.accountStatus === "suspended" || !existing.isActive
-        ? "suspended"
-        : "active";
+      const status = existing.accountStatus === "suspended" ? "suspended" : "active";
 
-      if (status === "active" && existing.accountStatus !== "active") {
+      if (status === "active" && (!existing.isActive || existing.accountStatus !== "active")) {
         await ctx.db.patch(existing._id, { accountStatus: "active", isActive: true });
       }
 
