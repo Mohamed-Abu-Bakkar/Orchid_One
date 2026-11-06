@@ -61,9 +61,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
         row.eventCount, row.outsideGeofenceEvents, row.pendingReviews,
       ]),
     ];
-    const csv = lines.map(line => line.map(quote).join(",")).join("\r
-");
-    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+    const csv = lines.map(line => line.map(quote).join(",")).join(String.fromCharCode(13, 10));
+    const url = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff), csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
     link.download = "orchid-attendance-" + fromDate + "-to-" + toDate + ".csv";
