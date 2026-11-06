@@ -42,7 +42,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
   if (employees === undefined) return <section className="sec"><p className="sub">Loading attendance filters…</p></section>;
 
   const timezone = register?.timezone ?? "Asia/Kolkata";
-  const invalidRange = !fromDate || !toDate || fromDate > toDate;\n  function exportCsv() {
+  const invalidRange = !fromDate || !toDate || fromDate > toDate;
+  function exportCsv() {
     if (!register || rows.length === 0) return;
     const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
     const lines = [
@@ -55,8 +56,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
         row.eventCount, row.outsideGeofenceEvents, row.pendingReviews,
       ]),
     ];
-    const csv = lines.map(line => line.map(quote).join(",")).join("\\r\\n");
-    const url = URL.createObjectURL(new Blob(["\\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+    const csv = lines.map(line => line.map(quote).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
     link.download = "orchid-attendance-" + fromDate + "-to-" + toDate + ".csv";
@@ -95,7 +96,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
               <span className="t-caption text-tertiary"><CalendarDays size={13} style={{display:"inline",verticalAlign:"middle"}}/> {register.fromDate} to {register.toDate} · {timezone}</span>
               <span className="t-caption text-tertiary">Maximum range: 31 calendar days</span>
             </div>
-            {register.truncated && <p className="form-error" role="status">This result exceeds the 5,000-event display limit. Narrow the date range or select an employee to view a complete subset.</p>}\n            {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
+            {register.truncated && <p className="form-error" role="status">This result exceeds the 5,000-event display limit. Narrow the date range or select an employee to view a complete subset.</p>}
+            {rows.length === 0 ? <div className="empty-state"><Clock3 size={28}/><h3 className="t-h3">{register.rows.length === 0 ? "No attendance records for this period" : "No matching attendance records"}</h3><p className="t-body-sm text-secondary">{register.rows.length === 0 ? "Actual check-in, check-out and break events will appear here after employees record attendance. No sample records are inserted." : "Try another employee or search term."}</p></div>
             : <div className="employee-directory-table-wrap"><table className="employee-directory-table">
                 <thead><tr><th>Employee</th><th>Work date</th><th>Scheduled shift</th><th>First check-in</th><th>Last check-out</th><th>Events</th><th>Geofence</th><th>Review</th><th>History</th></tr></thead>
                 <tbody>{rows.map((row: any) => <tr key={row.id}>
