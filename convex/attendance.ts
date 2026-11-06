@@ -37,7 +37,7 @@ export const recordPunch = mutation({
 
     const latest = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").first();
-    if (latest?.eventType === "check_in" && latest.reviewStatus === "pending") throw new Error("ATTENDANCE_REVIEW_PENDING");
+    if (latest?.reviewStatus === "pending") throw new Error("ATTENDANCE_REVIEW_PENDING");
 
     const distance = distanceMeters(location.latitude, location.longitude, args.latitude, args.longitude);
     const geofencePassed = distance <= location.geofenceRadiusM;
@@ -63,11 +63,11 @@ export const pendingGeofenceExceptions = query({
   args: {},
   handler: async (ctx) => {
     const reviewer = await requireRole(ctx, ["supervisor", "superadmin"]);
-    const events = await ctx.db.query("attendanceEvents")
-      .withIndex("by_org_time", q => q.eq("organizationId", reviewer.organizationId))
-      .order("desc").take(200);
-    const pending = events.filter(event => event.reviewStatus === "pending" && event.exceptionCode === "OUTSIDE_GEOFENCE");
-    return Promise.all(pending.map(async event => {
+    const pending = await ctx.db.query("attendanceEvents")
+      .withIndex("by_org_review_time", q => q.eq("organizationId", reviewer.organizationId).eq("reviewStatus", "pending"))
+      .order("desc").collect();
+    const exceptions = pending.filter(event => event.exceptionCode === "OUTSIDE_GEOFENCE");
+    return Promise.all(exceptions.map(async event => {
       const [employee, location] = await Promise.all([ctx.db.get(event.employeeId), ctx.db.get(event.locationId)]);
       return {
         _id: event._id, eventType: event.eventType, latitude: event.latitude, longitude: event.longitude,
