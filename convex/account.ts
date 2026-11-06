@@ -1,26 +1,36 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-const accountStatusValidator = v.union(
-  v.literal("pending"),
-  v.literal("active"),
-  v.literal("rejected"),
-  v.literal("suspended"),
-);
+const accountStatusValidator = v.union(v.literal("active"), v.literal("suspended"));
+const roleValidator = v.union(v.literal("superadmin"), v.literal("supervisor"), v.literal("employee"));
 
-export const ensurePendingProfile = mutation({
+async function getOrCreateOrganization(ctx: any) {
+  const code = "ORCHID";
+  const existing = await ctx.db
+    .query("organizations")
+    .withIndex("by_code", (q: any) => q.eq("code", code))
+    .unique();
+
+  if (existing) return existing._id;
+
+  const now = Date.now();
+  return ctx.db.insert("organizations", {
+    name: "Orchid Flowers",
+    code,
+    timezone: "Asia/Kolkata",
+    currency: "INR",
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+/**
+ * Every authenticated Better Auth user receives an active employee account.
+ * Elevated roles are assigned separately by the owner in the database.
+ */
+export const ensureUserProfile = mutation({
   args: {},
-  returns: v.object({
-    status: accountStatusValidator,
-    role: v.union(
-      v.literal("superadmin"),
-      v.literal("admin"),
-      v.literal("hr_manager"),
-      v.literal("department_manager"),
-      v.literal("supervisor"),
-      v.literal("employee"),
-    ),
-  }),
+  returns: v.object({ status: accountStatusValidator, role: roleValidator }),
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("UNAUTHENTICATED");
@@ -31,36 +41,33 @@ export const ensurePendingProfile = mutation({
       .unique();
 
     if (existing) {
+      const status = existing.accountStatus === "suspended" || !existing.isActive
+        ? "suspended"
+        : "active";
+
+      if (status === "active" && existing.accountStatus !== "active") {
+        await ctx.db.patch(existing._id, { accountStatus: "active", isActive: true });
+      }
+
       return {
-        status: existing.accountStatus ?? (existing.isActive ? "active" : "pending"),
-        role: existing.role,
+        status,
+        role: existing.role as "superadmin" | "supervisor" | "employee",
       };
     }
 
-    const organizationCode = process.env.ORCHID_ORGANIZATION_CODE;
-    if (!organizationCode) {
-      throw new Error("ORCHID_ORGANIZATION_CODE_NOT_CONFIGURED");
-    }
-
-    const organization = await ctx.db
-      .query("organizations")
-      .withIndex("by_code", (q) => q.eq("code", organizationCode))
-      .unique();
-
-    if (!organization) throw new Error("ORCHID_ORGANIZATION_NOT_BOOTSTRAPPED");
-
+    const organizationId = await getOrCreateOrganization(ctx);
     await ctx.db.insert("users", {
-      organizationId: organization._id,
+      organizationId,
       authSubject: identity.subject,
       fullName: identity.name,
       email: identity.email,
       role: "employee",
-      accountStatus: "pending",
-      isActive: false,
+      accountStatus: "active",
+      isActive: true,
       createdAt: Date.now(),
     });
 
-    return { status: "pending" as const, role: "employee" as const };
+    return { status: "active" as const, role: "employee" as const };
   },
 });
 
@@ -70,14 +77,7 @@ export const getMyAccountStatus = query({
     v.null(),
     v.object({
       status: accountStatusValidator,
-      role: v.union(
-        v.literal("superadmin"),
-        v.literal("admin"),
-        v.literal("hr_manager"),
-        v.literal("department_manager"),
-        v.literal("supervisor"),
-        v.literal("employee"),
-      ),
+      role: roleValidator,
       employeeId: v.optional(v.id("employees")),
     }),
   ),
@@ -91,10 +91,9 @@ export const getMyAccountStatus = query({
       .unique();
 
     if (!user) return null;
-
     return {
-      status: user.accountStatus ?? (user.isActive ? "active" : "pending"),
-      role: user.role,
+      status: user.accountStatus === "suspended" || !user.isActive ? "suspended" as const : "active" as const,
+      role: user.role as "superadmin" | "supervisor" | "employee",
       employeeId: user.employeeId,
     };
   },
