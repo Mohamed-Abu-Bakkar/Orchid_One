@@ -174,15 +174,20 @@ export const adminRegister = query({
     }
     const startAt = localDateStartUtc(args.fromDate, organization.timezone);
     const endAt = localDateStartUtc(nextDate(args.toDate), organization.timezone);
-    const [events, scheduledShifts] = await Promise.all([ctx.db.query("attendanceEvents")
-      .withIndex("by_org_time", q => q.eq("organizationId", admin.organizationId).gte("receivedAt", startAt).lt("receivedAt", endAt))
-      .order("desc")
-      .take(5001), ctx.db.query("shiftAssignments")
-      .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
-      .collect()]);
+    const [events, scheduledShifts] = await Promise.all([
+      args.employeeId
+        ? ctx.db.query("attendanceEvents")
+            .withIndex("by_employee_time", q => q.eq("employeeId", args.employeeId!).gte("receivedAt", startAt).lt("receivedAt", endAt))
+            .order("desc").take(5001)
+        : ctx.db.query("attendanceEvents")
+            .withIndex("by_org_time", q => q.eq("organizationId", admin.organizationId).gte("receivedAt", startAt).lt("receivedAt", endAt))
+            .order("desc").take(5001),
+      ctx.db.query("shiftAssignments")
+        .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
+        .collect(),
+    ]);
     const hasMoreEvents = events.length > 5000;
-    const eventWindow = events.slice(0, 5000);
-    const filtered = args.employeeId ? eventWindow.filter(event => event.employeeId === args.employeeId) : eventWindow;
+    const filtered = events.slice(0, 5000);
     const employeeIds = [...new Set(filtered.map(event => String(event.employeeId)))];
     const employeeMap = new Map<string, any>();
     await Promise.all(employeeIds.map(async id => {
