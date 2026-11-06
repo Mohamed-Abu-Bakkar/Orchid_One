@@ -177,10 +177,12 @@ export const adminRegister = query({
     const [events, scheduledShifts] = await Promise.all([ctx.db.query("attendanceEvents")
       .withIndex("by_org_time", q => q.eq("organizationId", admin.organizationId).gte("receivedAt", startAt).lt("receivedAt", endAt))
       .order("desc")
-      .collect(), ctx.db.query("shiftAssignments")
+      .take(5001), ctx.db.query("shiftAssignments")
       .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate))
       .collect()]);
-    const filtered = args.employeeId ? events.filter(event => event.employeeId === args.employeeId) : events;
+    const hasMoreEvents = events.length > 5000;
+    const eventWindow = events.slice(0, 5000);
+    const filtered = args.employeeId ? eventWindow.filter(event => event.employeeId === args.employeeId) : eventWindow;
     const employeeIds = [...new Set(filtered.map(event => String(event.employeeId)))];
     const employeeMap = new Map<string, any>();
     await Promise.all(employeeIds.map(async id => {
@@ -257,6 +259,7 @@ export const adminRegister = query({
       toDate: args.toDate,
       timezone: organization.timezone,
       totalEvents: filtered.length,
+      truncated: hasMoreEvents,
       recordedDays: rows.length,
       pendingReviews: rows.reduce((sum, row) => sum + row.pendingReviews, 0),
       outsideGeofenceEvents: rows.reduce((sum, row) => sum + row.outsideGeofenceEvents, 0),
