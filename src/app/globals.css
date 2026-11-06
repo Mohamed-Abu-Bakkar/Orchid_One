@@ -95,7 +95,7 @@
 .employee-directory-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 20px}
 .employee-directory-stats .kpi{display:grid;gap:8px;padding:17px}
 .employee-directory-stats .kpi-val{font-size:25px;font-weight:700;color:var(--text-primary)}
-.employee-directory-toolbar{display:flex;align-items:end;gap:14px;padding:16px;border-bottom:1px solid var(--border)}
+.employee-directory-toolbar{display:flex;align-items:flex-end;gap:14px;padding:16px;border-bottom:1px solid var(--border)}
 .employee-directory-search{flex:1;min-width:220px}
 .employee-status-filter{display:grid;gap:6px;width:min(220px,40%)}
 .employee-status-filter .input{height:40px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-primary);padding:0 10px}
