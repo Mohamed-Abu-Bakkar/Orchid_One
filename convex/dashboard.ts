@@ -79,9 +79,6 @@ export const getOverview = query({
     const orgInterviews = (await Promise.all(candidates.map(candidate =>
       ctx.db.query("interviews").withIndex("by_candidate", q => q.eq("candidateId", candidate._id)).collect()
     ))).flat();
-    const pendingCandidateCount = candidates.filter(candidate =>
-      !["rejected", "hired", "joined", "withdrawn"].includes(candidate.status.toLowerCase())
-    ).length;
     const orgWageRecords = (await Promise.all(wagePeriods.map(period =>
       ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()
     ))).flat().filter(record => orgEmployeeIds.has(String(record.employeeId)));
@@ -118,7 +115,6 @@ export const getOverview = query({
       },
       recruitment: {
         candidates: candidates.length,
-        activePipeline: pendingCandidateCount,
         interviews: orgInterviews.length,
       },
       organization: {
