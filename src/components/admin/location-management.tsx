@@ -139,7 +139,7 @@ export function LocationManagement() {
           <div className="location-geofence-note"><ShieldCheck size={17}/><span>Activation is explicit. Saving as draft will not make this location selectable for employees.</span></div>
           {message && <p className="onboarding-success" role="status">{message}</p>}
           {error && <p className="auth-error" role="alert">{error}</p>}
-          <div className="location-save-actions"><button type="button" className="btn btn-outline" disabled={saving} onClick={() => save(false)}><Save size={15}/>Save as draft</button><button type="button" className="btn btn-primary" disabled={saving} onClick={() => save(true)}><ShieldCheck size={15}/>{saving ? "Saving…" : "Save & activate"}</button></div>
+          <div className="location-save-actions"><button type="button" className="btn btn-outline" disabled={saving} onClick={() => save(Boolean(selected.isActive))}><Save size={15}/>{selected.isActive ? "Save changes" : "Save as draft"}</button><button type="button" className="btn btn-primary" disabled={saving} onClick={() => save(true)}><ShieldCheck size={15}/>{saving ? "Saving…" : "Save & activate"}</button></div>
         </div>}
       </div>
     </div>
