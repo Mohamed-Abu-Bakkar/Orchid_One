@@ -910,11 +910,11 @@ export function EmployeeMockReplica() {
 <div className="grid grid-cols-2 gap-2">
 <div>
 <label className="text-label-sm font-label-sm text-on-surface-variant block mb-1">From</label>
-<input type="date" value="2026-08-19" id="reqFrom" className="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+<input type="date" defaultValue="2026-08-19" id="reqFrom" className="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
 </div>
 <div>
 <label className="text-label-sm font-label-sm text-on-surface-variant block mb-1">To</label>
-<input type="date" value="2026-08-19" id="reqTo" className="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+<input type="date" defaultValue="2026-08-19" id="reqTo" className="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
 </div>
 </div>
 <div>
