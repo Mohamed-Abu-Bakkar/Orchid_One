@@ -34,5 +34,6 @@ export function UserManagement() {
       {rows.length===0&&<div className="empty-state"><Users size={26}/><strong>{view==="unlinked"?"No unlinked employee accounts":"No linked employee accounts"}</strong><p>{view==="unlinked"?"Registered employee accounts will appear here when available.":"Accounts linked to employee records will appear here."}</p></div>}
       {view==="unlinked"&&availableEmployees.length===0&&rows.length>0&&<p className="t-caption text-tertiary">There are no unlinked employee records available. Create an employee in Onboarding first.</p>}
     </div>
+    </div>
   </section>;
 }
