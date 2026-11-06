@@ -109,6 +109,7 @@ export function EmployeePortal() {
             <p className="employee-card-title">Your workspace</p>
             <p className="employee-muted">Your employee account is active. Use the sections below to access attendance, documents and requests as those records become available.</p>
           </div>
+          <EmployeePolicies />
           <div className="employee-card">
             <p className="employee-card-title">Today’s attendance</p>
             <p className="employee-muted">Location is requested only when you choose to punch in or out. Your device must allow location access.</p>
