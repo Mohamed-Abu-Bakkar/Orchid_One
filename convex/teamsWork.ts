@@ -6,6 +6,7 @@ const dateOk=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s);
 const statuses=v.union(v.literal("not_started"),v.literal("in_progress"),v.literal("completed"));
 const dayNumber=(date:string)=>Math.floor(Date.parse(date+"T00:00:00Z")/86400000);
 const dateFromDay=(day:number)=>new Date(day*86400000).toISOString().slice(0,10);
+const dateFromDay=(day:number)=>new Date(day*86400000).toISOString().slice(0,10);
 const shiftInterval=(shift:{startMinute:number;endMinute:number},day:number)=>({start:day*1440+shift.startMinute,end:day*1440+(shift.endMinute<=shift.startMinute?shift.endMinute+1440:shift.endMinute)});
 const overlaps=(a:{start:number;end:number},b:{start:number;end:number})=>a.start<b.end&&b.start<a.end;
 
@@ -80,7 +81,7 @@ export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees
  if(employee.status!=="active")throw Error("EMPLOYEE_NOT_ACTIVE");
  const selected=await Promise.all(a.shiftIds.map(id=>ctx.db.get(id)));
  if(selected.some(s=>!s||s.organizationId!==u.organizationId||!s.isActive))throw Error("SHIFT_NOT_AVAILABLE");
- const existing=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id)).collect();
+ const existing=await ctx.db.query("shiftAssignments").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id).gte("workDate",dateFromDay(dayNumber(a.workDate)-1)).lte("workDate",dateFromDay(dayNumber(a.workDate)+1))).collect();
  const targetDay=dayNumber(a.workDate);
  const adjacent=existing.filter(row=>row.workDate!==a.workDate&&Math.abs(dayNumber(row.workDate)-targetDay)<=1);
  const adjacentIntervals=await Promise.all(adjacent.map(async row=>{const shift=await ctx.db.get(row.shiftId);return shift?shiftInterval(shift,dayNumber(row.workDate)):null;}));
