@@ -1,5 +1,5 @@
-import AdminShell from "@/components/admin/admin-shell";
+import { AdminAccessGuard } from "@/components/admin/admin-access-guard";
 
 export default function AdminPage() {
-  return <AdminShell />;
+  return <AdminAccessGuard />;
 }
