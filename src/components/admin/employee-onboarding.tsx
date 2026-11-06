@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { CheckCircle2, UserPlus, Plus } from "lucide-react";
 import { CreatableSelect } from "@/components/admin/creatable-select";
+import { CreatableSelect } from "@/components/admin/creatable-select";
 
 export function EmployeeOnboarding() {
   const options = useQuery(api.employee.listOnboardingOptions, {});
@@ -25,7 +26,6 @@ export function EmployeeOnboarding() {
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
   const [error,setError]=useState("");
-  const [newDepartment,setNewDepartment]=useState("");
   const [newLocation,setNewLocation]=useState("");
   const [creatingOption,setCreatingOption]=useState<"department"|"location"|null>(null);
   const [optionMessage,setOptionMessage]=useState("");
@@ -72,7 +72,7 @@ export function EmployeeOnboarding() {
           <label className="policy-field">Designation *<input className="input" required value={designation} onChange={e=>setDesignation(e.target.value)} /></label>
           <label className="policy-field">Joining date *<input className="input" type="date" required value={joiningDate} onChange={e=>setJoiningDate(e.target.value)} /></label>
           <div className="onboarding-master-field"><CreatableSelect label="Department *" value={departmentId} options={options.departments.map(d=>({value:d._id,label:d.name}))} placeholder="Select department" required onChange={setDepartmentId} createLabel="Create department" onCreate={async name=>{const result=await createDepartment({name});setOptionMessage(`Department "${result.name}" created and selected.`);return {value:result.departmentId,label:result.name};}}/></div>
-          <div className="onboarding-master-field"><label className="policy-field">Work location *<select className="input" required value={locationId} onChange={e=>setLocationId(e.target.value)}><option value="">Select configured location</option>{options.locations.map(l=><option key={l._id} value={l._id}>{l.name}</option>)}</select></label><div className="onboarding-create-option"><input className="input" value={newLocation} maxLength={80} onChange={e=>setNewLocation(e.target.value)} placeholder="New location name" aria-label="New location name"/><button className="btn btn-outline btn-sm" type="button" disabled={!newLocation.trim()||creatingOption!==null} onClick={addLocation}><Plus size={14}/>{creatingOption==="location"?"Saving…":"Create draft"}</button></div><p className="t-caption text-tertiary">New locations remain inactive until address and GPS geofence details are configured.</p></div>
+          <div className="onboarding-master-field"><CreatableSelect label="Work location *" value={locationId} options={options.locations.map(l=>({value:l._id,label:l.name}))} placeholder="Select configured location" required onChange={setLocationId} createLabel="Create location draft" onCreate={async name=>{await createLocationDraft({name});setOptionMessage(`Location "${name}" created as a draft. Configure its address and GPS geofence in Locations before assigning employees.`);return null;}}/><p className="t-caption text-tertiary">New locations remain inactive until address and GPS geofence details are configured.</p></div>
           <label className="policy-field">Employment type *<select className="input" value={employmentType} onChange={e=>setEmploymentType(e.target.value)}><option value="permanent">Permanent</option><option value="hourly">Hourly</option><option value="daily">Daily</option><option value="contract">Contract</option></select></label>
           <label className="policy-field">Employee status *<select className="input" value={status} onChange={e=>setStatus(e.target.value)}><option value="pending">Pending</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
         </div>
