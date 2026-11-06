@@ -14,7 +14,7 @@ export function LocationManagement() {
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
-  const [radius, setRadius] = useState("100");
+  const [radius, setRadius] = useState("");
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,7 +36,7 @@ export function LocationManagement() {
     setAddress(item?.address ?? "");
     setLatitude(item && item.latitude !== 0 ? String(item.latitude) : "");
     setLongitude(item && item.longitude !== 0 ? String(item.longitude) : "");
-    setRadius(item && item.geofenceRadiusM > 0 ? String(item.geofenceRadiusM) : "100");
+    setRadius(item && item.geofenceRadiusM > 0 ? String(item.geofenceRadiusM) : "");
     setResults([]);
     setMessage("");
     setError("");
@@ -134,7 +134,7 @@ export function LocationManagement() {
             <label className="policy-field">Latitude<input className="input" inputMode="decimal" value={latitude} onChange={e => setLatitude(e.target.value)} placeholder="e.g. 10.7905"/></label>
             <label className="policy-field">Longitude<input className="input" inputMode="decimal" value={longitude} onChange={e => setLongitude(e.target.value)} placeholder="e.g. 78.7047"/></label>
           </div>
-          <label className="policy-field">Geofence radius (metres)<input className="input" type="number" min="10" max="1000" step="1" value={radius} onChange={e => setRadius(e.target.value)}/><small className="text-tertiary">Allowed range: 10–1,000 metres. Choose a radius that covers the actual workplace, not the surrounding neighbourhood.</small></label>
+          <label className="policy-field">Geofence radius (metres)<input className="input" type="number" min="10" max="1000" step="1" value={radius} onChange={e => setRadius(e.target.value)} placeholder="Enter radius in metres"/><small className="text-tertiary">Allowed range: 10–1,000 metres. Choose a radius that covers the actual workplace, not the surrounding neighbourhood.</small></label>
           {hasCoordinates && <div className="location-map-wrap"><iframe title="Selected workplace map" src={mapUrl} loading="lazy" referrerPolicy="no-referrer" /><a href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`} target="_blank" rel="noreferrer">Open map to verify pin</a></div>}
           <div className="location-geofence-note"><ShieldCheck size={17}/><span>Activation is explicit. Saving as draft will not make this location selectable for employees.</span></div>
           {message && <p className="onboarding-success" role="status">{message}</p>}
