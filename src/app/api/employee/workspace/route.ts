@@ -7,11 +7,13 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
   try {
-    const [workspace, policies] = await Promise.all([
+    const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+    const [workspace, policies, work] = await Promise.all([
       fetchAuthQuery(api.employee.myWorkspace, {}),
       fetchAuthQuery(api.policies.listPublishedForEmployee, {}),
+      fetchAuthQuery(api.teamsWork.myWorkDashboard, { workDate }),
     ]);
-    return NextResponse.json({ workspace, policies }, {
+    return NextResponse.json({ workspace, policies, work }, {
       headers: { "Cache-Control": "private, no-store, max-age=0" },
     });
   } catch (error) {
