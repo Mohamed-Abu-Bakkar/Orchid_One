@@ -13,8 +13,9 @@ export const saveMyDocument=mutation({args:{storageId:v.id("_storage"),documentC
  const category=args.documentCategory.trim(),type=args.documentType.trim(),fileName=args.originalFileName.trim();
  if(!category||category.length>40||!type||type.length>100||!fileName||fileName.length>180)throw Error("DOCUMENT_DETAILS_REQUIRED");
  if(!allowedTypes.includes(args.mimeType))throw Error("UNSUPPORTED_DOCUMENT_TYPE");
- const metadata=await ctx.storage.getMetadata(args.storageId);if(!metadata||metadata.contentType!==args.mimeType)throw Error("DOCUMENT_UPLOAD_INVALID");
- const matches=await ctx.db.query("employeeDocuments").withIndex("by_employee_category_type",q=>q.eq("employeeId",employee._id).eq("documentCategory",category).eq("documentType",type)).collect();
+ const metadata=await ctx.storage.getMetadata(args.storageId);if(!metadata||metadata.contentType!==args.mimeType||metadata.size<=0||metadata.size>15*1024*1024)throw Error("DOCUMENT_UPLOAD_INVALID");
+ const employeeDocs=await ctx.db.query("employeeDocuments").withIndex("by_employee",q=>q.eq("employeeId",employee._id)).collect();
+ const matches=employeeDocs.filter(doc=>doc.documentType.trim().toLowerCase()===type.toLowerCase()&&(!doc.documentCategory||doc.documentCategory.toLowerCase()===category.toLowerCase()));
  if(matches.some(doc=>doc.reviewStatus==="pending"))throw Error("DOCUMENT_REVIEW_ALREADY_PENDING");
  const active=matches.find(doc=>doc.reviewStatus==="verified");
  const id=await ctx.db.insert("employeeDocuments",{organizationId:user.organizationId,employeeId:employee._id,documentCategory:category,documentType:type,storageId:args.storageId,originalFileName:fileName,mimeType:args.mimeType,uploadedBy:user._id,uploadedAt:Date.now(),reviewStatus:"pending",replacesDocumentId:active?._id});
