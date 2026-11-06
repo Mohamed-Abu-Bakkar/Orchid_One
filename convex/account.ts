@@ -1,14 +1,15 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { MutationCtx } from "./_generated/server";
 
 const accountStatusValidator = v.union(v.literal("active"), v.literal("suspended"));
 const roleValidator = v.union(v.literal("superadmin"), v.literal("supervisor"), v.literal("employee"));
 
-async function getOrCreateOrganization(ctx: any) {
+async function getOrCreateOrganization(ctx: MutationCtx) {
   const code = "ORCHID";
   const existing = await ctx.db
     .query("organizations")
-    .withIndex("by_code", (q: any) => q.eq("code", code))
+    .withIndex("by_code", (q) => q.eq("code", code))
     .unique();
 
   if (existing) return existing._id;
