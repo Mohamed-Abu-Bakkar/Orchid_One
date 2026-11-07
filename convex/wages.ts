@@ -251,7 +251,7 @@ export const submitHourlyReview = mutation({
   args: { employeeId: v.id("employees"), workDate: v.string(), regularMinutes: v.number(), overtimeMinutes: v.number(), reason: v.string() },
   handler: async (ctx, args) => {
     const user = await requireRole(ctx, ["supervisor"]);
-    if (!validDate(args.workDate) || !Number.isSafeInteger(args.regularMinutes) || args.regularMinutes < 0 || !Number.isSafeInteger(args.overtimeMinutes) || args.overtimeMinutes < 0 || !args.reason.trim()) throw new Error("INVALID_HOURLY_REVIEW");
+    if (!validDate(args.workDate) || !Number.isSafeInteger(args.regularMinutes) || args.regularMinutes < 0 || args.overtimeMinutes !== 0 || !args.reason.trim() || args.reason.trim().length > 1000) throw new Error("INVALID_HOURLY_REVIEW");
     const employee = await ctx.db.get(args.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.employmentType !== "hourly" || employee.status !== "active") throw new Error("ACTIVE_HOURLY_EMPLOYEE_REQUIRED");
     const org = await ctx.db.get(user.organizationId);
@@ -271,6 +271,9 @@ export const submitHourlyReview = mutation({
     if (openIn !== null || openBreak !== null) throw new Error("INCOMPLETE_ATTENDANCE_SEQUENCE");
     const recordedBreakMinutes = Math.floor(breakMs / 60000);
     const recordedWorkMinutes = Math.max(0, Math.floor(attendanceMs / 60000) - recordedBreakMinutes);
+    if (args.regularMinutes > recordedWorkMinutes) throw new Error("PAYABLE_HOURS_EXCEED_RECORDED_WORK");
+    const applicableRate = await ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).lte("effectiveFrom", args.workDate)).order("desc").first();
+    if (!applicableRate || applicableRate.organizationId !== user.organizationId || applicableRate.employmentType !== "hourly" || (applicableRate.effectiveTo && applicableRate.effectiveTo < args.workDate)) throw new Error("HOURLY_RATE_NOT_CONFIGURED");
     const prior = await ctx.db.query("hourlyWageReviews").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate)).first();
     if (prior?.status === "approved") throw new Error("HOURLY_REVIEW_ALREADY_APPROVED");
     if (prior) throw new Error("HOURLY_REVIEW_ALREADY_SUBMITTED");
