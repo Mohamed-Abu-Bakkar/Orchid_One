@@ -698,34 +698,34 @@
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">schedule</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#1E8E4E] bg-[#e6f4ea] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">arrow_upward</span>5%</span>
+<span class="text-[10px] text-on-surface-variant">This month</span>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Total Hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">44.5<span class="text-title-md font-title-md text-on-surface-variant">h</span></p>
+<p id="performanceTotalHours" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">h</span></p>
 </div>
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">how_to_reg</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#1E8E4E] bg-[#e6f4ea] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">arrow_upward</span>2%</span>
+<span class="text-[10px] text-on-surface-variant">This month</span>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Avg. Attendance</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">94<span class="text-title-md font-title-md text-on-surface-variant">%</span></p>
+<p id="performanceAttendance" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">%</span></p>
 </div>
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">payments</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#b26a00] bg-[#fff4e0] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">trending_up</span>8%</span>
+<span class="text-[10px] text-on-surface-variant">Approved weeks</span>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Avg. Wage</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">₹5,100<span class="text-title-md font-title-md text-on-surface-variant">/wk</span></p>
+<p id="performanceAverageWage" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">/wk</span></p>
 </div>
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">local_florist</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#1E8E4E] bg-[#e6f4ea] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">arrow_upward</span>3%</span>
+<span class="text-[10px] text-on-surface-variant">This month</span>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Shifts Completed</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">22<span class="text-title-md font-title-md text-on-surface-variant">/mo</span></p>
+<p id="performanceShiftsAttended" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">/mo</span></p>
 </div>
 </div>
 <!-- Trends chart -->
@@ -733,71 +733,19 @@
 <div class="flex items-center justify-between mb-3">
 <span class="text-body-lg font-body-lg font-semibold text-on-surface">Trends</span>
 <div class="flex bg-surface-container-low rounded-lg p-1">
-<button class="px-3 py-1 text-label-sm font-label-sm rounded-md bg-primary text-white shadow-sm transition-all">Weekly</button>
-<button class="px-3 py-1 text-label-sm font-label-sm rounded-md text-on-surface-variant transition-all" onclick="toast('Monthly view')">Monthly</button>
+<button id="performanceWeeklyTab" type="button" class="px-3 py-1 text-label-sm font-label-sm rounded-md bg-primary text-white shadow-sm transition-all" onclick="setPerformanceRange('weekly')">Weekly</button>
+<button id="performanceMonthlyTab" type="button" class="px-3 py-1 text-label-sm font-label-sm rounded-md text-on-surface-variant transition-all" onclick="setPerformanceRange('monthly')">Monthly</button>
 </div>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant">Daily working hours</p>
-<div class="h-40 w-full flex items-end justify-between gap-2 pt-4 relative mt-2">
-<div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-6">
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
+<div id="performanceTrendBars" class="h-40 w-full flex items-end justify-between gap-2 pt-4 relative mt-2" aria-live="polite"><p class="w-full text-center text-label-sm text-on-surface-variant py-8">Loading working hours…</p></div></div>
 </div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[88%]"></div>
-<span class="text-[10px] text-on-surface-variant">Mon</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[88%]"></div>
-<span class="text-[10px] text-on-surface-variant">Tue</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-primary rounded-t-sm h-[92%]"></div>
-<span class="text-[10px] text-on-surface-variant">Wed</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[82%]"></div>
-<span class="text-[10px] text-on-surface-variant">Thu</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[80%]"></div>
-<span class="text-[10px] text-on-surface-variant">Fri</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-outline-variant/40 rounded-t-sm h-[6%]"></div>
-<span class="text-[10px] text-on-surface-variant">Sat</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-outline-variant/40 rounded-t-sm h-[6%]"></div>
-<span class="text-[10px] text-on-surface-variant">Sun</span>
-</div>
-</div>
-</div>
-<!-- Attendance insights -->
+<!-- Performance data notes -->
 <div class="bento-card">
-<div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">Attendance insights</span>
-<span class="text-label-sm font-label-sm text-primary font-semibold cursor-pointer" onclick="toast('Full insights')">View all</span>
-</div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">On-time check-ins</span><span class="text-body-md font-body-md font-medium text-on-surface">17 / 18</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Late arrivals</span><span class="text-body-md font-body-md font-medium text-on-surface">1 day</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Overtime earned</span><span class="text-body-md font-body-md font-medium text-[#1E8E4E]">4.5 hrs · ₹675</span></div>
-<div class="flex justify-between py-2"><span class="text-body-md font-body-md text-on-surface-variant">Streak</span><span class="text-body-md font-body-md font-medium text-on-surface">14 days</span></div>
-</div>
-
-<!-- Self feedback -->
-<div class="bento-card">
-<div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">Self feedback</span>
-<span class="text-label-sm font-label-sm text-primary font-semibold cursor-pointer" onclick="openFeedbackSheet()">Add</span>
-</div>
-<p class="text-body-md font-body-md text-on-surface-variant" id="fbStatus">No feedback submitted yet for this month.</p>
-<p class="text-label-sm font-label-sm text-[#EA4335] font-semibold mt-2">Deadline: 2 days remaining</p>
-</div>
-</div>
-</div>
+<span class="text-body-lg font-body-lg font-semibold text-on-surface">Performance summary</span>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-2" id="performanceDataNote">Metrics are calculated from recorded attendance days and approved or locked wage records. Unverified punches are excluded.</p>
+<div class="flex justify-between py-2 mt-2 border-t border-outline-variant/30"><span class="text-body-md text-on-surface-variant">Scheduled shifts</span><span id="performanceScheduledShifts" class="text-body-md font-medium text-on-surface">—</span></div>
+<div class="flex justify-between py-2 border-t border-outline-variant/30"><span class="text-body-md text-on-surface-variant">Recorded attendance days</span><span id="performanceRecordedDays" class="text-body-md font-medium text-on-surface">—</span></div>
 </div>
 <!-- Notifications Screen -->
 <div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="notifScreen">
