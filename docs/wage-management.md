@@ -61,3 +61,13 @@
 - Confirm only approved hours produce earnings and overtime remains separate.
 - Confirm audit logs for rate creation, submission, approval and rejection.
 - Confirm no sample records are inserted.
+
+
+## Dedicated admin modules — initial implementation
+- Wage Management separates permanent monthly compensation from hourly and daily effective-dated employee rate configuration.
+- Daily rates are configuration records only. Payable-day, partial-day, holiday, leave and absence rules are not inferred or calculated.
+- Hourly Workforce owns attendance evidence, supervisor suggestions and Superadmin approval for hourly payable hours. Wage Management no longer contains the operational attendance-review screen.
+- Overtime provides supervisor request submission and Superadmin approval/rejection with required rejection note, approved-minute validation, organization scoping and audit events.
+- Overtime request records retain submitter and reviewer metadata. Existing records remain readable because new audit fields are optional.
+- The Overtime module reviews request records; it does not define eligibility thresholds, rounding, statutory treatment or payroll formulas.
+- The overtime request workflow is distinct from the existing hourly payable-hours review. Before payroll integration, Orchid Flowers must confirm whether both approvals are required or whether one approval source should become authoritative.
