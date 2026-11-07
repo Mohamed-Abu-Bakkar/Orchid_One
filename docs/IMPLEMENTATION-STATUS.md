@@ -1,7 +1,7 @@
 # Orchid One – Phase 1 implementation status
 
 ## Source of truth
-Signed agreement CUSP/ORCHID/2026/001 controls Phase 1 scope. Original prototype remains in `OrchidHRM/`; production application is at repository root.
+Signed agreement CUSP/ORCHID/2026/001 controls Phase 1 scope. Legacy employee prototype is archived in `prototypes/legacy-employee/`; production application is at repository root.
 
 ## Contract modules
 Dashboard; authentication and roles; recruitment; onboarding and employee management; document management; hourly workforce; attendance; leave and shifts; organization and policies; reports including employee payment summary.
