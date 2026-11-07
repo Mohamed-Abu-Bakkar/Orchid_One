@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     title: "Orchid One"
   },
   icons: {
-    icon: [{ url: "/icons/orchid-mark.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/icons/icon-512.png", type: "image/png" }],
     apple: [{ url: "/icons/icon-180.png", type: "image/png" }]
   }
 };

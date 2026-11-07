@@ -8,7 +8,7 @@ Orchid One's Next.js App Router build is installable as a PWA independently of t
 - PWA metadata in the Next.js root layout.
 - Client-side service-worker registration at `/sw.js`.
 - Generic offline fallback at `/offline.html`.
-- App icon at `/icons/orchid-mark.svg`.
+- App icon at `/icons/icon-512.png`.
 
 ## Cache and privacy policy
 
@@ -23,4 +23,4 @@ The service worker caches only versioned Next.js static assets and the generic o
 
 ## Validation
 
-Check that `/manifest.json`, `/sw.js`, `/offline.html`, and `/icons/orchid-mark.svg` return successfully. In browser DevTools, verify the service worker is registered and that authenticated routes and `/api/*` are not stored in Cache Storage.
+Check that `/manifest.json`, `/sw.js`, `/offline.html`, and `/icons/icon-512.png` return successfully. In browser DevTools, verify the service worker is registered and that authenticated routes and `/api/*` are not stored in Cache Storage.
