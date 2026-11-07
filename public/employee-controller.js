@@ -57,7 +57,7 @@
 
       const p = workspace.profile;
       // Populate the More profile summary from the authenticated employee workspace.
-      text("#moreProfileName", fullName || "Employee");
+      text("#moreProfileName", [p.firstName, p.lastName].filter(Boolean).join(" ") || "Employee");
       text("#moreProfileMeta", [p.employeeCode, p.designation, workspace.department?.name].filter(Boolean).join(" · ") || "Employee");
       const joiningDate = p.joiningDate ? new Date(p.joiningDate + "T00:00:00") : null;
       if (joiningDate && !Number.isNaN(joiningDate.getTime())) {
