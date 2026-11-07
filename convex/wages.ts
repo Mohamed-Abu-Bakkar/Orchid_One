@@ -290,7 +290,7 @@ export const decideHourlyReview = mutation({
     if (review.status !== "pending") throw new Error("HOURLY_REVIEW_ALREADY_DECIDED");
     if (args.decision === "approved") {
       const regular = args.approvedRegularMinutes ?? review.suggestedRegularMinutes;
-      const overtime = args.approvedOvertimeMinutes ?? review.suggestedOvertimeMinutes;
+      const overtime = args.approvedOvertimeMinutes ?? 0;
       if (!Number.isSafeInteger(regular) || regular < 0 || !Number.isSafeInteger(overtime) || overtime < 0) throw new Error("INVALID_APPROVED_HOURS");
       if (regular + overtime > review.recordedWorkMinutes) throw new Error("PAYABLE_HOURS_EXCEED_RECORDED_WORK");
       const employee = await ctx.db.get(review.employeeId);
@@ -303,7 +303,7 @@ export const decideHourlyReview = mutation({
       if (!args.note?.trim()) throw new Error("REJECTION_REASON_REQUIRED");
       await ctx.db.patch(review._id, { status: "rejected", reviewerNote: args.note.trim(), reviewedBy: user._id, reviewedAt: Date.now() });
     }
-    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: args.decision === "approved" ? "hourly_wage_review.approved" : "hourly_wage_review.rejected", entityType: "hourlyWageReview", entityId: String(review._id), metadata: { approvedRegularMinutes: args.approvedRegularMinutes ?? review.suggestedRegularMinutes, approvedOvertimeMinutes: args.approvedOvertimeMinutes ?? review.suggestedOvertimeMinutes, note: args.note?.trim() || null }, createdAt: Date.now() });
+    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: args.decision === "approved" ? "hourly_wage_review.approved" : "hourly_wage_review.rejected", entityType: "hourlyWageReview", entityId: String(review._id), metadata: { approvedRegularMinutes: args.approvedRegularMinutes ?? review.suggestedRegularMinutes, approvedOvertimeMinutes: args.approvedOvertimeMinutes ?? 0, note: args.note?.trim() || null }, createdAt: Date.now() });
     return { reviewed: true, decision: args.decision };
   },
 });
