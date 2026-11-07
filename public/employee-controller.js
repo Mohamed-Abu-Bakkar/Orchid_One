@@ -249,12 +249,12 @@
       const validWorkDays = performanceDays.filter(day => ["present", "late"].includes(day.status));
       const totalPayableMinutes = validWorkDays.reduce((sum, day) => sum + Math.max(0, Number(day.payableMinutes) || 0), 0);
       const hoursValue = totalPayableMinutes / 60;
-      text("#performanceTotalHours", hoursValue.toLocaleString("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-      text("#performanceAttendance", summary?.percentage == null ? "—" : String(summary.percentage));
+      text("#performanceTotalHours", hoursValue.toLocaleString("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "h");
+      text("#performanceAttendance", summary?.percentage == null ? "—" : String(summary.percentage) + "%");
       const finalizedWeeklyWages = (workspace.wageRecords ?? []).filter(record => record.period?.periodType === "weekly" && ["approved", "locked"].includes(record.status));
       const averageWeeklyWagePaise = finalizedWeeklyWages.length ? finalizedWeeklyWages.reduce((sum, record) => sum + (Number(record.totalPaise) || 0), 0) / finalizedWeeklyWages.length : null;
-      text("#performanceAverageWage", averageWeeklyWagePaise == null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(averageWeeklyWagePaise / 100));
-      text("#performanceShiftsAttended", String(validWorkDays.length));
+      text("#performanceAverageWage", averageWeeklyWagePaise == null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(averageWeeklyWagePaise / 100) + "/wk");
+      text("#performanceShiftsAttended", String(validWorkDays.length) + "/mo");
       text("#performanceScheduledShifts", String(performance.scheduledShifts ?? 0));
       text("#performanceRecordedDays", String(validWorkDays.length));
       const trendNode = document.getElementById("performanceTrendBars");
