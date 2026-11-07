@@ -994,24 +994,24 @@ Submit Request
 <div class="flex items-center gap-3">
 <div class="w-12 h-12 rounded-full border-2 border-white/30 bg-white/15 text-white flex-shrink-0 flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined text-3xl">account_circle</span></div>
 <div class="flex flex-col flex-1 min-w-0">
-<p class="text-body-lg font-body-lg font-semibold">Arun Kumar</p>
-<p class="text-label-sm font-label-sm opacity-80 mt-0.5">OH-2041 · Software Engineer · IT</p>
+<p id="moreProfileName" class="text-body-lg font-body-lg font-semibold">Loading profile…</p>
+<p id="moreProfileMeta" class="text-label-sm font-label-sm opacity-80 mt-0.5">Employee profile</p>
 </div>
-<button class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors flex items-center justify-center flex-shrink-0" onclick="toast('Profile opens')">
+<button class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors flex items-center justify-center flex-shrink-0" onclick="toast('Profile details are not available yet.')">
 <span class="material-symbols-outlined text-[18px]">chevron_right</span>
 </button>
 </div>
 <div class="grid grid-cols-3 gap-2 mt-4">
 <div class="rounded-lg bg-white/10 p-2.5 text-center">
-<p class="text-body-md font-body-md font-bold font-tabular-nums">2</p>
+<p id="moreTenure" class="text-body-md font-body-md font-bold font-tabular-nums">—</p>
 <p class="text-[10px] opacity-75 mt-0.5">Years at Orchid</p>
 </div>
 <div class="rounded-lg bg-white/10 p-2.5 text-center">
-<p class="text-body-md font-body-md font-bold font-tabular-nums">12</p>
+<p id="moreLeaveBalance" class="text-body-md font-body-md font-bold font-tabular-nums">—</p>
 <p class="text-[10px] opacity-75 mt-0.5">Leave balance</p>
 </div>
 <div class="rounded-lg bg-white/10 p-2.5 text-center">
-<p class="text-body-md font-body-md font-bold font-tabular-nums">94%</p>
+<p id="moreAttendance" class="text-body-md font-body-md font-bold font-tabular-nums">—</p>
 <p class="text-[10px] opacity-75 mt-0.5">Attendance</p>
 </div>
 </div>
@@ -1019,19 +1019,19 @@ Submit Request
 <div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Work</p>
 <div class="bento-card p-0 overflow-hidden">
-<div class="more-item" onclick="toast('Attendance opens')">
+<div class="more-item" onclick="openAtt()">
 <span class="more-ic bg-secondary-fixed text-secondary"><span class="material-symbols-outlined">fingerprint</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Attendance</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Check in, shift and history</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Working hours opens')">
+<div class="more-item" onclick="openWorkingHours()">
 <span class="more-ic bg-[#e6f4ea] text-[#1E8E4E]"><span class="material-symbols-outlined">schedule</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Working Hours</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Weekly and monthly hours</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Shift schedule opens')">
+<div class="more-item" onclick="toast('My Schedule is not available yet.')">
 <span class="more-ic bg-[#fdf1e1] text-[#B26A00]"><span class="material-symbols-outlined">calendar_month</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">My Schedule</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Upcoming shifts and swaps</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
@@ -1069,13 +1069,13 @@ Submit Request
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Holiday calendar opens')">
+<div class="more-item" onclick="toast('Holiday Calendar is not available yet.')">
 <span class="more-ic bg-[#e6f4ea] text-[#1E8E4E]"><span class="material-symbols-outlined">calendar_month</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Holiday Calendar</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Public and festival holidays</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Events opens')">
+<div class="more-item" onclick="toast('Company Events are not available yet.')">
 <span class="more-ic bg-[#fdf1e1] text-[#B26A00]"><span class="material-symbols-outlined">celebration</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Company Events</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Celebrations and birthdays</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
@@ -1085,7 +1085,7 @@ Submit Request
 <div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Account</p>
 <div class="bento-card p-0 overflow-hidden">
-<div class="more-item" onclick="toast('Settings opens')">
+<div class="more-item" onclick="toast('Settings are not available yet.')">
 <span class="more-ic bg-secondary-fixed text-secondary"><span class="material-symbols-outlined">settings</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Settings</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Language, security and more</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
