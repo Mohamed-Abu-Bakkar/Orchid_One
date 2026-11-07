@@ -86,6 +86,7 @@ export function WageManagement() {
 <p className="t-caption text-tertiary">Daily rates are configuration only. Payable-day rules and partial-day treatment are not inferred.</p>
 <div className="wage-record-list">{(wageTab==="hourly"?rateData.hourlyEmployees:rateData.dailyEmployees).map(e=><div className="wage-employee-record" key={e._id}><div className="wage-employee-heading"><div><strong>{e.name}</strong><small>{e.employeeCode} · {e.departmentName}</small></div><span className={e.rates.length?"badge badge-success":"badge badge-warning"}>{e.rates.length?"Rate configured":"Rate missing"}</span></div>{e.rates.map(r=><div className="wage-history-row" key={r._id}><span>Effective {r.effectiveFrom}</span><strong>{money(r.amountPaise)} / {wageTab==="hourly"?"hour":"day"}</strong><span>{r.overtimeMultiplier===undefined?"":"OT ×"+r.overtimeMultiplier}</span></div>)}</div>)}</div></div>}
 </div></div>
+    {wageTab==="permanent" && <>
     <div className="grid-2-equal wage-config-grid">
       <div className="panel">
         <div className="panel-head"><div><span className="t-h3">Employee monthly compensation</span><p className="t-caption text-tertiary">Set a fixed amount, components, or both.</p></div><UserRound size={18}/></div>
@@ -146,5 +147,6 @@ export function WageManagement() {
         {data.employees.length === 0 && <div className="empty-state"><UserRound size={24}/><strong>No active permanent employees</strong><p>Active permanent employee records will appear here.</p></div>}
       </div>
     </div>
+    </>}
   </section>;
 }
