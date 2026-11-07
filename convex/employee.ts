@@ -74,7 +74,7 @@ export const myWorkspace = query({
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address } : null,
       shift: currentShift, shifts: validCurrentShifts,
-      attendance, attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, todayAttendance, upcoming,
+      attendance: attendance.map(event => ({ eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, geofencePassed: event.geofencePassed, reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, todayAttendance, upcoming,
       leaveBalances: leaveBalancesWithTypes, leaveRequests, documents: docsWithUrls,
       wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
       weeklyWage: weeklyWage ? { totalPaise: weeklyWage.totalPaise, payableUnits: weeklyWage.payableUnits, employmentType: weeklyWage.employmentType, status: weeklyWage.status, period: weeklyWage.period ? { fromDate: weeklyWage.period.fromDate, toDate: weeklyWage.period.toDate } : null } : null,
