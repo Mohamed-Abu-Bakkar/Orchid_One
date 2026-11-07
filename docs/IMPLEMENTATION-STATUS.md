@@ -32,9 +32,9 @@ Configure identity provider, Convex deployment, private document storage, secret
 - Visual parity and runtime verification have not yet been completed. No build, typecheck or browser test result is claimed in this status.
 
 
-## Employee interface preview
-- Added `/employee` route to display the original employee mobile prototype without redesigning it.
-- The preview is intentionally isolated in an iframe so the legacy inline interactions do not leak into the Next.js application shell.
-- The preview remains a static prototype: attendance, requests, wage figures, documents and notifications are sample/local interactions only; they are not authenticated or persisted to Convex.
-- Prototype image assets are currently loaded from the feature branch's raw GitHub URLs. Before production, move these assets into the app's own `public/` directory and migrate interactions to React components and authenticated backend operations.
-- The original employee HTML in `OrchidHRM/` remains unchanged.
+## Employee application separation
+- `/employee` is served by the Convex-connected `EmployeePortal` React application; the root route redirects to `/employee`.
+- The legacy HTML employee prototype is archived separately at `prototypes/legacy-employee/employee_mobileApp.html` and is not used by production routes.
+- The unused `EmployeeMockReplica` component has been removed to avoid maintaining a second mock employee application.
+- Employee data and attendance actions in the active portal use authenticated Convex queries and mutations. UI-only empty states are retained where the underlying business capability or policy is not yet configured.
+- The legacy prototype is retained for visual reference only; do not import it into production components or routes.
