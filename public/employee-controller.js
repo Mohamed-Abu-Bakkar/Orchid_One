@@ -162,6 +162,36 @@
       const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
       const todayEvents = acceptedEvents.filter(event => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(event.receivedAt || event.clientTimestamp)) === todayKey).sort((x, y) => x.receivedAt - y.receivedAt);
       const latestToday = todayEvents[todayEvents.length - 1];
+      const formatAttendanceDate = value => new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "2-digit", month: "short", year: "numeric" }).format(value);
+      const formatPunchTime = value => new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
+      const eventLabel = type => ({ check_in: "Checked in", check_out: "Checked out", break_start: "Break started", break_end: "Break ended" }[type] || String(type || "Attendance"));
+      text("#attDateLabel", formatAttendanceDate(new Date()));
+      text("#attClock", formatPunchTime(Date.now()));
+      if (window.__orchidAttendanceClock) clearInterval(window.__orchidAttendanceClock);
+      window.__orchidAttendanceClock = setInterval(() => text("#attClock", formatPunchTime(Date.now())), 1000);
+      const attendanceEventsNode = document.getElementById("todayAttendanceEvents");
+      if (attendanceEventsNode) {
+        attendanceEventsNode.replaceChildren();
+        const heading = document.createElement("p"); heading.className = "text-body-md font-body-md font-semibold text-on-surface mb-2"; heading.textContent = "Today’s attendance events"; attendanceEventsNode.append(heading);
+        if (!todayEvents.length) { const note=document.createElement("p"); note.className="text-label-sm text-on-surface-variant py-3"; note.textContent="No accepted attendance punches recorded today."; attendanceEventsNode.append(note); }
+        else todayEvents.forEach(event => {
+          const row = document.createElement("div"); row.className = "flex items-center justify-between gap-3 py-2 border-t border-outline-variant/30";
+          const label = document.createElement("p"); label.className = "text-body-md font-body-md text-on-surface"; label.textContent = eventLabel(event.eventType);
+          const time = document.createElement("p"); time.className = "text-label-sm font-label-sm text-on-surface-variant tabular-nums"; time.textContent = formatPunchTime(event.receivedAt || event.clientTimestamp);
+          row.append(label, time); attendanceEventsNode.append(row);
+        });
+      }
+      const gpsTitle = document.getElementById("gpsStatusTitle"), gpsDetail = document.getElementById("gpsStatusDetail"), gpsBadge = document.getElementById("gpsStatusBadge");
+      if (gpsTitle && gpsDetail && gpsBadge) {
+        if (latestToday) {
+          const verified = latestToday.geofencePassed || latestToday.reviewStatus === "approved";
+          gpsTitle.textContent = verified ? "Attendance location verified" : "Location requires review";
+          gpsDetail.textContent = "Last verified punch · " + formatPunchTime(latestToday.receivedAt || latestToday.clientTimestamp);
+          gpsBadge.textContent = verified ? "Verified" : "Review";
+          gpsBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 " + (verified ? "bg-[#e6f4ea] text-[#1E8E4E]" : "bg-[#fff4e0] text-[#b26a00]");
+        }
+      }
+
       const checkedIn = !!latestToday && latestToday.eventType !== "check_out";
       const formatElapsed = milliseconds => { const seconds = Math.max(0, Math.floor(milliseconds / 1000)); return [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60].map(value => String(value).padStart(2, "0")).join(":"); };
       const calculateTodayMilliseconds = () => {
@@ -194,6 +224,9 @@
       text("#employeeShiftHours", shift ? formatShiftTime(shift.startMinute) + " – " + formatShiftTime(shift.endMinute) : "—");
       text("#employeeShiftBreak", shift && typeof shift.breakMinutes === "number" ? shift.breakMinutes + " min" : "—");
       text("#employeeShiftCheckout", shift ? formatShiftTime(shift.endMinute) : "—");
+      text("#attShiftLabel", shift ? shift.name + " · " + formatShiftTime(shift.startMinute) + " – " + formatShiftTime(shift.endMinute) : "No shift assigned today");
+      text("#employeeOfficeName", workspace.location?.name ?? "Work location not assigned");
+      text("#employeeOfficeAddress", workspace.location?.address ?? "Office address not configured");
       if (shiftLabel) shiftLabel.textContent = shift ? shift.name + " · " + [shift.startMinute, shift.endMinute].map(value => String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0")).join(" – ") : "No shift assigned today";
       const clockDate = () => { const now = new Date(); text("#heroClock", now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })); text("#heroDate", now.toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })); };
       clockDate(); if (window.__orchidClockTimer) clearInterval(window.__orchidClockTimer); window.__orchidClockTimer = setInterval(clockDate, 1000);
@@ -249,8 +282,43 @@
 
       const dailyHours = document.getElementById("dailyHours");
       if (dailyHours) empty(dailyHours, attendance.length ? "Attendance events are available in the attendance screen." : "No attendance records are available yet.");
-      const weekBars = document.getElementById("weekBars");
-      if (weekBars) empty(weekBars, "Working-hour totals are not calculated from raw punch events.");
+
+      const allAcceptedEvents = attendance.filter(event => event.geofencePassed || event.reviewStatus === "approved");
+      const dayKey = value => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(value));
+      const historyByDay = new Map();
+      allAcceptedEvents.forEach(event => { const at=event.receivedAt || event.clientTimestamp; const key=dayKey(at); if(!historyByDay.has(key))historyByDay.set(key,[]); historyByDay.get(key).push(event); });
+      const summarizeDay = events => {
+        let open=null,total=0,firstIn=null,lastOut=null;
+        events.sort((a,b)=>(a.receivedAt||a.clientTimestamp)-(b.receivedAt||b.clientTimestamp));
+        for(const event of events){const at=event.receivedAt||event.clientTimestamp;if(event.eventType==="check_in"||event.eventType==="break_end"){if(event.eventType==="check_in"&&firstIn===null)firstIn=at;open=at;}if((event.eventType==="break_start"||event.eventType==="check_out")&&open!==null){total+=Math.max(0,at-open);open=null;}if(event.eventType==="check_out")lastOut=at;}
+        const isToday=events.length&&dayKey(events[0].receivedAt||events[0].clientTimestamp)===dayKey(Date.now());
+        if(open!==null&&isToday)total+=Math.max(0,Date.now()-open);
+        return {total,firstIn,lastOut};
+      };
+      const historyRows=[...historyByDay.entries()].sort((a,b)=>b[0].localeCompare(a[0]));
+      const weekStart=new Date();weekStart.setHours(0,0,0,0);weekStart.setDate(weekStart.getDate()-6);
+      const weekBars=document.getElementById("weekBars");
+      if(weekBars){
+        weekBars.replaceChildren();
+        const days=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(d.getDate()+i);return d;});
+        const totals=days.map(d=>summarizeDay([...(historyByDay.get(dayKey(d.getTime()))||[])]).total),max=Math.max(1,...totals);
+        days.forEach((d,i)=>{const wrap=document.createElement("div");wrap.className="flex-1 flex flex-col items-center justify-end h-full gap-1";const bar=document.createElement("div");bar.className="bar"+(totals[i]?" main":"");bar.style.height=Math.max(4,Math.round(totals[i]/max*100))+"%";bar.title=(totals[i]/3600000).toFixed(2)+" hours";wrap.append(bar);weekBars.append(wrap);});
+        text("#hoursWeekLabel",formatAttendanceDate(weekStart)+" – "+formatAttendanceDate(new Date()));
+      }
+      const dailyHours=document.getElementById("dailyHours");
+      if(dailyHours){
+        dailyHours.replaceChildren();
+        if(!historyRows.length){const note=document.createElement("p");note.className="text-body-md text-on-surface-variant text-center py-8";note.textContent="No accepted attendance history is available yet.";dailyHours.append(note);}
+        historyRows.forEach(([key,events],index)=>{
+          const summary=summarizeDay([...events]),row=document.createElement("div");row.className="px-4 py-3"+(index?" border-t border-outline-variant/30":"");
+          const top=document.createElement("div");top.className="flex items-center justify-between gap-2";
+          const date=document.createElement("p");date.className="text-body-md font-body-md font-semibold text-on-surface";date.textContent=formatAttendanceDate(new Date(key+"T12:00:00+05:30"));
+          const hours=document.createElement("p");hours.className="text-body-md font-body-md font-semibold text-primary tabular-nums";hours.textContent=(summary.total/3600000).toFixed(2)+" hrs";top.append(date,hours);
+          const detail=document.createElement("p");detail.className="text-label-sm font-label-sm text-on-surface-variant mt-1";detail.textContent=(summary.firstIn?"In "+formatPunchTime(summary.firstIn):"No check-in")+" · "+(summary.lastOut?"Out "+formatPunchTime(summary.lastOut):"No check-out")+" · "+events.length+" event(s)";
+          row.append(top,detail);dailyHours.append(row);
+        });
+      }
+
 
       const wageRecords = workspace.wageRecords ?? [];
       const payScreen = document.getElementById("payScreen");
