@@ -11,7 +11,21 @@ const toPaise = (value: string) => Math.round(Number(value) * 100);
 const localDate = () => { const date = new Date(); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-"); };
 
 export function WageManagement() {
-  const data = useQuery(api.wages.listForAdmin, {});\n  const account = useQuery(api.account.getMyAccountStatus, {});\n  const [fromDate, setFromDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 6); return d.toLocaleDateString("en-CA"); });\n  const [toDate, setToDate] = useState(localDate);\n  const hourly = useQuery(api.wages.hourlyAdminData, fromDate && toDate && fromDate <= toDate ? { fromDate, toDate } : "skip");\n  const saveHourlyRate = useMutation(api.wages.saveHourlyRate);\n  const submitHourlyReview = useMutation(api.wages.submitHourlyReview);\n  const decideHourlyReview = useMutation(api.wages.decideHourlyReview);\n  const [rateEmployeeId, setRateEmployeeId] = useState("");\n  const [hourlyAmount, setHourlyAmount] = useState("");\n  const [overtimeMultiplier, setOvertimeMultiplier] = useState("");\n  const [rateEffectiveFrom, setRateEffectiveFrom] = useState(localDate);\n  const [hourInputs, setHourInputs] = useState<Record<string, { regular: string; overtime: string; reason: string }>>({});\n  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});\n  const [hourlyBusy, setHourlyBusy] = useState(false);
+  const data = useQuery(api.wages.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
+  const [fromDate, setFromDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 6); return d.toLocaleDateString("en-CA"); });
+  const [toDate, setToDate] = useState(localDate);
+  const hourly = useQuery(api.wages.hourlyAdminData, fromDate && toDate && fromDate <= toDate ? { fromDate, toDate } : "skip");
+  const saveHourlyRate = useMutation(api.wages.saveHourlyRate);
+  const submitHourlyReview = useMutation(api.wages.submitHourlyReview);
+  const decideHourlyReview = useMutation(api.wages.decideHourlyReview);
+  const [rateEmployeeId, setRateEmployeeId] = useState("");
+  const [hourlyAmount, setHourlyAmount] = useState("");
+  const [overtimeMultiplier, setOvertimeMultiplier] = useState("");
+  const [rateEffectiveFrom, setRateEffectiveFrom] = useState(localDate);
+  const [hourInputs, setHourInputs] = useState<Record<string, { regular: string; overtime: string; reason: string }>>({});
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [hourlyBusy, setHourlyBusy] = useState(false);
   const createComponent = useMutation(api.wages.createSalaryComponent);
   const setComponentActive = useMutation(api.wages.setSalaryComponentActive);
   const saveCompensation = useMutation(api.wages.saveEmployeeCompensation);
