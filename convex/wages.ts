@@ -205,7 +205,7 @@ export const hourlyAdminData = query({
       rows.push({
         employeeId: employee._id, employeeCode: employee.employeeCode,
         employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
-        departmentId: employee.departmentId, workDate, attendanceMinutes, breakMinutes,
+        departmentId: employee.departmentId, workDate, attendanceMinutes, breakMinutes, firstCheckInAt: dayEvents.find(event => event.eventType === "check_in")?.receivedAt ?? null, lastCheckOutAt: [...dayEvents].reverse().find(event => event.eventType === "check_out")?.receivedAt ?? null,
         recordedWorkMinutes: Math.max(0, attendanceMinutes - breakMinutes),
         incomplete, pendingPunchReview,
         review: review ? { _id: review._id, status: review.status, suggestedRegularMinutes: review.suggestedRegularMinutes, suggestedOvertimeMinutes: review.suggestedOvertimeMinutes, supervisorReason: review.supervisorReason, approvedRegularMinutes: review.approvedRegularMinutes, approvedOvertimeMinutes: review.approvedOvertimeMinutes, reviewerNote: review.reviewerNote } : null,
@@ -297,3 +297,17 @@ export const decideHourlyReview = mutation({
     return { reviewed: true, decision: args.decision };
   },
 });
+
+
+export const wageRateAdminData=query({args:{},handler:async(ctx)=>{
+ const user=await requireAdmin(ctx);const active=await ctx.db.query("employees").withIndex("by_org_status",q=>q.eq("organizationId",user.organizationId).eq("status","active")).collect();
+ const load=async(list:typeof active,type:"hourly"|"daily")=>Promise.all(list.map(async employee=>{const [department,rates]=await Promise.all([ctx.db.get(employee.departmentId),ctx.db.query("wageRates").withIndex("by_employee_effective",q=>q.eq("employeeId",employee._id)).order("desc").collect()]);return {_id:employee._id,employeeCode:employee.employeeCode,name:[employee.firstName,employee.lastName].filter(Boolean).join(" "),departmentName:department?.name??"—",rates:rates.filter(r=>r.organizationId===user.organizationId&&r.employmentType===type).map(r=>({_id:r._id,amountPaise:r.amountPaise,effectiveFrom:r.effectiveFrom,effectiveTo:r.effectiveTo,overtimeMultiplier:r.overtimeMultiplier}))};}));
+ return {hourlyEmployees:await load(active.filter(e=>e.employmentType==="hourly"),"hourly"),dailyEmployees:await load(active.filter(e=>e.employmentType==="daily"),"daily")};
+}});
+export const saveDailyRate=mutation({args:{employeeId:v.id("employees"),amountPaise:v.number(),effectiveFrom:v.string()},handler:async(ctx,args)=>{
+ const user=await requireRole(ctx,["superadmin"]);if(!validDate(args.effectiveFrom)||!Number.isSafeInteger(args.amountPaise)||args.amountPaise<=0)throw new Error("INVALID_DAILY_RATE");
+ const employee=await ctx.db.get(args.employeeId);if(!employee||employee.organizationId!==user.organizationId||employee.employmentType!=="daily"||employee.status!=="active")throw new Error("ACTIVE_DAILY_EMPLOYEE_REQUIRED");
+ const prior=await ctx.db.query("wageRates").withIndex("by_employee_effective",q=>q.eq("employeeId",employee._id).eq("effectiveFrom",args.effectiveFrom)).first();if(prior)throw new Error("WAGE_RATE_EFFECTIVE_DATE_EXISTS");
+ const now=Date.now();const id=await ctx.db.insert("wageRates",{organizationId:user.organizationId,employeeId:employee._id,employmentType:"daily",amountPaise:args.amountPaise,effectiveFrom:args.effectiveFrom,approvedBy:user._id,createdAt:now});
+ await ctx.db.insert("auditLogs",{organizationId:user.organizationId,actorUserId:user._id,action:"daily_wage_rate.created",entityType:"wageRate",entityId:String(id),metadata:{employeeCode:employee.employeeCode,amountPaise:args.amountPaise,effectiveFrom:args.effectiveFrom},createdAt:now});return id;
+}});
