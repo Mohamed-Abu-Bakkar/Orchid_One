@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin } from "./lib/auth";
+import { requireAdmin, requireRole } from "./lib/auth";
 
 const componentCategory = v.union(v.literal("earning"), v.literal("deduction"));
 const compensationLine = v.object({
