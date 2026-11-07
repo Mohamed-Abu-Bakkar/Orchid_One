@@ -91,7 +91,7 @@ export function WageManagement() {
           hourly.rows.length===0 ? <div className="empty-state"><Clock3 size={24}/><strong>No hourly attendance records</strong><p>Hourly employee check-in and check-out events will appear here.</p></div> :
           <div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Employee / date</th><th>Check-in</th><th>Check-out</th><th>Recorded attendance</th><th>Break</th><th>Recorded work</th><th>Hourly rate</th><th>Payable hours</th><th>Overtime</th><th>Status / action</th></tr></thead><tbody>
           {hourly.rows.map(row=>{
-            const values=hourInputs[String(row.employeeId)+":"+row.workDate] ?? {regular:(row.recordedWorkMinutes/60).toFixed(2),overtime:"0",reason:""};
+            const values=hourInputs[String(row.employeeId)+":"+row.workDate] ?? {regular:"",overtime:"",reason:""};
             const reviewId=String(row.review?._id ?? "");
             return <tr key={String(row.employeeId)+":"+row.workDate}>
               <td><strong>{row.employeeName}</strong><small>{row.employeeCode} · {row.workDate}</small></td>
