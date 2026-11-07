@@ -243,6 +243,44 @@
       const weeklyWage = workspace.weeklyWage;
       text("#statWeeklyWage", weeklyWage ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(weeklyWage.totalPaise / 100) : "—");
       text("#statWeeklyWageSub", weeklyWage ? weeklyWage.payableUnits + " payable units · " + weeklyWage.status : "No approved wage for this week");
+      // Employee performance is derived only from recorded attendance days and finalized wages.
+      const performance = workspace.performance ?? {};
+      const performanceDays = performance.attendanceDays ?? [];
+      const validWorkDays = performanceDays.filter(day => ["present", "late"].includes(day.status));
+      const totalPayableMinutes = validWorkDays.reduce((sum, day) => sum + Math.max(0, Number(day.payableMinutes) || 0), 0);
+      const hoursValue = totalPayableMinutes / 60;
+      text("#performanceTotalHours", hoursValue.toLocaleString("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+      text("#performanceAttendance", summary?.percentage == null ? "—" : String(summary.percentage));
+      const finalizedWeeklyWages = (workspace.wageRecords ?? []).filter(record => record.period?.periodType === "weekly" && ["approved", "locked"].includes(record.status));
+      const averageWeeklyWagePaise = finalizedWeeklyWages.length ? finalizedWeeklyWages.reduce((sum, record) => sum + (Number(record.totalPaise) || 0), 0) / finalizedWeeklyWages.length : null;
+      text("#performanceAverageWage", averageWeeklyWagePaise == null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(averageWeeklyWagePaise / 100));
+      text("#performanceShiftsAttended", String(validWorkDays.length));
+      text("#performanceScheduledShifts", String(performance.scheduledShifts ?? 0));
+      text("#performanceRecordedDays", String(validWorkDays.length));
+      const trendNode = document.getElementById("performanceTrendBars");
+      let performanceRange = "weekly";
+      const renderPerformanceTrend = () => {
+        if (!trendNode) return;
+        const now = new Date();
+        const todayLocal = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now);
+        const selected = performanceRange === "weekly"
+          ? (() => { const date = new Date(todayLocal + "T00:00:00Z"); const weekday = (date.getUTCDay() + 6) % 7; date.setUTCDate(date.getUTCDate() - weekday); const start = date.toISOString().slice(0,10); return Array.from({length:7},(_,i)=>{const d=new Date(start+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);}); })()
+          : Array.from({length: new Date(now.getFullYear(),now.getMonth()+1,0).getDate()},(_,i)=>String(now.getFullYear())+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(i+1).padStart(2,"0"));
+        const byDate = new Map(performanceDays.map(day => [day.workDate, Math.max(0, Number(day.payableMinutes)||0) / 60]));
+        const values = selected.map(date => ({ date, hours: byDate.get(date) ?? 0 }));
+        const max = Math.max(8, ...values.map(item => item.hours));
+        trendNode.replaceChildren();
+        values.forEach((item,index) => {
+          const column=document.createElement("div");column.className="flex flex-col items-center flex-1 gap-2 z-10 min-w-0";
+          const bar=document.createElement("div");bar.className="w-full rounded-t-sm "+(item.hours>0?"bg-primary":"bg-outline-variant/40");bar.style.height=Math.max(3,(item.hours/max)*100)+"%";bar.title=item.date+": "+item.hours.toFixed(1)+" hours";
+          const label=document.createElement("span");label.className="text-[10px] text-on-surface-variant";label.textContent=performanceRange==="weekly"?new Intl.DateTimeFormat("en-IN",{weekday:"short",timeZone:"UTC"}).format(new Date(item.date+"T12:00:00Z")):String(Number(item.date.slice(-2)));
+          column.append(bar,label);trendNode.append(column);
+        });
+        const weeklyTab=document.getElementById("performanceWeeklyTab"),monthlyTab=document.getElementById("performanceMonthlyTab");
+        [[weeklyTab,"weekly"],[monthlyTab,"monthly"]].forEach(([tab,range])=>{if(!tab)return;const active=performanceRange===range;tab.classList.toggle("bg-primary",active);tab.classList.toggle("text-white",active);tab.classList.toggle("shadow-sm",active);tab.classList.toggle("text-on-surface-variant",!active);});
+      };
+      window.setPerformanceRange = range => { if (range==="weekly"||range==="monthly") { performanceRange=range; renderPerformanceTrend(); } };
+      renderPerformanceTrend();
       const upcomingList = document.getElementById("upcomingList");
       if (upcomingList) {
         upcomingList.replaceChildren(); const upcoming = workspace.upcoming ?? [];
