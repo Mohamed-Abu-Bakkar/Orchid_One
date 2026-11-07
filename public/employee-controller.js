@@ -59,6 +59,7 @@
       const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
       const headerIdentity = document.querySelector("header .text-label-sm");
       if (headerIdentity) headerIdentity.textContent = "Employee · " + safe(p.employeeCode);
+      document.querySelectorAll("#attScreen header .text-label-sm").forEach(node => { node.textContent = "Employee · " + safe(p.employeeCode); });
       const greeting = document.querySelector("h2.text-headline-lg-mobile");
       if (greeting) greeting.textContent = "Good morning, " + fullName;
       const profileImage = document.querySelector('header img[alt*="Profile Picture"]');
