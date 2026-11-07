@@ -428,24 +428,22 @@
 <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 <div class="flex items-center justify-between">
 <div>
-<p class="text-title-md font-title-md font-semibold text-on-surface">Thursday, 14 Aug</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Morning Shift · 06:00 – 14:00</p>
+<p class="text-title-md font-title-md font-semibold text-on-surface" id="attDateLabel">—</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="attShiftLabel">Loading shift…</p>
 </div>
 <div class="flex flex-col items-end">
-<p class="text-headline-lg-mobile font-headline-lg-mobile font-semibold text-primary font-tabular-nums" id="attClock">06:00</p>
+<p class="text-headline-lg-mobile font-headline-lg-mobile font-semibold text-primary font-tabular-nums" id="attClock">—</p>
 <p class="text-label-sm font-label-sm text-on-surface-variant">Live</p>
 </div>
 </div>
 <!-- GPS status -->
 <div class="bento-card flex items-center gap-3">
-<div class="w-11 h-11 rounded-lg bg-secondary-fixed text-primary flex items-center justify-center flex-shrink-0" id="gpsIcon">
-<span class="material-symbols-outlined text-[22px]">location_on</span>
-</div>
+<div class="w-11 h-11 rounded-lg bg-surface-container-low text-primary flex items-center justify-center flex-shrink-0" id="gpsIcon"><span class="material-symbols-outlined text-[22px]">location_on</span></div>
 <div class="flex flex-col flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Inside the attendance area</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">120 m from office · accuracy ±8 m</p>
+<p class="text-body-md font-body-md font-semibold text-on-surface" id="gpsStatusTitle">Location not checked</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="gpsStatusDetail">Your location is verified when you record a punch.</p>
 </div>
-<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#e6f4ea] text-[#1E8E4E] text-[10px] font-semibold flex-shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#1E8E4E]"></span>Verified</span>
+<span id="gpsStatusBadge" class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-semibold flex-shrink-0">Not checked</span>
 </div>
 <!-- Circular control -->
 <div class="bento-card flex flex-col items-center">
@@ -460,16 +458,17 @@
 <button class="bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg px-7 py-3 shadow-sm hover:bg-primary-container transition-colors" id="attCheckBtn" onclick="toggleCheckIn()">Check In</button>
 </div>
 </div>
+<div class="bento-card" id="todayAttendanceEvents"><p class="text-body-md text-on-surface-variant text-center py-3">Loading today’s attendance…</p></div>
 <!-- Shift info -->
 <div class="bento-card">
 <div class="flex items-center justify-between mb-2">
 <span class="text-body-lg font-body-lg font-semibold text-on-surface">Your shift</span>
 <span class="text-label-sm font-label-sm text-primary font-semibold cursor-pointer" onclick="toast('Shift schedule')">View schedule</span>
 </div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Shift</span><span class="text-body-md font-body-md font-medium text-on-surface">Morning</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Working hours</span><span class="text-body-md font-body-md font-medium text-on-surface">06:00 – 14:00</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Break</span><span class="text-body-md font-body-md font-medium text-on-surface">30 min</span></div>
-<div class="flex justify-between py-2"><span class="text-body-md font-body-md text-on-surface-variant">Expected check-out</span><span class="text-body-md font-body-md font-medium text-on-surface">14:00</span></div>
+<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Shift</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftName">—</span></div>
+<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Working hours</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftHours">—</span></div>
+<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Scheduled break</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftBreak">—</span></div>
+<div class="flex justify-between py-2"><span class="text-body-md font-body-md text-on-surface-variant">Expected check-out</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftCheckout">—</span></div>
 </div>
 <!-- Team by shifts -->
 <div class="bento-card" id="employeeTeamByShift">
@@ -484,13 +483,8 @@
 <button class="w-full bg-surface text-primary border border-primary text-body-md font-body-md font-semibold rounded-lg py-3 hover:bg-secondary-fixed transition-colors flex items-center justify-center gap-1" onclick="openWorkingHours()">View working hours<span class="material-symbols-outlined text-[18px]">chevron_right</span></button>
 <!-- Office location -->
 <div class="bento-card flex items-center gap-3">
-<div class="w-11 h-11 rounded-lg bg-[#e6f4ea] text-[#1E8E4E] flex items-center justify-center flex-shrink-0">
-<span class="material-symbols-outlined text-[22px]">location_city</span>
-</div>
-<div class="flex flex-col flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Orchid Flowers — Main Campus</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Kovaipudur, Coimbatore · 641042</p>
-</div>
+<div class="w-11 h-11 rounded-lg bg-[#e6f4ea] text-[#1E8E4E] flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-[22px]">location_city</span></div>
+<div class="flex flex-col flex-1 min-w-0"><p class="text-body-md font-body-md font-semibold text-on-surface" id="employeeOfficeName">—</p><p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="employeeOfficeAddress">Office address not configured</p></div>
 </div>
 </div>
 </div>
@@ -517,7 +511,7 @@
 <div class="bento-card mt-4">
 <div class="flex items-center justify-between mb-3">
 <span class="text-body-lg font-body-lg font-semibold text-on-surface">This week</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">10 – 16 Aug</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant" id="hoursWeekLabel">Last 7 days</span>
 </div>
 <div class="flex items-end gap-2 h-32" id="weekBars"></div>
 <div class="flex justify-between mt-2">
@@ -528,29 +522,6 @@
 <span class="text-label-sm font-label-sm text-on-surface-variant">Fri</span>
 <span class="text-label-sm font-label-sm text-on-surface-variant">Sat</span>
 <span class="text-label-sm font-label-sm text-on-surface-variant">Sun</span>
-</div>
-</div>
-<!-- Stats -->
-<div class="grid grid-cols-2 gap-3 mt-4">
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Regular hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">40.0</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">5 days</p>
-</div>
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Overtime</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#b26a00] font-semibold mt-2 font-tabular-nums">4.5</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">+₹675</p>
-</div>
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Payable hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">44.5</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">incl. breaks</p>
-</div>
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Estimated wage</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">₹5,475</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Week 33</p>
 </div>
 </div>
 <!-- Daily breakdown -->
