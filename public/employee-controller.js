@@ -57,6 +57,8 @@
 
       const p = workspace.profile;
       const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
+      const moreProfileName = document.getElementById("moreProfileName");
+      if (moreProfileName) moreProfileName.textContent = fullName || "Employee";
       const headerIdentity = document.querySelector("header .text-label-sm");
       if (headerIdentity) headerIdentity.textContent = "Employee · " + safe(p.employeeCode);
       document.querySelectorAll("#attScreen header .text-label-sm").forEach(node => { node.textContent = "Employee · " + safe(p.employeeCode); });
