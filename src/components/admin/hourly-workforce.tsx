@@ -15,17 +15,6 @@ export function HourlyWorkforce(){
  return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Hourly Workforce</h2><p className="sub">Attendance evidence, supervisor payable-hour suggestions and Superadmin approval.</p></div></div>
  {message&&<div className="onboarding-success" role="status"><CheckCircle2 size={16}/>{message}</div>}{error&&<div className="auth-error" role="alert">{error}</div>}
     <div className="panel mt-4">
-      <div className="panel-head"><div><span className="t-h3">Hourly workforce wages</span><p className="t-caption text-tertiary">Configure hourly rates, review recorded attendance and approve payable hours.</p></div><Clock3 size={18}/></div>
-      <div className="panel-body wage-form">
-        {account?.role === "superadmin" && <div className="grid-2-equal">
-          <label className="policy-field">Hourly employee
-            <select className="input" value={rateEmployeeId} onChange={e=>setRateEmployeeId(e.target.value)}><option value="">Select hourly employee</option>{(hourly?.employees ?? []).map(employee=><option key={employee._id} value={employee._id}>{employee.employeeCode} · {employee.name}</option>)}</select>
-          </label>
-          <label className="policy-field">Hourly rate (₹)<input className="input" type="number" min="0.01" step="0.01" value={hourlyAmount} onChange={e=>setHourlyAmount(e.target.value)} placeholder="e.g. 80.00"/></label>
-          <label className="policy-field">Overtime multiplier<input className="input" type="number" min="1" max="10" step="0.01" value={overtimeMultiplier} onChange={e=>setOvertimeMultiplier(e.target.value)} placeholder="Set approved multiplier"/></label>
-          <label className="policy-field">Effective from<input className="input" type="date" value={rateEffectiveFrom} onChange={e=>setRateEffectiveFrom(e.target.value)}/></label>
-          <div><button className="btn btn-primary" type="button" disabled={hourlyBusy || !rateEmployeeId || !hourlyAmount || !overtimeMultiplier} onClick={async()=>{setHourlyBusy(true);setError("");setMessage("");try{await saveHourlyRate({employeeId:rateEmployeeId as any,amountPaise:Math.round(Number(hourlyAmount)*100),overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});setMessage("Hourly rate saved as a new effective-dated record.");setHourlyAmount("");setOvertimeMultiplier("");}catch(e){setError(e instanceof Error?e.message:"Could not save hourly rate.");}finally{setHourlyBusy(false);}}}>Save hourly rate</button></div>
-        </div>}
         <div className="employee-directory-toolbar">
           <label className="policy-field">From date<input className="input" type="date" value={fromDate} max={toDate} onChange={e=>setFromDate(e.target.value)}/></label>
           <label className="policy-field">To date<input className="input" type="date" value={toDate} min={fromDate} onChange={e=>setToDate(e.target.value)}/></label>
