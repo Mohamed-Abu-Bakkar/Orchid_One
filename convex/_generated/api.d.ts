@@ -22,6 +22,7 @@ import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as locations from "../locations.js";
 import type * as policies from "../policies.js";
+import type * as overtime from "../overtime.js";
 import type * as teamsWork from "../teamsWork.js";
 import type * as wages from "../wages.js";
 
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   locations: typeof locations;
   policies: typeof policies;
+  overtime: typeof overtime;
   teamsWork: typeof teamsWork;
   wages: typeof wages;
 }>;
