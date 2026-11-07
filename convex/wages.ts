@@ -147,10 +147,11 @@ export const hourlyAdminData = query({
     if (!org) throw new Error("ORGANIZATION_NOT_FOUND");
     const hourlyEmployees = await ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active")).collect();
     const employees = hourlyEmployees.filter(e => e.employmentType === "hourly");
-    const [rateSets, reviews, events] = await Promise.all([
+    const [rateSets, reviews, events, overtimeRequests] = await Promise.all([
       Promise.all(employees.map(employee => ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id)).collect())),
       ctx.db.query("hourlyWageReviews").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).take(5001),
       ctx.db.query("attendanceEvents").withIndex("by_org_time", q => q.eq("organizationId", user.organizationId).gte("receivedAt", dateStartUtc(args.fromDate, org.timezone)).lt("receivedAt", dateStartUtc(new Date(Date.parse(args.toDate + "T00:00:00Z") + 86400000).toISOString().slice(0,10), org.timezone))).take(5001),
+      ctx.db.query("overtimeRequests").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).take(5001),
     ]);
     const employeeMap = new Map(employees.map(e => [String(e._id), e]));
     const employeeRates = rateSets.flat().filter(rate => rate.organizationId === user.organizationId && rate.employmentType === "hourly" && rate.employeeId && employeeMap.has(String(rate.employeeId)));
@@ -171,6 +172,8 @@ export const hourlyAdminData = query({
       eventGroups.set(key, group);
     }
     const reviewMap = new Map(reviews.map(review => [String(review.employeeId) + ":" + review.workDate, review]));
+    const overtimeMap = new Map<string, typeof overtimeRequests>();
+    for (const request of overtimeRequests) { const key = String(request.employeeId) + ":" + request.workDate; const list = overtimeMap.get(key) ?? []; list.push(request); overtimeMap.set(key, list); }
     const rows: any[] = [];
     for (const [key, dayEvents] of eventGroups) {
       const [employeeId, workDate] = key.split(":");
@@ -199,15 +202,18 @@ export const hourlyAdminData = query({
       const attendanceMinutes = Math.floor(attendanceMs / 60000);
       const breakMinutes = Math.floor(breakMs / 60000);
       const review = reviewMap.get(key);
+      const dayOvertimeRequests = overtimeMap.get(key) ?? [];
+      const approvedOvertimeMinutes = dayOvertimeRequests.filter(request => request.status === "approved").reduce((sum, request) => sum + (request.approvedMinutes ?? 0), 0);
+      const pendingOvertimeMinutes = dayOvertimeRequests.filter(request => request.status === "pending").reduce((sum, request) => sum + request.requestedMinutes, 0);
       const rate = employeeRates.filter(item => String(item.employeeId) === employeeId && item.effectiveFrom <= workDate && (!item.effectiveTo || item.effectiveTo >= workDate)).sort((a,b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
       const regularMinutes = review?.status === "approved" ? review.approvedRegularMinutes ?? 0 : 0;
-      const overtimeMinutes = review?.status === "approved" ? review.approvedOvertimeMinutes ?? 0 : 0;
+      const overtimeMinutes = approvedOvertimeMinutes;
       rows.push({
         employeeId: employee._id, employeeCode: employee.employeeCode,
         employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
         departmentId: employee.departmentId, workDate, attendanceMinutes, breakMinutes, firstCheckInAt: dayEvents.find(event => event.eventType === "check_in")?.receivedAt ?? null, lastCheckOutAt: [...dayEvents].reverse().find(event => event.eventType === "check_out")?.receivedAt ?? null,
         recordedWorkMinutes: Math.max(0, attendanceMinutes - breakMinutes),
-        incomplete, pendingPunchReview,
+        incomplete, pendingPunchReview, approvedOvertimeMinutes, pendingOvertimeMinutes, overtimeRequestCount: dayOvertimeRequests.length,
         review: review ? { _id: review._id, status: review.status, suggestedRegularMinutes: review.suggestedRegularMinutes, suggestedOvertimeMinutes: review.suggestedOvertimeMinutes, supervisorReason: review.supervisorReason, approvedRegularMinutes: review.approvedRegularMinutes, approvedOvertimeMinutes: review.approvedOvertimeMinutes, reviewerNote: review.reviewerNote } : null,
         ratePaise: rate?.amountPaise ?? null, overtimeMultiplier: rate?.overtimeMultiplier ?? null,
         regularEarningsPaise: rate && review?.status === "approved" ? Math.round(regularMinutes * rate.amountPaise / 60) : null,
@@ -219,7 +225,7 @@ export const hourlyAdminData = query({
     return {
       employees: employees.map(employee => ({ _id: employee._id, employeeCode: employee.employeeCode, name: [employee.firstName, employee.lastName].filter(Boolean).join(" "), departmentName: names.get(String(employee.departmentId)) ?? "—", rate: latestRates.get(String(employee._id)) ? { amountPaise: latestRates.get(String(employee._id))!.amountPaise, overtimeMultiplier: latestRates.get(String(employee._id))!.overtimeMultiplier, effectiveFrom: latestRates.get(String(employee._id))!.effectiveFrom } : null })),
       rows: rows.sort((a,b) => b.workDate.localeCompare(a.workDate) || a.employeeName.localeCompare(b.employeeName)),
-      truncated: events.length > 5000 || reviews.length > 5000,
+      truncated: events.length > 5000 || reviews.length > 5000 || overtimeRequests.length > 5000,
       timezone: org.timezone,
     };
   },
@@ -286,8 +292,12 @@ export const decideHourlyReview = mutation({
       const regular = args.approvedRegularMinutes ?? review.suggestedRegularMinutes;
       const overtime = args.approvedOvertimeMinutes ?? review.suggestedOvertimeMinutes;
       if (!Number.isSafeInteger(regular) || regular < 0 || !Number.isSafeInteger(overtime) || overtime < 0) throw new Error("INVALID_APPROVED_HOURS");
+      if (regular + overtime > review.recordedWorkMinutes) throw new Error("PAYABLE_HOURS_EXCEED_RECORDED_WORK");
       const employee = await ctx.db.get(review.employeeId);
       if (!employee || employee.organizationId !== user.organizationId || employee.employmentType !== "hourly") throw new Error("HOURLY_EMPLOYEE_NOT_FOUND");
+      const rate = await ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).lte("effectiveFrom", review.workDate)).order("desc").first();
+      if (!rate || rate.organizationId !== user.organizationId || rate.employmentType !== "hourly" || (rate.effectiveTo && rate.effectiveTo < review.workDate)) throw new Error("HOURLY_RATE_NOT_CONFIGURED");
+      if (overtime > 0) throw new Error("OVERTIME_MUST_BE_APPROVED_IN_OVERTIME_MODULE");
       await ctx.db.patch(review._id, { status: "approved", approvedRegularMinutes: regular, approvedOvertimeMinutes: overtime, reviewerNote: args.note?.trim() || undefined, reviewedBy: user._id, reviewedAt: Date.now() });
     } else {
       if (!args.note?.trim()) throw new Error("REJECTION_REASON_REQUIRED");
