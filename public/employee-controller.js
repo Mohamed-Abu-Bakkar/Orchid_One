@@ -56,6 +56,21 @@
       }
 
       const p = workspace.profile;
+      // Populate the More profile summary from the authenticated employee workspace.
+      text("#moreProfileName", fullName || "Employee");
+      text("#moreProfileMeta", [p.employeeCode, p.designation, workspace.department?.name].filter(Boolean).join(" · ") || "Employee");
+      const joiningDate = p.joiningDate ? new Date(p.joiningDate + "T00:00:00") : null;
+      if (joiningDate && !Number.isNaN(joiningDate.getTime())) {
+        const today = new Date();
+        let years = today.getFullYear() - joiningDate.getFullYear();
+        if (today.getMonth() < joiningDate.getMonth() || (today.getMonth() === joiningDate.getMonth() && today.getDate() < joiningDate.getDate())) years--;
+        text("#moreTenure", Math.max(0, years) + (years === 1 ? " yr" : " yrs"));
+      } else { text("#moreTenure", "—"); }
+      const leaveBalances = workspace.leaveBalances ?? [];
+      const availableLeave = leaveBalances.reduce((total, item) => total + Math.max(0, Number(item.allocated || 0) - Number(item.used || 0) - Number(item.pending || 0)), 0);
+      text("#moreLeaveBalance", leaveBalances.length ? String(Number(availableLeave.toFixed(2))) : "—");
+      const attendancePercentage = workspace.attendanceSummary?.percentage;
+      text("#moreAttendance", attendancePercentage == null ? "—" : attendancePercentage + "%");
       const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
       const headerIdentity = document.querySelector("header .text-label-sm");
       if (headerIdentity) headerIdentity.textContent = "Employee · " + safe(p.employeeCode);
