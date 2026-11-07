@@ -1,8 +1,29 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
+import { employeeDashboardGuard } from "@/lib/employee-dashboard-guard";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** The root entry point now leads to the authenticated employee application. */
-export function GET(request: NextRequest) {
-  return NextResponse.redirect(new URL("/employee", request.url));
+export async function GET(request: NextRequest) {
+  const guard = await employeeDashboardGuard(request, "/");
+  if (guard) return guard;
+
+  const filePath = join(process.cwd(), "OrchidHRM", "employee_mobileApp.html");
+  let html = await readFile(filePath, "utf8");
+  html = html
+    .replaceAll('href="assets/', 'href="/employee/assets/')
+    .replaceAll('src="assets/', 'src="/employee/assets/')
+    .replace('<link rel="manifest" href="manifest.json"/>', '<link rel="manifest" href="/manifest.json" crossorigin="use-credentials"/>')
+    .replace("</head>", '<meta name="theme-color" content="#5a285f"/>\n  </head>')
+    .replace("</body>", '<script src="/employee-controller.js" defer></script>\n</body>');
+
+  return new NextResponse(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "private, no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
