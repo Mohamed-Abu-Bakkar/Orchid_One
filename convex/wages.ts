@@ -118,7 +118,7 @@ export const saveEmployeeCompensation = mutation({
 
 // Hourly wage configuration and daily payable-hours review.
 function validDate(value: string) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(value + "T00:00:00.000Z");
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
@@ -147,8 +147,8 @@ export const hourlyAdminData = query({
     if (!org) throw new Error("ORGANIZATION_NOT_FOUND");
     const hourlyEmployees = await ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active")).collect();
     const employees = hourlyEmployees.filter(e => e.employmentType === "hourly");
-    const [rates, reviews, events] = await Promise.all([
-      ctx.db.query("wageRates").collect(),
+    const [rateSets, reviews, events] = await Promise.all([
+      Promise.all(employees.map(employee => ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id)).collect())),
       ctx.db.query("hourlyWageReviews").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).take(5001),
       ctx.db.query("attendanceEvents").withIndex("by_org_time", q => q.eq("organizationId", user.organizationId).gte("receivedAt", dateStartUtc(args.fromDate, org.timezone)).lt("receivedAt", dateStartUtc(new Date(Date.parse(args.toDate + "T00:00:00Z") + 86400000).toISOString().slice(0,10), org.timezone))).take(5001),
     ]);
@@ -254,6 +254,17 @@ export const submitHourlyReview = mutation({
     const next = dateStartUtc(new Date(Date.parse(args.workDate + "T00:00:00Z") + 86400000).toISOString().slice(0,10), org.timezone);
     const events = await ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", start).lt("receivedAt", next)).collect();
     if (!events.length || events.some(event => event.reviewStatus === "pending")) throw new Error("ATTENDANCE_MISSING_OR_PENDING_REVIEW");
+    events.sort((a,b) => a.receivedAt - b.receivedAt);
+    let openIn: number | null = null, openBreak: number | null = null, attendanceMs = 0, breakMs = 0;
+    for (const event of events) {
+      if (event.eventType === "check_in") { if (openIn !== null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); openIn = event.receivedAt; }
+      else if (event.eventType === "check_out") { if (openIn === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); attendanceMs += event.receivedAt - openIn; openIn = null; }
+      else if (event.eventType === "break_start") { if (openBreak !== null || openIn === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); openBreak = event.receivedAt; }
+      else if (event.eventType === "break_end") { if (openBreak === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); breakMs += event.receivedAt - openBreak; openBreak = null; }
+    }
+    if (openIn !== null || openBreak !== null) throw new Error("INCOMPLETE_ATTENDANCE_SEQUENCE");
+    const recordedBreakMinutes = Math.floor(breakMs / 60000);
+    const recordedWorkMinutes = Math.max(0, Math.floor(attendanceMs / 60000) - recordedBreakMinutes);
     const prior = await ctx.db.query("hourlyWageReviews").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate)).first();
     if (prior?.status === "approved") throw new Error("HOURLY_REVIEW_ALREADY_APPROVED");
     if (prior) throw new Error("HOURLY_REVIEW_ALREADY_SUBMITTED");
