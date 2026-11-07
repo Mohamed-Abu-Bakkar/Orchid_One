@@ -281,8 +281,6 @@
         });
       }
 
-      const dailyHours = document.getElementById("dailyHours");
-      if (dailyHours) empty(dailyHours, attendance.length ? "Attendance events are available in the attendance screen." : "No attendance records are available yet.");
 
       const allAcceptedEvents = attendance.filter(event => event.geofencePassed || event.reviewStatus === "approved");
       const dayKey = value => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(value));
