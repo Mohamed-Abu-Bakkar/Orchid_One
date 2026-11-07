@@ -44,7 +44,6 @@ export function HourlyWorkforce(){
           </tbody></table></div>}
         <p className="t-caption text-tertiary">Recorded attendance and break durations are informational evidence. Supervisors suggest regular payable hours here. Overtime requests and approval are handled in the separate Overtime module.</p>
       </div>
-    </div>
 
  </section>;
 }
