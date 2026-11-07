@@ -153,7 +153,7 @@ export const hourlyAdminData = query({
       ctx.db.query("attendanceEvents").withIndex("by_org_time", q => q.eq("organizationId", user.organizationId).gte("receivedAt", dateStartUtc(args.fromDate, org.timezone)).lt("receivedAt", dateStartUtc(new Date(Date.parse(args.toDate + "T00:00:00Z") + 86400000).toISOString().slice(0,10), org.timezone))).take(5001),
     ]);
     const employeeMap = new Map(employees.map(e => [String(e._id), e]));
-    const employeeRates = rates.filter(rate => rate.organizationId === user.organizationId && rate.employmentType === "hourly" && rate.employeeId && employeeMap.has(String(rate.employeeId)));
+    const employeeRates = rateSets.flat().filter(rate => rate.organizationId === user.organizationId && rate.employmentType === "hourly" && rate.employeeId && employeeMap.has(String(rate.employeeId)));
     const latestRates = new Map<string, typeof employeeRates[number]>();
     for (const rate of employeeRates) {
       const key = String(rate.employeeId);
@@ -199,7 +199,7 @@ export const hourlyAdminData = query({
       const attendanceMinutes = Math.floor(attendanceMs / 60000);
       const breakMinutes = Math.floor(breakMs / 60000);
       const review = reviewMap.get(key);
-      const rate = latestRates.get(employeeId);
+      const rate = employeeRates.filter(item => String(item.employeeId) === employeeId && item.effectiveFrom <= workDate && (!item.effectiveTo || item.effectiveTo >= workDate)).sort((a,b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
       const regularMinutes = review?.status === "approved" ? review.approvedRegularMinutes ?? 0 : 0;
       const overtimeMinutes = review?.status === "approved" ? review.approvedOvertimeMinutes ?? 0 : 0;
       rows.push({
@@ -258,7 +258,7 @@ export const submitHourlyReview = mutation({
     if (prior?.status === "approved") throw new Error("HOURLY_REVIEW_ALREADY_APPROVED");
     if (prior) throw new Error("HOURLY_REVIEW_ALREADY_SUBMITTED");
     const now = Date.now();
-    const id = await ctx.db.insert("hourlyWageReviews", { organizationId: user.organizationId, employeeId: employee._id, workDate: args.workDate, recordedWorkMinutes: 0, recordedBreakMinutes: 0, suggestedRegularMinutes: args.regularMinutes, suggestedOvertimeMinutes: args.overtimeMinutes, supervisorReason: args.reason.trim(), status: "pending", submittedBy: user._id, submittedAt: now });
+    const id = await ctx.db.insert("hourlyWageReviews", { organizationId: user.organizationId, employeeId: employee._id, workDate: args.workDate, recordedWorkMinutes, recordedBreakMinutes, suggestedRegularMinutes: args.regularMinutes, suggestedOvertimeMinutes: args.overtimeMinutes, supervisorReason: args.reason.trim(), status: "pending", submittedBy: user._id, submittedAt: now });
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "hourly_wage_review.submitted", entityType: "hourlyWageReview", entityId: String(id), metadata: { employeeCode: employee.employeeCode, workDate: args.workDate, regularMinutes: args.regularMinutes, overtimeMinutes: args.overtimeMinutes }, createdAt: now });
     return id;
   },
