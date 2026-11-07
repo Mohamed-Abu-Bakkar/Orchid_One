@@ -65,8 +65,8 @@ export function WageManagement() {
   if (data === undefined) return <section className="sec"><p className="sub">Loading wage configuration…</p></section>;
 
   return <section className="sec">
-    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Configure monthly compensation for active permanent employees.</p></div><span className="badge badge-neutral">{data.employees.length} permanent employees</span></div>
-    <div className="wage-scope-note"><Wallet size={18}/><span><strong>Configuration stage</strong> — this release stores salary components and employee compensation with effective dates. It does not calculate attendance-based pay, generate payslips, process statutory deductions, approve wage runs or record payments.</span></div>
+    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Manage hourly payable-hours approval and permanent employee monthly compensation.</p></div><span className="badge badge-neutral">{data.employees.length} permanent employees</span></div>
+    <div className="wage-scope-note"><Wallet size={18}/><span><strong>Hourly and monthly wage configuration</strong> — approved hourly attendance is calculated separately from permanent employee monthly compensation. This does not generate payslips, process statutory deductions or record payments.</span></div>
     {message && <div className="onboarding-success" role="status"><CheckCircle2 size={16}/>{message}</div>}
     {error && <div className="auth-error" role="alert">{error}</div>}
 
