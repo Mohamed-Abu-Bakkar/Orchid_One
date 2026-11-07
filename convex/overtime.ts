@@ -4,7 +4,7 @@ export const listForAdmin=query({args:{fromDate:v.optional(v.string()),toDate:v.
 export const submitRequest=mutation({args:{employeeId:v.id("employees"),workDate:v.string(),requestedMinutes:v.number(),reason:v.string()},handler:async(ctx,args)=>{
  const user=await requireRole(ctx,["supervisor"]);if(!validDate(args.workDate)||!Number.isSafeInteger(args.requestedMinutes)||args.requestedMinutes<=0||!args.reason.trim()||args.reason.trim().length>1000)throw new Error("INVALID_OVERTIME_REQUEST");
  const employee=await ctx.db.get(args.employeeId);if(!employee||employee.organizationId!==user.organizationId||employee.status!=="active")throw new Error("ACTIVE_EMPLOYEE_REQUIRED");
- const prior=await ctx.db.query("overtimeRequests").withIndex("by_employee",q=>q.eq("employeeId",employee._id)).filter(q=>q.eq(q.field("workDate"),args.workDate)).collect();
+ const prior=await ctx.db.query("overtimeRequests").withIndex("by_employee_date",q=>q.eq("employeeId",employee._id).eq("workDate",args.workDate)).collect();
  if(prior.some(r=>r.status==="pending"))throw new Error("PENDING_OVERTIME_REQUEST_EXISTS");
  const now=Date.now();const id=await ctx.db.insert("overtimeRequests",{organizationId:user.organizationId,employeeId:employee._id,workDate:args.workDate,requestedMinutes:args.requestedMinutes,reason:args.reason.trim(),status:"pending",createdAt:now,submittedBy:user._id});
  await ctx.db.insert("auditLogs",{organizationId:user.organizationId,actorUserId:user._id,action:"overtime.submitted",entityType:"overtimeRequest",entityId:String(id),metadata:{employeeCode:employee.employeeCode,workDate:args.workDate,requestedMinutes:args.requestedMinutes},createdAt:now});return id;
