@@ -309,7 +309,7 @@
         dailyHours.replaceChildren();
         if(!historyRows.length){const note=document.createElement("p");note.className="text-body-md text-on-surface-variant text-center py-8";note.textContent="No accepted attendance history is available yet.";dailyHours.append(note);}
         historyRows.forEach(([key,events],index)=>{
-          const summary=summarizeDay([...events]),row=document.createElement("div");row.className="px-4 py-3"+(index?" border-t border-outline-variant/30":"");
+          const summary=summarizeDay([...events]),row=document.createElement("div");row.dataset.date=key;row.className="px-4 py-3"+(index?" border-t border-outline-variant/30":"");
           const top=document.createElement("div");top.className="flex items-center justify-between gap-2";
           const date=document.createElement("p");date.className="text-body-md font-body-md font-semibold text-on-surface";date.textContent=formatAttendanceDate(new Date(key+"T12:00:00+05:30"));
           const hours=document.createElement("p");hours.className="text-body-md font-body-md font-semibold text-primary tabular-nums";hours.textContent=(summary.total/3600000).toFixed(2)+" hrs";top.append(date,hours);
@@ -317,7 +317,22 @@
           row.append(top,detail);dailyHours.append(row);
         });
       }
-
+      const historyViewButtons = document.querySelectorAll("#hoursSeg [data-view]");
+      const applyHistoryView = view => {
+        const days = view === "month" ? 30 : 7;
+        const cutoff = new Date(); cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate() - (days - 1));
+        const cutoffKey = dayKey(cutoff.getTime());
+        dailyHours?.querySelectorAll("[data-date]").forEach(row => { row.hidden = row.dataset.date < cutoffKey; });
+        historyViewButtons.forEach(button => {
+          const active = button.dataset.view === view;
+          button.className = active
+            ? "flex-1 py-2 rounded-md text-body-md font-body-md font-semibold text-primary bg-surface shadow-sm"
+            : "flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant";
+          button.setAttribute("aria-pressed", String(active));
+        });
+      };
+      historyViewButtons.forEach(button => button.addEventListener("click", () => applyHistoryView(button.dataset.view === "month" ? "month" : "week")));
+      applyHistoryView("week");
 
       const wageRecords = workspace.wageRecords ?? [];
       const payScreen = document.getElementById("payScreen");
