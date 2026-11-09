@@ -62,6 +62,15 @@
       const headerIdentity = document.querySelector("header .text-label-sm");
       if (headerIdentity) headerIdentity.textContent = "Employee · " + safe(p.employeeCode);
       document.querySelectorAll("#attScreen header .text-label-sm").forEach(node => { node.textContent = "Employee · " + safe(p.employeeCode); });
+      const mainIdentity = document.getElementById("mainEmployeeIdentity");
+      if (mainIdentity) mainIdentity.textContent = "Employee · " + safe(p.employeeCode);
+      const requestIdentity = document.getElementById("requestEmployeeIdentity");
+      if (requestIdentity) requestIdentity.textContent = "Employee · " + safe(p.employeeCode);
+      const leaveTypeSelect = document.getElementById("reqLeaveType");
+      if (leaveTypeSelect) {
+        leaveTypeSelect.replaceChildren(new Option("Select leave type", ""));
+        (workspace.leaveTypes || []).forEach(type => leaveTypeSelect.add(new Option(type.name, type.id)));
+      }
       const performanceIdentity = document.getElementById("performanceEmployeeIdentity");
       if (performanceIdentity) performanceIdentity.textContent = "Employee · " + safe(p.employeeCode);
       const greeting = document.querySelector("h2.text-headline-lg-mobile");
@@ -577,7 +586,87 @@
       window.toast?.(error.code === 1 ? "Location permission is required to record attendance." : "Unable to verify your location.");
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
-  window.submitNewRequest = () => window.toast?.("Request submission is not enabled until the leave workflow is configured.");
+  let selectedEmployeeRequestType = "leave";
+  window.prepareNewRequest = () => {
+    selectedEmployeeRequestType = "leave";
+    const cards = document.querySelectorAll("#reqTypeGrid .req-type-card");
+    cards.forEach(card => {
+      card.classList.toggle("active", card.dataset.type === selectedEmployeeRequestType);
+      card.onclick = () => {
+        selectedEmployeeRequestType = card.dataset.type;
+        cards.forEach(item => item.classList.toggle("active", item === card));
+        document.getElementById("leaveRequestFields")?.classList.toggle("hidden", selectedEmployeeRequestType !== "leave");
+        document.getElementById("overtimeRequestFields")?.classList.toggle("hidden", selectedEmployeeRequestType !== "overtime");
+        const message = document.getElementById("requestFormMessage");
+        if (message) message.textContent = "";
+      };
+    });
+    document.getElementById("leaveRequestFields")?.classList.remove("hidden");
+    document.getElementById("overtimeRequestFields")?.classList.add("hidden");
+    const message = document.getElementById("requestFormMessage");
+    if (message) message.textContent = "";
+    const reason = document.getElementById("reqReason");
+    if (reason) reason.value = "";
+    const submit = document.getElementById("submitEmployeeRequest");
+    if (submit) { submit.disabled = false; submit.textContent = "Submit Request"; }
+  };
+
+  window.submitNewRequest = async () => {
+    const button = document.getElementById("submitEmployeeRequest");
+    const message = document.getElementById("requestFormMessage");
+    const say = value => { if (message) message.textContent = value; };
+    const reason = document.getElementById("reqReason")?.value?.trim() || "";
+    if (!reason) { say("Please enter a reason for your request."); return; }
+    if (reason.length > 1000) { say("Reason must be 1,000 characters or fewer."); return; }
+
+    let payload;
+    if (selectedEmployeeRequestType === "leave") {
+      const leaveTypeId = document.getElementById("reqLeaveType")?.value || "";
+      const fromDate = document.getElementById("reqFrom")?.value || "";
+      const toDate = document.getElementById("reqTo")?.value || "";
+      if (!leaveTypeId || !fromDate || !toDate) { say("Select a leave type and both dates."); return; }
+      if (fromDate > toDate) { say("The end date must be on or after the start date."); return; }
+      payload = { type: "leave", leaveTypeId, fromDate, toDate, reason };
+    } else {
+      const workDate = document.getElementById("reqOvertimeDate")?.value || "";
+      const hours = Number(document.getElementById("reqOvertimeHours")?.value);
+      if (!workDate || !Number.isFinite(hours) || hours <= 0) { say("Enter the overtime work date and a valid number of hours."); return; }
+      const requestedMinutes = Math.round(hours * 60);
+      if (requestedMinutes <= 0) { say("Overtime duration must be at least one minute."); return; }
+      payload = { type: "overtime", workDate, requestedMinutes, reason };
+    }
+
+    if (button) { button.disabled = true; button.textContent = "Submitting…"; }
+    say("");
+    try {
+      const response = await fetch("/api/employee/requests", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const messages = {
+          NO_SCHEDULED_WORKING_DAYS: "No scheduled working days were found in that leave date range (company holidays are excluded).",
+          INVALID_LEAVE_TYPE: "That leave type is unavailable. Refresh and try again.",
+          PENDING_OVERTIME_REQUEST_EXISTS: "A pending overtime request already exists for this work date.",
+          EMPLOYEE_PROFILE_REQUIRED: "Your employee profile is not linked. Contact an administrator.",
+          EMPLOYEE_INACTIVE: "Your employee profile is inactive. Contact an administrator.",
+          INVALID_LEAVE_DATE_RANGE: "Choose a valid leave date range.",
+          INVALID_OVERTIME_REQUEST: "Enter a valid overtime date and duration.",
+        };
+        throw new Error(messages[result.error] || result.error || "Unable to submit your request.");
+      }
+      window.toast?.("Request submitted for supervisor review.");
+      window.closeNewRequest?.();
+      window.location.reload();
+    } catch (error) {
+      say(error instanceof Error ? error.message : "Unable to submit your request.");
+    } finally {
+      if (button) { button.disabled = false; button.textContent = "Submit Request"; }
+    }
+  };
   // Employee policy actions are bound after the published policy data is loaded.
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once: true });
