@@ -326,6 +326,7 @@
           const meta = document.createElement("p");
           meta.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5";
           meta.textContent = fmtDate(request.fromDate) + " – " + fmtDate(request.toDate) + " · " + request.requestedDays + " day(s)";
+          if (Array.isArray(request.daySelections) && request.daySelections.length) { const detail = document.createElement("p"); detail.className = "text-label-sm text-on-surface-variant mt-1"; detail.textContent = request.daySelections.map(item => fmtDate(item.date) + ": " + (leavePortionLabels[item.portion] || "Leave")).join(" · "); copy.append(detail); }
           copy.append(title, meta);
           const badge = document.createElement("span");
           badge.className = "flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold " + (request.status === "approved" ? "bg-[#e6f4ea] text-[#1E8E4E]" : request.status === "rejected" ? "bg-[#fde8e8] text-[#B3261E]" : "bg-secondary-fixed text-secondary");
@@ -589,6 +590,36 @@
       window.toast?.(error.code === 1 ? "Location permission is required to record attendance." : "Unable to verify your location.");
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
+  const leavePortionLabels = { full: "Full day", first_half: "First half", second_half: "Second half" };
+  const renderLeaveDaySelections = () => {
+    const from = document.getElementById("reqFrom")?.value || "";
+    const to = document.getElementById("reqTo")?.value || "";
+    const container = document.getElementById("leaveDaySelections");
+    const total = document.getElementById("leaveSelectionTotal");
+    if (!container) return;
+    container.replaceChildren();
+    if (!from || !to || from > to) { if (total) total.textContent = "Choose a valid date range."; return; }
+    const start = new Date(from + "T00:00:00Z"), end = new Date(to + "T00:00:00Z");
+    const count = Math.round((end - start) / 86400000) + 1;
+    if (count > 62) { if (total) total.textContent = "A request can cover at most 62 calendar dates."; return; }
+    for (let offset = 0; offset < count; offset++) {
+      const date = new Date(start); date.setUTCDate(date.getUTCDate() + offset);
+      const key = date.toISOString().slice(0, 10);
+      const row = document.createElement("label"); row.className = "flex items-center justify-between gap-3 rounded-lg border border-outline-variant/40 p-2";
+      const label = document.createElement("span"); label.className = "text-label-sm text-on-surface"; label.textContent = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" }).format(date);
+      const select = document.createElement("select"); select.className = "bg-surface-container-low rounded-lg px-2 py-2 text-label-sm text-on-surface"; select.dataset.leaveDate = key;
+      [["", "No leave"], ["full", "Full day (1)"], ["first_half", "First half (0.5)"], ["second_half", "Second half (0.5)"]].forEach(([value, text]) => { const option = document.createElement("option"); option.value = value; option.textContent = text; select.append(option); });
+      select.addEventListener("change", updateLeaveSelectionTotal);
+      row.append(label, select); container.append(row);
+    }
+    updateLeaveSelectionTotal();
+  };
+  const updateLeaveSelectionTotal = () => {
+    const selects = [...(document.querySelectorAll("#leaveDaySelections select") || [])];
+    const days = selects.reduce((sum, select) => sum + (select.value === "full" ? 1 : select.value ? 0.5 : 0), 0);
+    const total = document.getElementById("leaveSelectionTotal");
+    if (total) total.textContent = days + (days === 1 ? " leave day selected" : " leave days selected");
+  };
   let selectedEmployeeRequestType = "leave";
   window.prepareNewRequest = () => {
     selectedEmployeeRequestType = "leave";
@@ -610,6 +641,8 @@
     if (message) message.textContent = "";
     const reason = document.getElementById("reqReason");
     if (reason) reason.value = "";
+    ["reqFrom", "reqTo"].forEach(id => document.getElementById(id)?.addEventListener("change", renderLeaveDaySelections, { once: true }));
+    renderLeaveDaySelections();
     const submit = document.getElementById("submitEmployeeRequest");
     if (submit) { submit.disabled = false; submit.textContent = "Submit Request"; }
   };
@@ -629,7 +662,9 @@
       const toDate = document.getElementById("reqTo")?.value || "";
       if (!leaveTypeId || !fromDate || !toDate) { say("Select a leave type and both dates."); return; }
       if (fromDate > toDate) { say("The end date must be on or after the start date."); return; }
-      payload = { type: "leave", leaveTypeId, fromDate, toDate, reason };
+      const daySelections = [...document.querySelectorAll("#leaveDaySelections select")].filter(select => select.value).map(select => ({ date: select.dataset.leaveDate, portion: select.value }));
+      if (!daySelections.length) { say("Select at least one full or half working day."); return; }
+      payload = { type: "leave", leaveTypeId, fromDate, toDate, daySelections, reason };
     } else {
       const workDate = document.getElementById("reqOvertimeDate")?.value || "";
       const hours = Number(document.getElementById("reqOvertimeHours")?.value);
@@ -652,6 +687,9 @@
       if (!response.ok) {
         const messages = {
           NO_WORKING_DAYS_IN_RANGE: "No scheduled working days were found in that leave date range (company holidays are excluded).",
+          LEAVE_DATE_NOT_SCHEDULED: "A selected date has no assigned shift. Remove that date or contact your supervisor.",
+          LEAVE_DATE_IS_HOLIDAY: "Company holidays cannot be selected for leave.",
+          INVALID_LEAVE_SELECTION: "Check your date-wise leave selections and try again.",
           LEAVE_BALANCE_NOT_CONFIGURED: "Your leave balance is not configured. Contact HR before submitting this request.",
           INSUFFICIENT_LEAVE_BALANCE: "You do not have enough available leave balance for this request.",
           OVERLAPPING_PENDING_LEAVE_REQUEST: "A pending leave request already overlaps these dates.",
