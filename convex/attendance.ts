@@ -74,7 +74,15 @@ export const pendingGeofenceExceptions = query({
         _id: event._id, eventType: event.eventType, latitude: event.latitude, longitude: event.longitude,
         accuracyM: event.accuracyM, clientTimestamp: event.clientTimestamp, receivedAt: event.receivedAt,
         employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Unknown employee",
-        employeeCode: employee?.employeeCode ?? "—", locationName: location?.name ?? "Unknown location",
+        employeeCode: employee?.employeeCode ?? "—",
+        locationName: location?.name ?? "Unknown location",
+        locationAddress: location?.address ?? "",
+        workplaceLatitude: location?.latitude ?? null,
+        workplaceLongitude: location?.longitude ?? null,
+        geofenceRadiusM: location?.geofenceRadiusM ?? null,
+        distanceFromWorkplaceM: location
+          ? Math.round(distanceMeters(location.latitude, location.longitude, event.latitude, event.longitude))
+          : null,
       };
     }));
   },
