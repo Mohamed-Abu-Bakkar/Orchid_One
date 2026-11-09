@@ -59,6 +59,9 @@
       const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
       const moreProfileName = document.getElementById("moreProfileName");
       if (moreProfileName) moreProfileName.textContent = fullName || "Employee";
+      const moreProfileIdentity = document.getElementById("moreProfileIdentity");
+      if (moreProfileIdentity) moreProfileIdentity.textContent = [p.employeeCode, p.designation, workspace.department?.name].filter(Boolean).join(" · ");
+      
       const headerIdentity = document.querySelector("header .text-label-sm");
       if (headerIdentity) headerIdentity.textContent = "Employee · " + safe(p.employeeCode);
       document.querySelectorAll("#attScreen header .text-label-sm").forEach(node => { node.textContent = "Employee · " + safe(p.employeeCode); });
