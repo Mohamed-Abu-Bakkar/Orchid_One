@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity } from "./lib/auth";
 
@@ -95,7 +96,7 @@ function isValidRequestDate(value: string) {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-async function getActiveEmployeeForRequest(ctx: any) {
+async function getActiveEmployeeForRequest(ctx: MutationCtx) {
   const user = await requireIdentity(ctx);
   if (!user.employeeId) throw new Error("EMPLOYEE_PROFILE_REQUIRED");
   const employee = await ctx.db.get(user.employeeId);
