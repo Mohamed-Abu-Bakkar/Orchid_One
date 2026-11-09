@@ -5,8 +5,8 @@ import { useEffect, useId, useRef } from "react";
 type Props = {
   employeeLatitude: number;
   employeeLongitude: number;
-  workplaceLatitude: number;
-  workplaceLongitude: number;
+  workplaceLatitude: number | null;
+  workplaceLongitude: number | null;
   geofenceRadiusM: number;
   employeeName: string;
   workplaceName: string;
@@ -52,7 +52,8 @@ function loadLeaflet(): Promise<void> {
 export function GeofenceExceptionMap(props: Props) {
   const mapId = useId().replace(/:/g, "");
   const mapRef = useRef<any>(null);
-  const valid = [props.employeeLatitude, props.employeeLongitude, props.workplaceLatitude, props.workplaceLongitude, props.geofenceRadiusM].every(Number.isFinite)
+  const valid = props.workplaceLatitude !== null && props.workplaceLongitude !== null
+    && [props.employeeLatitude, props.employeeLongitude, props.workplaceLatitude, props.workplaceLongitude, props.geofenceRadiusM].every(Number.isFinite)
     && Math.abs(props.employeeLatitude) <= 90 && Math.abs(props.workplaceLatitude) <= 90
     && Math.abs(props.employeeLongitude) <= 180 && Math.abs(props.workplaceLongitude) <= 180
     && props.geofenceRadiusM > 0;
