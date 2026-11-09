@@ -630,15 +630,15 @@
 <div class="flex items-center justify-between">
 <div>
 <h2 class="text-headline-lg-mobile font-headline-lg-mobile text-primary">My Requests</h2>
-<p class="text-body-md font-body-md text-on-surface-variant mt-1">Track your leaves, overtime and wage requests.</p>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Track your leave and overtime requests.</p>
 </div>
-<button class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-2.5 shadow-sm hover:bg-primary-container transition-colors flex items-center gap-1" onclick="openNewRequest()">
+<button type="button" disabled title="Request submission is not available yet" class="bg-surface-container-high text-on-surface-variant text-body-md font-body-md font-bold rounded-lg px-4 py-2.5 flex items-center gap-1 opacity-60 cursor-not-allowed">
 <span class="material-symbols-outlined text-[18px]">add</span>Request
 </button>
 </div>
 <div class="flex bg-surface-container-low rounded-lg p-1" id="reqTabs">
-<button class="flex-1 py-2 rounded-md text-body-md font-body-md font-semibold text-primary bg-surface shadow-sm" data-rt="pending">Pending (2)</button>
-<button class="flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant" data-rt="history">History</button>
+<button class="flex-1 py-2 rounded-md text-body-md font-body-md font-semibold text-primary bg-surface shadow-sm" data-rt="pending">Pending (0)</button>
+<button class="flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant" data-rt="history">History (0)</button>
 </div>
 <div class="flex flex-col gap-3" id="reqContent"></div>
 </div>
@@ -1349,35 +1349,38 @@ Submit Request
                 </div>`).join('') || '<p class="text-body-md font-body-md text-on-surface-variant text-center py-8">No notifications in this category.</p>';
         }
         function submitNewRequest() {
-            const type = document.querySelector('#reqTypeGrid .req-type-card.active')?.dataset.type || 'leave';
-            toast(type === 'leave' ? 'Leave request submitted for approval' : type === 'overtime' ? 'Overtime request submitted' : type === 'wage' ? 'Wage request submitted' : 'Request submitted for approval');
-            closeNewRequest();
-            setTimeout(() => renderRequests(), 250);
+            toast('Employee request submission is not available yet.');
         }
         function renderRequests() {
-            const reqRow = (t, icon, bg, sub, badge, bc, cls) => `
-                <div class="bento-card flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg ${bg} ${icon ? 'text-[#4a1254]' : ''} flex items-center justify-center flex-shrink-0">
-                        <span class="text-body-md font-body-md font-bold ${icon === 'OT' ? 'text-[#b26a00]' : icon === '₹' ? 'text-[#4a1254]' : ''}">${icon}</span>
-                    </div>
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-medium text-on-surface">${t}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">${sub}</p>
-                    </div>
-                    <span class="flex-shrink-0 px-2 py-0.5 rounded-full ${bc} text-[10px] font-semibold">${badge}</span>
-                </div>`;
-            const pending = [
-                { t: "Overtime request · 13 Aug", icon: "OT", bg: "bg-[#fff4e0]", sub: "2.0 hrs · estimated ₹300", badge: "Pending", bc: "bg-[#fff4e0] text-[#b26a00]" },
-                { t: "Weekly wage · Week 33", icon: "₹", bg: "bg-secondary-fixed", sub: "₹5,475 · 44.5 hrs", badge: "Submitted", bc: "bg-secondary-fixed text-[#4a1254]" },
-            ];
-            const history = [
-                { t: "Casual Leave · 09 Aug", icon: "LV", bg: "bg-[#e6f4ea]", sub: "1 day · reason: family function", badge: "Approved", bc: "bg-[#e6f4ea] text-[#1E8E4E]" },
-                { t: "Sick Leave · 02 Aug", icon: "LV", bg: "bg-[#e6f4ea]", sub: "1 day · reason: fever", badge: "Approved", bc: "bg-[#e6f4ea] text-[#1E8E4E]" },
-                { t: "Overtime · 02 Aug", icon: "OT", bg: "bg-[#fdecea]", sub: "1.5 hrs · requested late", badge: "Rejected", bc: "bg-[#fdecea] text-[#ba1a1a]" },
-            ];
-            document.getElementById('reqContent').innerHTML = (pending.map(r => reqRow(r.t, r.icon, r.bg, r.sub, r.badge, r.bc)).join(''));
+            const workspace = window.__orchidWorkspace;
+            const content = document.getElementById('reqContent');
             const tabs = document.querySelectorAll('#reqTabs button');
+            if (!content) return;
+            if (!workspace?.linked) {
+                content.replaceChildren();
+                const message = document.createElement('p');
+                message.className = 'text-body-md font-body-md text-on-surface-variant text-center py-8';
+                message.textContent = 'Employee profile is not linked. Request records are unavailable.';
+                content.append(message);
+                return;
+            }
+            const leave = (workspace.leaveRequests || []).map(request => ({
+                id: String(request._id), type: 'leave', title: (request.leaveTypeName || 'Leave') + ' request',
+                date: request.fromDate, endDate: request.toDate, detail: (request.requestedDays ?? 0) + ' day(s) · ' + (request.reason || 'No reason provided'),
+                status: request.status, createdAt: request.createdAt
+            }));
+            const overtime = (workspace.overtimeRequests || []).map(request => ({
+                id: String(request._id), type: 'overtime', title: 'Overtime request',
+                date: request.workDate, detail: (request.requestedMinutes / 60).toFixed(2) + ' hrs requested · ' + (request.reason || 'No reason provided'),
+                status: request.status, approvedMinutes: request.approvedMinutes, reviewerNote: request.reviewerNote, createdAt: request.createdAt
+            }));
+            const records = [...leave, ...overtime].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            const pending = records.filter(item => item.status === 'pending');
+            const history = records.filter(item => item.status !== 'pending');
+            const counts = { pending: pending.length, history: history.length };
             tabs.forEach(tab => {
+                const key = tab.dataset.rt;
+                tab.textContent = (key === 'pending' ? 'Pending' : 'History') + ' (' + (counts[key] ?? 0) + ')';
                 tab.onclick = () => {
                     tabs.forEach(x => {
                         x.classList.remove('bg-surface', 'shadow-sm', 'text-primary');
@@ -1385,10 +1388,62 @@ Submit Request
                     });
                     tab.classList.add('bg-surface', 'shadow-sm', 'text-primary');
                     tab.classList.remove('text-on-surface-variant');
-                    const list = tab.dataset.rt === 'history' ? history : pending;
-                    document.getElementById('reqContent').innerHTML = list.map(r => reqRow(r.t, r.icon, r.bg, r.sub, r.badge, r.bc)).join('');
+                    renderRequestRows(key === 'history' ? history : pending);
                 };
             });
+            renderRequestRows(pending);
+            function renderRequestRows(items) {
+                content.replaceChildren();
+                if (!items.length) {
+                    const message = document.createElement('p');
+                    message.className = 'text-body-md font-body-md text-on-surface-variant text-center py-8';
+                    message.textContent = records.length ? 'No requests in this section.' : 'No leave or overtime requests have been submitted.';
+                    content.append(message);
+                    return;
+                }
+                items.forEach(item => {
+                    const card = document.createElement('article');
+                    card.className = 'bento-card flex items-center gap-3';
+                    const iconWrap = document.createElement('div');
+                    iconWrap.className = 'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ' + (item.type === 'overtime' ? 'bg-[#fff4e0]' : 'bg-secondary-fixed');
+                    const icon = document.createElement('span');
+                    icon.className = 'text-body-md font-body-md font-bold ' + (item.type === 'overtime' ? 'text-[#b26a00]' : 'text-primary');
+                    icon.textContent = item.type === 'overtime' ? 'OT' : 'LV';
+                    iconWrap.append(icon);
+                    const copy = document.createElement('div');
+                    copy.className = 'flex flex-col flex-1 min-w-0';
+                    const title = document.createElement('p');
+                    title.className = 'text-body-md font-body-md font-medium text-on-surface';
+                    title.textContent = item.title;
+                    const detail = document.createElement('p');
+                    detail.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
+                    detail.textContent = item.type === 'leave'
+                        ? fmtDate(item.date) + ' – ' + fmtDate(item.endDate) + ' · ' + item.detail
+                        : fmtDate(item.date) + ' · ' + item.detail;
+                    copy.append(title, detail);
+                    if (item.type === 'overtime' && item.status === 'approved' && Number.isFinite(item.approvedMinutes)) {
+                        const approved = document.createElement('p');
+                        approved.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
+                        approved.textContent = 'Approved: ' + (item.approvedMinutes / 60).toFixed(2) + ' hrs';
+                        copy.append(approved);
+                    }
+                    if (item.reviewerNote) {
+                        const note = document.createElement('p');
+                        note.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
+                        note.textContent = 'Review note: ' + item.reviewerNote;
+                        copy.append(note);
+                    }
+                    const badge = document.createElement('span');
+                    badge.className = 'flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ' +
+                        (item.status === 'approved' ? 'bg-[#e6f4ea] text-[#1E8E4E]' :
+                         item.status === 'rejected' ? 'bg-[#fde8e8] text-[#B3261E]' :
+                         item.status === 'cancelled' ? 'bg-surface-container-highest text-on-surface-variant' :
+                         'bg-secondary-fixed text-secondary');
+                    badge.textContent = item.status;
+                    card.append(iconWrap, copy, badge);
+                    content.append(card);
+                });
+            }
         }
         function renderHours() {
             const bars = [8.1, 8.1, 8.3, 7.6, 7.4, 0, 0];
