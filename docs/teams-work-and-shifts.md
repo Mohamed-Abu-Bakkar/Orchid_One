@@ -15,7 +15,7 @@
 - Assign an employee a default shift and override it with zero or more date-specific shifts.
 - Date-specific assignments replace the default shift for that date.
 - Reject overlapping shifts within the same day and across adjacent days, including overnight boundaries.
-- A shift template cannot be archived while referenced by an active team or any employee shift assignment. This protects historical schedule references.
+- A shift template cannot be archived while referenced by any team, employee default shift or employee date-specific shift assignment. This protects active configuration and historical schedule references.
 - Shift changes, assignments and team/work actions are organization-scoped and audited.
 
 ## Permissions
