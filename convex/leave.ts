@@ -8,15 +8,15 @@ const workingDayCount=(from:string,to:string,off:number[],holidays:Set<string>)=
 
 export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{year})=>{
  const user=await requireAdmin(ctx);
- const [employees,types,balances,requests,holidays,locations,calendars]=await Promise.all([
+ const [employees,types,requests,holidays,locations,calendars]=await Promise.all([
   ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveTypes").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
-  Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year)).collect())).then(rows=>rows.flat()),
   ctx.db.query("leaveRequests").withIndex("by_org_status",q=>q.eq("organizationId",user.organizationId)).take(500),
   ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).gte("date",String(year)+"-01-01").lte("date",String(year)+"-12-31").collect(),
   ctx.db.query("locations").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect()
  ]);
+ const balances=(await Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year)).collect()))).flat();
  const employeeRows=employees.map(e=>({_id:e._id,name:[e.firstName,e.lastName].filter(Boolean).join(" "),employeeCode:e.employeeCode,locationId:e.locationId,locationName:locations.find(l=>l._id===e.locationId)?.name??"Unknown"}));
  const balanceRows=await Promise.all(balances.filter(b=>employees.some(e=>e._id===b.employeeId)).map(async b=>({ ...b,employeeName:employeeRows.find(e=>e._id===b.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===b.employeeId)?.employeeCode??"",leaveTypeName:types.find(t=>t._id===b.leaveTypeId)?.name??"Unknown"})));
  const requestRows=await Promise.all(requests.map(async r=>({ ...r,employeeName:employeeRows.find(e=>e._id===r.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===r.employeeId)?.employeeCode??"",locationId:employeeRows.find(e=>e._id===r.employeeId)?.locationId,leaveTypeName:types.find(t=>t._id===r.leaveTypeId)?.name??"Unknown"})));
