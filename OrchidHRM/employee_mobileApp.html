@@ -245,7 +245,7 @@
 </main>
 </div>
 <!-- Main Content Area -->
-<main class="flex-1 w-full max-w-[430px] mx-auto">
+<main id="homeScreen" class="flex-1 w-full max-w-[430px] mx-auto">
 <!-- TopAppBar -->
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm sticky top-0 z-30">
 <div class="flex flex-col">
@@ -1389,7 +1389,7 @@ Submit Request
             const content = document.getElementById('docContent');
             if (content) content.textContent = 'Loading your documents…';
         }
-        const SCREEN_IDS = ['attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'polScreen', 'polDetailScreen'];
+        const SCREEN_IDS = ['homeScreen', 'attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'polScreen', 'polDetailScreen'];
         var navStack = [];
         function getScreen(id) {
             const screen = document.getElementById(id);
@@ -1403,11 +1403,12 @@ Submit Request
             });
         }
         function goTo(id) {
-            const target = id === 'home' ? null : getScreen(id);
-            if (id !== 'home' && !target) return;
+            const targetId = id === 'home' ? 'homeScreen' : id;
+            const target = getScreen(targetId);
+            if (!target) return;
             hideAll();
             navStack = [id];
-            if (target) target.classList.remove('hidden');
+            target.classList.remove('hidden');
         }
         function pushScreen(id) {
             const target = getScreen(id);
