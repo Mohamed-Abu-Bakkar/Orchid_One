@@ -137,8 +137,10 @@ export const submitMyLeaveRequest = mutation({
     if (existing.some(r => r.status === "pending" && r.fromDate <= args.toDate && r.toDate >= args.fromDate)) throw new Error("OVERLAPPING_PENDING_LEAVE_REQUEST");
     const holidayDates = new Set(holidays.filter(h => !h.locationId || h.locationId === employee.locationId).map(h => h.date));
     const scheduledDates = new Set(assignments.map(assignment => assignment.workDate));
+    const defaultShift = employee.defaultShiftId ? await ctx.db.get(employee.defaultShiftId) : null;
+    const hasValidDefaultShift = Boolean(defaultShift && defaultShift.organizationId === user.organizationId && defaultShift.isActive);
     for (const date of dates) {
-      if (!scheduledDates.has(date)) throw new Error("LEAVE_DATE_NOT_SCHEDULED");
+      if (!scheduledDates.has(date) && !hasValidDefaultShift) throw new Error("LEAVE_DATE_NOT_SCHEDULED");
       if (holidayDates.has(date)) throw new Error("LEAVE_DATE_IS_HOLIDAY");
     }
     const requestedDays = args.daySelections.reduce((total, selection) => total + (selection.portion === "full" ? 1 : 0.5), 0);
