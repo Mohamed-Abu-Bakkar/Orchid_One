@@ -16,6 +16,7 @@ export async function POST(request: Request) {
         leaveTypeId: body.leaveTypeId,
         fromDate: body.fromDate,
         toDate: body.toDate,
+        daySelections: body.daySelections,
         reason: body.reason,
       });
       return NextResponse.json({ type: "leave", ...result }, { headers: { "Cache-Control": "no-store" } });
