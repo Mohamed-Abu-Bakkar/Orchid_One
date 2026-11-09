@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { api } from "@/../convex/_generated/api";
 import { CheckCircle2, Clock3, MapPin, XCircle } from "lucide-react";
+import { GeofenceExceptionMap } from "@/components/admin/geofence-exception-map";
 
 export function AttendanceExceptionReview() {
   const items = useQuery(api.attendance.pendingGeofenceExceptions, {});
@@ -37,7 +38,25 @@ export function AttendanceExceptionReview() {
           <p className="t-body-sm"><strong>Work location:</strong> {item.locationName}</p>
           <p className="t-body-sm"><strong>Time:</strong> {new Date(item.clientTimestamp).toLocaleString("en-IN")}</p>
           <p className="t-body-sm"><strong>GPS accuracy:</strong> {Math.round(item.accuracyM)} m</p>
-          <p className="t-caption text-tertiary" style={{ marginTop: 6 }}><MapPin size={13} style={{ display: "inline", verticalAlign: "middle" }}/> {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}</p>
+          {item.locationAddress && <p className="t-body-sm"><strong>Workplace address:</strong> {item.locationAddress}</p>}
+          <div className="geofence-distance-summary">
+            <div><span>Distance from workplace</span><strong>{item.distanceFromWorkplaceM === null ? "Unavailable" : `${item.distanceFromWorkplaceM.toLocaleString("en-IN")} m`}</strong></div>
+            <div><span>Allowed radius</span><strong>{item.geofenceRadiusM === null ? "Not configured" : `${item.geofenceRadiusM.toLocaleString("en-IN")} m`}</strong></div>
+          </div>
+          <GeofenceExceptionMap
+            employeeLatitude={item.latitude}
+            employeeLongitude={item.longitude}
+            workplaceLatitude={item.workplaceLatitude}
+            workplaceLongitude={item.workplaceLongitude}
+            geofenceRadiusM={item.geofenceRadiusM}
+            employeeName={item.employeeName}
+            workplaceName={item.locationName}
+          />
+          <details className="geofence-coordinates">
+            <summary><MapPin size={13}/> View raw GPS coordinates</summary>
+            <p>Employee: {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}</p>
+            <p>Workplace: {item.workplaceLatitude?.toFixed(6) ?? "—"}, {item.workplaceLongitude?.toFixed(6) ?? "—"}</p>
+          </details>
           <label className="t-caption text-tertiary" htmlFor={"review-note-" + item._id}>Reviewer note (optional)</label>
           <textarea id={"review-note-" + item._id} className="input" rows={2} value={notes[String(item._id)] ?? ""} onChange={e => setNotes(current => ({ ...current, [String(item._id)]: e.target.value }))} placeholder="Add a reason or context"/>
           <div className="row gap-2" style={{ marginTop: 12 }}>
