@@ -27,7 +27,7 @@ export const adminWorkspace=query({args:{workDate:v.string()},handler:async(ctx,
  });
  const teamRows=await Promise.all(teams.filter(t=>t.isActive).map(async t=>{const shift=await ctx.db.get(t.shiftId);const rows=await Promise.all(memberships.filter(m=>m.teamId===t._id&&m.isActive).map(async m=>{const e=await ctx.db.get(m.employeeId);return e?{name:[e.firstName,e.lastName].filter(Boolean).join(" "),employeeCode:e.employeeCode}:null;}));return {_id:t._id,name:t.name,shiftId:t.shiftId,shiftName:shift?.name??"Shift unavailable",members:rows.filter(Boolean)};}));
  const assignmentRows=await Promise.all(assignments.filter(a=>a.isActive).map(async a=>{const [team,employee,progress]=await Promise.all([a.teamId?ctx.db.get(a.teamId):null,a.employeeId?ctx.db.get(a.employeeId):null,ctx.db.query("workAssignmentProgress").withIndex("by_assignment",q=>q.eq("assignmentId",a._id)).collect()]);const rows=await Promise.all(progress.map(async p=>{const e=await ctx.db.get(p.employeeId);return {status:p.status,name:e?[e.firstName,e.lastName].filter(Boolean).join(" "):"Unknown",code:e?.employeeCode??""};}));return {_id:a._id,title:a.title,category:a.category,priority:a.priority,targetName:team?.name??(employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Unknown"),progress:rows};}));
- return {employees:employeeRows,shifts:shifts.filter(s=>s.isActive).map(s=>({_id:s._id,name:s.name})),categories:categories.filter(c=>c.isActive).map(c=>c.name),teams:teamRows,memberships:memberships.filter(m=>m.isActive).map(m=>({teamId:m.teamId,employeeId:m.employeeId})),assignments:assignmentRows};
+ return {employees:employeeRows,shifts:shifts.filter(s=>s.isActive).map(s=>({_id:s._id,name:s.name,startMinute:s.startMinute,endMinute:s.endMinute,breakMinutes:s.breakMinutes,isActive:s.isActive})),categories:categories.filter(c=>c.isActive).map(c=>c.name),teams:teamRows,memberships:memberships.filter(m=>m.isActive).map(m=>({teamId:m.teamId,employeeId:m.employeeId})),assignments:assignmentRows};
 }});
 
 export const createShift=mutation({args:{name:v.string(),startMinute:v.number(),endMinute:v.number(),breakMinutes:v.number()},handler:async(ctx,a)=>{const u=await requireAdmin(ctx),name=a.name.trim();if(!name||name.length>80)throw Error("INVALID_SHIFT_NAME");if(!Number.isInteger(a.startMinute)||a.startMinute<0||a.startMinute>=1440||!Number.isInteger(a.endMinute)||a.endMinute<0||a.endMinute>=1440||a.startMinute===a.endMinute)throw Error("INVALID_SHIFT_TIME");if(!Number.isInteger(a.breakMinutes)||a.breakMinutes<0||a.breakMinutes>720)throw Error("INVALID_BREAK_DURATION");const rows=await ctx.db.query("shifts").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect();if(rows.some(s=>s.name.toLowerCase()===name.toLowerCase()))throw Error("SHIFT_ALREADY_EXISTS");const id=await ctx.db.insert("shifts",{organizationId:u.organizationId,name,startMinute:a.startMinute,endMinute:a.endMinute,breakMinutes:a.breakMinutes,isActive:true});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"shift.created",entityType:"shift",entityId:String(id),metadata:{name,startMinute:a.startMinute,endMinute:a.endMinute,breakMinutes:a.breakMinutes},createdAt:Date.now()});return id;}});
@@ -139,4 +139,19 @@ export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx
  const assignments=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive&&t.workDate===a.workDate?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status}:null;}));
  const validTeams=teams.filter((team):team is NonNullable<typeof team>=>team!==null);
  return {team:validTeams[0]??null,teams:validTeams,assignments:assignments.filter(Boolean)};
+}});
+
+
+export const archiveShift=mutation({args:{shiftId:v.id("shifts")},handler:async(ctx,{shiftId})=>{
+ const user=await requireAdmin(ctx),shift=await ctx.db.get(shiftId);
+ if(!shift||shift.organizationId!==user.organizationId)throw Error("SHIFT_NOT_FOUND");
+ if(!shift.isActive)return {archived:false};
+ const [teams,assignments]=await Promise.all([
+  ctx.db.query("teams").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
+  ctx.db.query("shiftAssignments").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).collect()
+ ]);
+ if(teams.some(team=>team.isActive&&team.shiftId===shiftId)||assignments.some(row=>row.shiftId===shiftId))throw Error("SHIFT_IN_USE_ARCHIVE_BLOCKED");
+ await ctx.db.patch(shiftId,{isActive:false});
+ await ctx.db.insert("auditLogs",{organizationId:user.organizationId,actorUserId:user._id,action:"shift.archived",entityType:"shift",entityId:String(shiftId),metadata:{name:shift.name},createdAt:Date.now()});
+ return {archived:true};
 }});
