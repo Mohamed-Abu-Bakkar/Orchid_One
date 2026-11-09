@@ -61,7 +61,7 @@ export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decis
  const year=Number(r.fromDate.slice(0,4));if(Number(r.toDate.slice(0,4))!==year)throw Error("CROSS_YEAR_LEAVE_REQUIRES_SPLIT_REQUEST");
  const balances=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",r.employeeId).eq("periodYear",year)).collect(),balance=balances.find(x=>x.leaveTypeId===r.leaveTypeId);
  if(!balance)throw Error("LEAVE_BALANCE_NOT_CONFIGURED");
- if(a.decision==="approved"&&balance.used+days>balance.allocated)throw Error("INSUFFICIENT_LEAVE_BALANCE");
+ if(a.decision==="approved"&&balance.used+Math.max(0,balance.pending-r.requestedDays)+days>balance.allocated)throw Error("INSUFFICIENT_LEAVE_BALANCE");
  if(balance.pending<r.requestedDays)throw Error("LEAVE_PENDING_BALANCE_MISMATCH");
  await ctx.db.patch(balance._id,{pending:Math.max(0,balance.pending-r.requestedDays),used:balance.used+(a.decision==="approved"?days:0)});
  await ctx.db.patch(r._id,{status:a.decision});
