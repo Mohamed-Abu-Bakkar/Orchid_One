@@ -61,6 +61,37 @@
       if (moreProfileName) moreProfileName.textContent = fullName || "Employee";
       const moreProfileIdentity = document.getElementById("moreProfileIdentity");
       if (moreProfileIdentity) moreProfileIdentity.textContent = [p.employeeCode, p.designation, workspace.department?.name].filter(Boolean).join(" · ");
+
+      const joiningDate = p.joiningDate && /^\\d{4}-\\d{2}-\\d{2}$/.test(p.joiningDate)
+        ? new Date(p.joiningDate + "T00:00:00Z")
+        : null;
+      const now = new Date();
+      let completedYears = null;
+      if (joiningDate && !Number.isNaN(joiningDate.getTime()) && joiningDate <= now) {
+        completedYears = now.getUTCFullYear() - joiningDate.getUTCFullYear();
+        if (
+          now.getUTCMonth() < joiningDate.getUTCMonth() ||
+          (now.getUTCMonth() === joiningDate.getUTCMonth() && now.getUTCDate() < joiningDate.getUTCDate())
+        ) completedYears -= 1;
+      }
+      text("#moreYearsAtOrchid", completedYears == null ? "—" : String(completedYears));
+
+      const profileLeaveBalances = workspace.leaveBalances ?? [];
+      const availableProfileLeave = profileLeaveBalances.reduce((total, balance) => {
+        const allocated = Number(balance.allocated);
+        const used = Number(balance.used);
+        const pending = Number(balance.pending);
+        if (![allocated, used, pending].every(Number.isFinite)) return total;
+        return total + Math.max(0, allocated - used - pending);
+      }, 0);
+      text("#moreLeaveBalance", profileLeaveBalances.length
+        ? String(Number(availableProfileLeave.toFixed(1)))
+        : "—");
+
+      const profileAttendance = workspace.attendanceSummary;
+      text("#moreAttendance", profileAttendance?.scheduledDays
+        ? String(profileAttendance.percentage ?? 0) + "%"
+        : "—");
       
       const headerIdentity = document.querySelector("header .text-label-sm");
       if (headerIdentity) headerIdentity.textContent = "Employee · " + safe(p.employeeCode);
