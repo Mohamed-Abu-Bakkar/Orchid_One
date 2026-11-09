@@ -233,3 +233,23 @@
 .orchid-password-message.success{background:#edf8ef;color:#236b35}
 .orchid-password-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:5px}
 @media(max-width:520px){.orchid-password-dialog{padding:18px}.orchid-password-actions{flex-direction:column-reverse}.orchid-password-actions .btn{justify-content:center}}
+
+
+/* Geofence exception map */
+.geofence-distance-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.geofence-distance-summary>div{display:grid;gap:5px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-secondary)}
+.geofence-distance-summary span{font-size:10px;color:var(--text-tertiary)}
+.geofence-distance-summary strong{font-size:14px;color:var(--text-primary)}
+.geofence-map-frame{display:grid;gap:8px;margin:14px 0}
+.geofence-map{width:100%;height:280px;border:1px solid var(--border);border-radius:10px;background:var(--surface-secondary);z-index:0}
+.geofence-map-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--text-secondary)}
+.geofence-map-legend span{display:inline-flex;align-items:center;gap:6px}
+.geofence-legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.geofence-legend-dot.employee{background:#2764c5}
+.geofence-legend-dot.workplace{background:#26834a}
+.geofence-legend-circle{width:12px;height:12px;border:2px solid #26834a;background:rgba(53,167,101,.12);border-radius:50%;display:inline-block}
+.geofence-map-unavailable{padding:13px;border:1px dashed var(--border-strong);border-radius:9px;background:var(--surface-secondary);color:var(--text-secondary);font-size:11px;line-height:1.5}
+.geofence-coordinates{margin:8px 0 14px;color:var(--text-tertiary);font-size:10px}
+.geofence-coordinates summary{display:flex;align-items:center;gap:5px;cursor:pointer}
+.geofence-coordinates p{margin:7px 0 0}
+@media(max-width:520px){.geofence-map{height:230px}.geofence-distance-summary{grid-template-columns:1fr 1fr}}
