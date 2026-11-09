@@ -62,7 +62,7 @@
       const moreProfileIdentity = document.getElementById("moreProfileIdentity");
       if (moreProfileIdentity) moreProfileIdentity.textContent = [p.employeeCode, p.designation, workspace.department?.name].filter(Boolean).join(" · ");
 
-      const joiningDate = p.joiningDate && /^\\d{4}-\\d{2}-\\d{2}$/.test(p.joiningDate)
+      const joiningDate = p.joiningDate && /^\d{4}-\d{2}-\d{2}$/.test(p.joiningDate)
         ? new Date(p.joiningDate + "T00:00:00Z")
         : null;
       const now = new Date();
