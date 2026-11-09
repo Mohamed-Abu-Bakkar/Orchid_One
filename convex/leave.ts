@@ -12,19 +12,26 @@ const workingDayCount=(from:string,to:string,off:number[],holidays:Set<string>)=
 
 export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{year})=>{
  const user=await requireAdmin(ctx);
- const [employees,types,requests,holidays,locations,calendars]=await Promise.all([
+ const [employees,types,requests,holidays,locations,calendars,defaults]=await Promise.all([
   ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveTypes").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveRequests").withIndex("by_org_status",q=>q.eq("organizationId",user.organizationId)).take(500),
   ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId).gte("date",String(year)+"-01-01").lte("date",String(year)+"-12-31")).collect(),
   ctx.db.query("locations").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
-  ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect()
+  ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
+  ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",user.organizationId).eq("periodYear",year)).collect()
  ]);
  const balances=(await Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year)).collect()))).flat();
  const employeeRows=employees.map(e=>({_id:e._id,name:[e.firstName,e.lastName].filter(Boolean).join(" "),employeeCode:e.employeeCode,locationId:e.locationId,locationName:locations.find(l=>l._id===e.locationId)?.name??"Unknown"}));
- const balanceRows=await Promise.all(balances.filter(b=>employees.some(e=>e._id===b.employeeId)).map(async b=>({ ...b,employeeName:employeeRows.find(e=>e._id===b.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===b.employeeId)?.employeeCode??"",leaveTypeName:types.find(t=>t._id===b.leaveTypeId)?.name??"Unknown"})));
+ const balanceRows=await Promise.all(employees.filter(e=>e.status==="active").flatMap(e=>types.filter(t=>t.isActive).flatMap(t=>{
+  const existing=balances.find(b=>b.employeeId===e._id&&b.leaveTypeId===t._id);
+  const defaultRow=defaults.find(d=>d.leaveTypeId===t._id);
+  if(existing)return [{...existing,isOverride:existing.isOverride??true}];
+  if(defaultRow)return [{_id:`default-${e._id}-${t._id}`,organizationId:user.organizationId,employeeId:e._id,leaveTypeId:t._id,periodYear:year,allocated:defaultRow.allocated,used:0,pending:0,isOverride:false}];
+  return [];
+})).map(b=>({...b,employeeName:employeeRows.find(e=>e._id===b.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===b.employeeId)?.employeeCode??"",leaveTypeName:types.find(t=>t._id===b.leaveTypeId)?.name??"Unknown"})));
  const requestRows=await Promise.all(requests.map(async r=>({ ...r,employeeName:employeeRows.find(e=>e._id===r.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===r.employeeId)?.employeeCode??"",locationId:employeeRows.find(e=>e._id===r.employeeId)?.locationId,leaveTypeName:types.find(t=>t._id===r.leaveTypeId)?.name??"Unknown"})));
- return {employees:employeeRows,leaveTypes:types,balances:balanceRows,requests:requestRows,holidays,locations,calendars};
+ return {employees:employeeRows,leaveTypes:types,balances:balanceRows,defaults,requests:requestRows,holidays,locations,calendars};
 }});
 
 export const saveLeaveType=mutation({args:{leaveTypeId:v.optional(v.id("leaveTypes")),name:v.string(),code:v.string(),isPaid:v.boolean()},handler:async(ctx,a)=>{
@@ -50,12 +57,27 @@ export const saveHoliday=mutation({args:{holidayId:v.optional(v.id("holidays")),
  const id=await ctx.db.insert("holidays",{organizationId:u.organizationId,name,date:a.date,locationId:a.locationId});await audit(ctx,u,"holiday.created","holiday",String(id),{name,date:a.date});return id;
 }});
 export const deleteHoliday=mutation({args:{holidayId:v.id("holidays")},handler:async(ctx,{holidayId})=>{const u=await requireAdmin(ctx),row=await ctx.db.get(holidayId);if(!row||row.organizationId!==u.organizationId)throw Error("HOLIDAY_NOT_FOUND");await ctx.db.delete(holidayId);await audit(ctx,u,"holiday.deleted","holiday",String(holidayId),{name:row.name,date:row.date});}});
+
+export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),periodYear:v.number(),allocated:v.number()},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx);
+ if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
+ const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");
+ const rows=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
+ const old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
+ const balances=(await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId", (await ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",u.organizationId)).first())?._id as any).eq("periodYear",a.periodYear)).collect());
+ void balances;
+ if(old)await ctx.db.patch(old._id,{allocated:a.allocated,updatedAt:Date.now(),updatedBy:u._id});
+ else await ctx.db.insert("leaveDefaults",{organizationId:u.organizationId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,updatedAt:Date.now(),updatedBy:u._id});
+ await audit(ctx,u,old?"leave.default.updated":"leave.default.created","leaveDefault",String(old?._id??a.leaveTypeId),{leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated});
+ return true;
+}});
+
 export const saveBalance=mutation({args:{employeeId:v.id("employees"),leaveTypeId:v.id("leaveTypes"),periodYear:v.number(),allocated:v.number()},handler:async(ctx,a)=>{
  const u=await requireAdmin(ctx);if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
  const [e,t]=await Promise.all([ctx.db.get(a.employeeId),ctx.db.get(a.leaveTypeId)]);if(!e||e.organizationId!==u.organizationId||!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("INVALID_EMPLOYEE_OR_LEAVE_TYPE");
  const rows=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",a.employeeId).eq("periodYear",a.periodYear)).collect(),old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
- if(old){if(a.allocated<old.used+old.pending)throw Error("ALLOCATION_BELOW_COMMITTED_DAYS");await ctx.db.patch(old._id,{allocated:a.allocated});await audit(ctx,u,"leave.balance.updated","leaveBalance",String(old._id),{allocated:a.allocated});return old._id;}
- const id=await ctx.db.insert("leaveBalances",{organizationId:u.organizationId,employeeId:a.employeeId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,used:0,pending:0});await audit(ctx,u,"leave.balance.created","leaveBalance",String(id),{allocated:a.allocated,periodYear:a.periodYear});return id;
+ if(old){if(a.allocated<old.used+old.pending)throw Error("ALLOCATION_BELOW_COMMITTED_DAYS");await ctx.db.patch(old._id,{allocated:a.allocated,isOverride:true});await audit(ctx,u,"leave.balance.updated","leaveBalance",String(old._id),{allocated:a.allocated});return old._id;}
+ const id=await ctx.db.insert("leaveBalances",{organizationId:u.organizationId,employeeId:a.employeeId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,used:0,pending:0,isOverride:true});await audit(ctx,u,"leave.balance.created","leaveBalance",String(id),{allocated:a.allocated,periodYear:a.periodYear});return id;
 }});
 export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decision:v.union(v.literal("approved"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,a)=>{
  const u=await requireAdmin(ctx),r=await ctx.db.get(a.requestId);if(!r||r.organizationId!==u.organizationId)throw Error("LEAVE_REQUEST_NOT_FOUND");if(r.status!=="pending")throw Error("LEAVE_REQUEST_ALREADY_DECIDED");
