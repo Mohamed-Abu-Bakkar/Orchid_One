@@ -107,59 +107,33 @@ async function getActiveEmployeeForRequest(ctx: MutationCtx) {
 }
 
 export const submitMyLeaveRequest = mutation({
-  args: {
-    leaveTypeId: v.id("leaveTypes"),
-    fromDate: v.string(),
-    toDate: v.string(),
-    reason: v.string(),
-  },
+  args: { leaveTypeId: v.id("leaveTypes"), fromDate: v.string(), toDate: v.string(), reason: v.string() },
   handler: async (ctx, args) => {
     const { user, employee } = await getActiveEmployeeForRequest(ctx);
-    if (!isValidRequestDate(args.fromDate) || !isValidRequestDate(args.toDate) || args.fromDate > args.toDate) {
-      throw new Error("INVALID_LEAVE_DATE_RANGE");
-    }
-    const reason = args.reason.trim();
-    if (!reason || reason.length > 1000) throw new Error("INVALID_LEAVE_REASON");
-    const leaveType = await ctx.db.get(args.leaveTypeId);
-    if (!leaveType || leaveType.organizationId !== user.organizationId || !leaveType.isActive) {
-      throw new Error("INVALID_LEAVE_TYPE");
-    }
-
-    const assignments = await ctx.db.query("shiftAssignments")
-      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", args.fromDate).lte("workDate", args.toDate))
-      .collect();
-    const holidays = await ctx.db.query("holidays")
-      .withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", args.fromDate).lte("date", args.toDate))
-      .collect();
-    const holidayDates = new Set(holidays
-      .filter(holiday => !holiday.locationId || holiday.locationId === employee.locationId)
-      .map(holiday => holiday.date));
-    const workingDates = new Set(assignments.map(assignment => assignment.workDate));
-    const requestedDays = [...workingDates].filter(date => !holidayDates.has(date)).length;
-    if (requestedDays <= 0) throw new Error("NO_SCHEDULED_WORKING_DAYS");
-
-    const now = Date.now();
-    const requestId = await ctx.db.insert("leaveRequests", {
-      organizationId: user.organizationId,
-      employeeId: employee._id,
-      leaveTypeId: leaveType._id,
-      fromDate: args.fromDate,
-      toDate: args.toDate,
-      requestedDays,
-      reason,
-      status: "pending",
-      createdAt: now,
-    });
-    await ctx.db.insert("auditLogs", {
-      organizationId: user.organizationId,
-      actorUserId: user._id,
-      action: "leave.submitted",
-      entityType: "leaveRequest",
-      entityId: String(requestId),
-      metadata: { employeeCode: employee.employeeCode, leaveType: leaveType.code, fromDate: args.fromDate, toDate: args.toDate, requestedDays },
-      createdAt: now,
-    });
-    return { requestId, requestedDays };
+    if (!isValidRequestDate(args.fromDate) || !isValidRequestDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_LEAVE_DATE_RANGE");
+    if (args.fromDate.slice(0,4) !== args.toDate.slice(0,4)) throw new Error("CROSS_YEAR_LEAVE_REQUIRES_SPLIT_REQUEST");
+    const reason=args.reason.trim(); if(!reason||reason.length>1000) throw new Error("INVALID_LEAVE_REASON");
+    const leaveType=await ctx.db.get(args.leaveTypeId);
+    if(!leaveType||leaveType.organizationId!==user.organizationId||!leaveType.isActive) throw new Error("INVALID_LEAVE_TYPE");
+    const [calendars,holidays,balances,existing]=await Promise.all([
+      ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
+      ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).gte("date",args.fromDate).lte("date",args.toDate).collect(),
+      ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",employee._id).eq("periodYear",Number(args.fromDate.slice(0,4)))).collect(),
+      ctx.db.query("leaveRequests").withIndex("by_employee",q=>q.eq("employeeId",employee._id)).collect()
+    ]);
+    if(existing.some(r=>r.status==="pending"&&r.fromDate<=args.toDate&&r.toDate>=args.fromDate)) throw new Error("OVERLAPPING_PENDING_LEAVE_REQUEST");
+    const calendar=calendars.find(x=>x.locationId===employee.locationId)??calendars.find(x=>!x.locationId),off=calendar?.weeklyOffDays??[];
+    const holidayDates=new Set(holidays.filter(h=>!h.locationId||h.locationId===employee.locationId).map(h=>h.date));
+    let requestedDays=0;
+    for(let d=new Date(args.fromDate+"T00:00:00Z"),end=new Date(args.toDate+"T00:00:00Z");d<=end;d.setUTCDate(d.getUTCDate()+1)){const key=d.toISOString().slice(0,10);if(!off.includes(d.getUTCDay())&&!holidayDates.has(key))requestedDays++;}
+    if(requestedDays<=0)throw new Error("NO_WORKING_DAYS_IN_RANGE");
+    const balance=balances.find(b=>b.leaveTypeId===leaveType._id);
+    if(!balance)throw new Error("LEAVE_BALANCE_NOT_CONFIGURED");
+    if(balance.used+balance.pending+requestedDays>balance.allocated)throw new Error("INSUFFICIENT_LEAVE_BALANCE");
+    await ctx.db.patch(balance._id,{pending:balance.pending+requestedDays});
+    const now=Date.now(),requestId=await ctx.db.insert("leaveRequests",{organizationId:user.organizationId,employeeId:employee._id,leaveTypeId:leaveType._id,fromDate:args.fromDate,toDate:args.toDate,requestedDays,reason,status:"pending",createdAt:now});
+    await ctx.db.insert("auditLogs",{organizationId:user.organizationId,actorUserId:user._id,action:"leave.submitted",entityType:"leaveRequest",entityId:String(requestId),metadata:{employeeCode:employee.employeeCode,leaveType:leaveType.code,fromDate:args.fromDate,toDate:args.toDate,requestedDays},createdAt:now});
+    return {requestId,requestedDays};
   },
 });
 
