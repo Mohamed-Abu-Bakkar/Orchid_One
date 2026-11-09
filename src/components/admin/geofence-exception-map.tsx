@@ -7,7 +7,7 @@ type Props = {
   employeeLongitude: number;
   workplaceLatitude: number | null;
   workplaceLongitude: number | null;
-  geofenceRadiusM: number;
+  geofenceRadiusM: number | null;
   employeeName: string;
   workplaceName: string;
 };
@@ -52,7 +52,7 @@ function loadLeaflet(): Promise<void> {
 export function GeofenceExceptionMap(props: Props) {
   const mapId = useId().replace(/:/g, "");
   const mapRef = useRef<any>(null);
-  const valid = props.workplaceLatitude !== null && props.workplaceLongitude !== null
+  const valid = props.workplaceLatitude !== null && props.workplaceLongitude !== null && props.geofenceRadiusM !== null
     && [props.employeeLatitude, props.employeeLongitude, props.workplaceLatitude, props.workplaceLongitude, props.geofenceRadiusM].every(Number.isFinite)
     && Math.abs(props.employeeLatitude) <= 90 && Math.abs(props.workplaceLatitude) <= 90
     && Math.abs(props.employeeLongitude) <= 180 && Math.abs(props.workplaceLongitude) <= 180
@@ -66,7 +66,7 @@ export function GeofenceExceptionMap(props: Props) {
       if (cancelled || !window.L) return;
       const L = window.L;
       const employee = [props.employeeLatitude, props.employeeLongitude];
-      const workplace = [props.workplaceLatitude, props.workplaceLongitude];
+      const workplace = [props.workplaceLatitude as number, props.workplaceLongitude as number];
       instance = L.map(mapId, { scrollWheelZoom: false, preferCanvas: true });
       mapRef.current = instance;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -74,7 +74,7 @@ export function GeofenceExceptionMap(props: Props) {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
       }).addTo(instance);
       L.marker(workplace).addTo(instance).bindPopup(props.workplaceName + " — geofence centre");
-      L.circle(workplace, { radius: props.geofenceRadiusM, color: "#26834a", fillColor: "#35a765", fillOpacity: 0.12, weight: 2 }).addTo(instance);
+      L.circle(workplace, { radius: props.geofenceRadiusM as number, color: "#26834a", fillColor: "#35a765", fillOpacity: 0.12, weight: 2 }).addTo(instance);
       L.marker(employee).addTo(instance).bindPopup(props.employeeName + " — recorded punch");
       instance.fitBounds(L.featureGroup([
         L.marker(employee),
