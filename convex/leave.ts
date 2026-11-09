@@ -11,7 +11,7 @@ export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{yea
  const [employees,types,balances,requests,holidays,locations,calendars]=await Promise.all([
   ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveTypes").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
-  ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("periodYear",year)).collect(),
+  Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year)).collect())).then(rows=>rows.flat()),
   ctx.db.query("leaveRequests").withIndex("by_org_status",q=>q.eq("organizationId",user.organizationId)).take(500),
   ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).gte("date",String(year)+"-01-01").lte("date",String(year)+"-12-31").collect(),
   ctx.db.query("locations").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
@@ -55,11 +55,9 @@ export const saveBalance=mutation({args:{employeeId:v.id("employees"),leaveTypeI
 }});
 export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decision:v.union(v.literal("approved"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,a)=>{
  const u=await requireAdmin(ctx),r=await ctx.db.get(a.requestId);if(!r||r.organizationId!==u.organizationId)throw Error("LEAVE_REQUEST_NOT_FOUND");if(r.status!=="pending")throw Error("LEAVE_REQUEST_ALREADY_DECIDED");
- const [employee,type,calendars,holidays]=await Promise.all([ctx.db.get(r.employeeId),ctx.db.get(r.leaveTypeId),ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect(),ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",u.organizationId)).gte("date",r.fromDate).lte("date",r.toDate).collect()]);
+ const [employee,type]=await Promise.all([ctx.db.get(r.employeeId),ctx.db.get(r.leaveTypeId)]);
  if(!employee||!type)throw Error("LEAVE_REFERENCE_MISSING");
- const calendar=calendars.find(x=>x.locationId===employee.locationId)??calendars.find(x=>!x.locationId),off=calendar?.weeklyOffDays??[];
- const holidaySet=new Set(holidays.filter(h=>!h.locationId||h.locationId===employee.locationId).map(h=>h.date));
- const days=workingDayCount(r.fromDate,r.toDate,off,holidaySet);if(days<=0)throw Error("NO_WORKING_DAYS_IN_RANGE");
+ const days=r.requestedDays;
  const year=Number(r.fromDate.slice(0,4));if(Number(r.toDate.slice(0,4))!==year)throw Error("CROSS_YEAR_LEAVE_REQUIRES_SPLIT_REQUEST");
  const balances=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",r.employeeId).eq("periodYear",year)).collect(),balance=balances.find(x=>x.leaveTypeId===r.leaveTypeId);
  if(!balance)throw Error("LEAVE_BALANCE_NOT_CONFIGURED");
