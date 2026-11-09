@@ -72,7 +72,7 @@ export function GeofenceExceptionMap(props: Props) {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
       }).addTo(instance);
-      L.marker(workplace).addTo(instance).bindPopup(L.tooltip ? "" : props.workplaceName);
+      L.marker(workplace).addTo(instance).bindPopup(props.workplaceName + " — geofence centre");
       L.circle(workplace, { radius: props.geofenceRadiusM, color: "#26834a", fillColor: "#35a765", fillOpacity: 0.12, weight: 2 }).addTo(instance);
       L.marker(employee).addTo(instance).bindPopup(props.employeeName + " — recorded punch");
       instance.fitBounds(L.featureGroup([
