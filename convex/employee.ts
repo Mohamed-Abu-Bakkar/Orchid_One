@@ -50,7 +50,14 @@ export const myWorkspace = query({
     const currentShift = validCurrentShifts[0] ?? null;
     const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
     const wagePeriods = await Promise.all(wageRecords.map(record => ctx.db.get(record.wagePeriodId)));
-    const leaveBalancesWithTypes = await Promise.all(leaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" })));
+    const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(today.slice(0, 4)))).collect();
+    const effectiveLeaveBalances = [...leaveBalances];
+    for (const entitlement of leaveDefaults) {
+      if (!effectiveLeaveBalances.some(balance => balance.leaveTypeId === entitlement.leaveTypeId)) {
+        effectiveLeaveBalances.push({ _id: `default-${entitlement._id}` as any, organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: entitlement.leaveTypeId, periodYear: Number(today.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false } as any);
+      }
+    }
+    const leaveBalancesWithTypes = await Promise.all(effectiveLeaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" })));
     const leaveRequestsWithTypes = await Promise.all(leaveRequests.map(async request => ({ ...request, leaveTypeName: (await ctx.db.get(request.leaveTypeId))?.name ?? "Leave" })));
     const attendedDateKeys = new Set(monthEvents.filter(event => event.geofencePassed || event.reviewStatus === "approved").filter(event => event.eventType === "check_in").map(event => dateKey(new Date(event.receivedAt))));
     const attendedDays = attendedDateKeys.size;
@@ -144,8 +151,14 @@ export const submitMyLeaveRequest = mutation({
       if (holidayDates.has(date)) throw new Error("LEAVE_DATE_IS_HOLIDAY");
     }
     const requestedDays = args.daySelections.reduce((total, selection) => total + (selection.portion === "full" ? 1 : 0.5), 0);
-    const balance = balances.find(b => b.leaveTypeId === leaveType._id);
-    if (!balance) throw new Error("LEAVE_BALANCE_NOT_CONFIGURED");
+    let balance = balances.find(b => b.leaveTypeId === leaveType._id);
+    if (!balance) {
+      const defaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(args.fromDate.slice(0, 4)))).collect();
+      const entitlement = defaults.find(item => item.leaveTypeId === leaveType._id);
+      if (!entitlement) throw new Error("LEAVE_BALANCE_NOT_CONFIGURED");
+      const balanceId = await ctx.db.insert("leaveBalances", { organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: leaveType._id, periodYear: Number(args.fromDate.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false });
+      balance = { _id: balanceId, organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: leaveType._id, periodYear: Number(args.fromDate.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false };
+    }
     if (balance.used + balance.pending + requestedDays > balance.allocated) throw new Error("INSUFFICIENT_LEAVE_BALANCE");
     await ctx.db.patch(balance._id, { pending: balance.pending + requestedDays });
     const now = Date.now();
