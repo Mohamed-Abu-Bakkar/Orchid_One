@@ -1443,7 +1443,7 @@ Submit Request
         function closePerformance() { goTo('home'); }
         function openNotifications() { pushScreen('notifScreen'); renderNotifications('all'); }
         function closeNotifications() { goBack(); }
-        function openNewRequest() { pushScreen('newReqScreen'); const cards = document.querySelectorAll('#reqTypeGrid .req-type-card'); cards.forEach(c => c.onclick = () => { cards.forEach(x => x.classList.remove('active')); c.classList.add('active'); }); }
+        function openNewRequest() { pushScreen('newReqScreen'); window.prepareNewRequest?.(); }
         function closeNewRequest() { goBack(); }
         function openHelpdesk() { pushScreen('helpScreen'); }
         function closeHelpdesk() { goBack(); }
