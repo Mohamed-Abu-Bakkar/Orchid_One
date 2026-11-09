@@ -64,6 +64,15 @@ export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),per
  const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");
  const rows=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
  const old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
+ const employees=await ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",u.organizationId)).collect();
+ for(const employee of employees){
+  const employeeBalances=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",employee._id).eq("periodYear",a.periodYear)).collect();
+  const inherited=employeeBalances.find(balance=>balance.leaveTypeId===a.leaveTypeId&&(balance.isOverride??true)===false);
+  if(inherited){
+   if(a.allocated<inherited.used+inherited.pending)throw Error("DEFAULT_BELOW_COMMITTED_DAYS");
+   await ctx.db.patch(inherited._id,{allocated:a.allocated});
+  }
+ }
  if(old)await ctx.db.patch(old._id,{allocated:a.allocated,updatedAt:Date.now(),updatedBy:u._id});
  else await ctx.db.insert("leaveDefaults",{organizationId:u.organizationId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,updatedAt:Date.now(),updatedBy:u._id});
  await audit(ctx,u,old?"leave.default.updated":"leave.default.created","leaveDefault",String(old?._id??a.leaveTypeId),{leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated});
@@ -77,6 +86,21 @@ export const saveBalance=mutation({args:{employeeId:v.id("employees"),leaveTypeI
  if(old){if(a.allocated<old.used+old.pending)throw Error("ALLOCATION_BELOW_COMMITTED_DAYS");await ctx.db.patch(old._id,{allocated:a.allocated,isOverride:true});await audit(ctx,u,"leave.balance.updated","leaveBalance",String(old._id),{allocated:a.allocated});return old._id;}
  const id=await ctx.db.insert("leaveBalances",{organizationId:u.organizationId,employeeId:a.employeeId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,used:0,pending:0,isOverride:true});await audit(ctx,u,"leave.balance.created","leaveBalance",String(id),{allocated:a.allocated,periodYear:a.periodYear});return id;
 }});
+
+export const resetBalanceToDefault=mutation({args:{employeeId:v.id("employees"),leaveTypeId:v.id("leaveTypes"),periodYear:v.number()},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx);
+ const [employee,type]=await Promise.all([ctx.db.get(a.employeeId),ctx.db.get(a.leaveTypeId)]);
+ if(!employee||employee.organizationId!==u.organizationId||!type||type.organizationId!==u.organizationId)throw Error("INVALID_EMPLOYEE_OR_LEAVE_TYPE");
+ const defaults=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
+ const entitlement=defaults.find(item=>item.leaveTypeId===a.leaveTypeId);if(!entitlement)throw Error("LEAVE_DEFAULT_NOT_CONFIGURED");
+ const rows=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",a.employeeId).eq("periodYear",a.periodYear)).collect();
+ const balance=rows.find(item=>item.leaveTypeId===a.leaveTypeId);if(!balance)throw Error("LEAVE_BALANCE_NOT_FOUND");
+ if(entitlement.allocated<balance.used+balance.pending)throw Error("DEFAULT_BELOW_COMMITTED_DAYS");
+ await ctx.db.patch(balance._id,{allocated:entitlement.allocated,isOverride:false});
+ await audit(ctx,u,"leave.balance.reset_to_default","leaveBalance",String(balance._id),{allocated:entitlement.allocated,periodYear:a.periodYear});
+ return true;
+}});
+
 export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decision:v.union(v.literal("approved"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,a)=>{
  const u=await requireAdmin(ctx),r=await ctx.db.get(a.requestId);if(!r||r.organizationId!==u.organizationId)throw Error("LEAVE_REQUEST_NOT_FOUND");if(r.status!=="pending")throw Error("LEAVE_REQUEST_ALREADY_DECIDED");
  const [employee,type]=await Promise.all([ctx.db.get(r.employeeId),ctx.db.get(r.leaveTypeId)]);
