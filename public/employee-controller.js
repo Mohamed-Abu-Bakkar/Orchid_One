@@ -651,7 +651,11 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         const messages = {
-          NO_SCHEDULED_WORKING_DAYS: "No scheduled working days were found in that leave date range (company holidays are excluded).",
+          NO_WORKING_DAYS_IN_RANGE: "No scheduled working days were found in that leave date range (company holidays are excluded).",
+          LEAVE_BALANCE_NOT_CONFIGURED: "Your leave balance is not configured. Contact HR before submitting this request.",
+          INSUFFICIENT_LEAVE_BALANCE: "You do not have enough available leave balance for this request.",
+          OVERLAPPING_PENDING_LEAVE_REQUEST: "A pending leave request already overlaps these dates.",
+          CROSS_YEAR_LEAVE_REQUIRES_SPLIT_REQUEST: "Please submit separate leave requests for dates in different calendar years.",
           INVALID_LEAVE_TYPE: "That leave type is unavailable. Refresh and try again.",
           PENDING_OVERTIME_REQUEST_EXISTS: "A pending overtime request already exists for this work date.",
           EMPLOYEE_PROFILE_REQUIRED: "Your employee profile is not linked. Contact an administrator.",
