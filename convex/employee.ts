@@ -22,10 +22,11 @@ export const myWorkspace = query({
     nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
     const monthEnd = dayOffset(nextMonthDate.toISOString().slice(0, 10), -1);
     const nextMonthStartAt = new Date(nextMonthDate.toISOString().slice(0, 10) + "T00:00:00+05:30");
-    const [department, location, attendance, leaveBalances, leaveRequests, overtimeRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignments, upcomingShifts, holidays, organizationEmployees, monthAttendanceDays] = await Promise.all([
+    const [department, location, attendance, leaveBalances, leaveTypes, leaveRequests, overtimeRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignments, upcomingShifts, holidays, organizationEmployees, monthAttendanceDays] = await Promise.all([
       ctx.db.get(employee.departmentId), ctx.db.get(employee.locationId),
       ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").take(500),
       ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id).eq("periodYear", Number(today.slice(0, 4)))).collect(),
+      ctx.db.query("leaveTypes").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("leaveRequests").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
       ctx.db.query("overtimeRequests").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
       ctx.db.query("employeeDocuments").withIndex("by_employee", q => q.eq("employeeId", employee._id)).order("desc").take(30),
@@ -78,7 +79,7 @@ export const myWorkspace = query({
       location: location ? { name: location.name, address: location.address } : null,
       shift: currentShift, shifts: validCurrentShifts,
       attendance: attendance.map(event => ({ _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, accuracyM: event.accuracyM, geofencePassed: event.geofencePassed, reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, performance: { attendanceDays: monthAttendanceDays.map(day => ({ workDate: day.workDate, payableMinutes: day.payableMinutes, status: day.status })), scheduledShifts: scheduledDays }, todayAttendance, upcoming,
-      leaveBalances: leaveBalancesWithTypes, leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt })), documents: docsWithUrls,
+      leaveBalances: leaveBalancesWithTypes, leaveTypes: leaveTypes.filter(type => type.isActive).map(type => ({ id: type._id, name: type.name, code: type.code })), leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt })), documents: docsWithUrls,
       wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
       weeklyWage: weeklyWage ? { totalPaise: weeklyWage.totalPaise, payableUnits: weeklyWage.payableUnits, employmentType: weeklyWage.employmentType, status: weeklyWage.status, period: weeklyWage.period ? { fromDate: weeklyWage.period.fromDate, toDate: weeklyWage.period.toDate } : null } : null,
       notifications,
@@ -86,6 +87,122 @@ export const myWorkspace = query({
   },
 });
 
+
+
+function isValidRequestDate(value: string) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00.000Z");
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+async function getActiveEmployeeForRequest(ctx: any) {
+  const user = await requireIdentity(ctx);
+  if (!user.employeeId) throw new Error("EMPLOYEE_PROFILE_REQUIRED");
+  const employee = await ctx.db.get(user.employeeId);
+  if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") {
+    throw new Error("EMPLOYEE_INACTIVE");
+  }
+  return { user, employee };
+}
+
+export const submitMyLeaveRequest = mutation({
+  args: {
+    leaveTypeId: v.id("leaveTypes"),
+    fromDate: v.string(),
+    toDate: v.string(),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { user, employee } = await getActiveEmployeeForRequest(ctx);
+    if (!isValidRequestDate(args.fromDate) || !isValidRequestDate(args.toDate) || args.fromDate > args.toDate) {
+      throw new Error("INVALID_LEAVE_DATE_RANGE");
+    }
+    const reason = args.reason.trim();
+    if (!reason || reason.length > 1000) throw new Error("INVALID_LEAVE_REASON");
+    const leaveType = await ctx.db.get(args.leaveTypeId);
+    if (!leaveType || leaveType.organizationId !== user.organizationId || !leaveType.isActive) {
+      throw new Error("INVALID_LEAVE_TYPE");
+    }
+
+    const assignments = await ctx.db.query("shiftAssignments")
+      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", args.fromDate).lte("workDate", args.toDate))
+      .collect();
+    const holidays = await ctx.db.query("holidays")
+      .withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", args.fromDate).lte("date", args.toDate))
+      .collect();
+    const holidayDates = new Set(holidays
+      .filter(holiday => !holiday.locationId || holiday.locationId === employee.locationId)
+      .map(holiday => holiday.date));
+    const workingDates = new Set(assignments.map(assignment => assignment.workDate));
+    const requestedDays = [...workingDates].filter(date => !holidayDates.has(date)).length;
+    if (requestedDays <= 0) throw new Error("NO_SCHEDULED_WORKING_DAYS");
+
+    const now = Date.now();
+    const requestId = await ctx.db.insert("leaveRequests", {
+      organizationId: user.organizationId,
+      employeeId: employee._id,
+      leaveTypeId: leaveType._id,
+      fromDate: args.fromDate,
+      toDate: args.toDate,
+      requestedDays,
+      reason,
+      status: "pending",
+      createdAt: now,
+    });
+    await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId,
+      actorUserId: user._id,
+      action: "leave.submitted",
+      entityType: "leaveRequest",
+      entityId: String(requestId),
+      metadata: { employeeCode: employee.employeeCode, leaveType: leaveType.code, fromDate: args.fromDate, toDate: args.toDate, requestedDays },
+      createdAt: now,
+    });
+    return { requestId, requestedDays };
+  },
+});
+
+export const submitMyOvertimeRequest = mutation({
+  args: {
+    workDate: v.string(),
+    requestedMinutes: v.number(),
+    reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { user, employee } = await getActiveEmployeeForRequest(ctx);
+    if (!isValidRequestDate(args.workDate) || !Number.isSafeInteger(args.requestedMinutes) || args.requestedMinutes <= 0) {
+      throw new Error("INVALID_OVERTIME_REQUEST");
+    }
+    const reason = args.reason.trim();
+    if (!reason || reason.length > 1000) throw new Error("INVALID_OVERTIME_REASON");
+    const prior = await ctx.db.query("overtimeRequests")
+      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate))
+      .collect();
+    if (prior.some(request => request.status === "pending")) throw new Error("PENDING_OVERTIME_REQUEST_EXISTS");
+
+    const now = Date.now();
+    const requestId = await ctx.db.insert("overtimeRequests", {
+      organizationId: user.organizationId,
+      employeeId: employee._id,
+      workDate: args.workDate,
+      requestedMinutes: args.requestedMinutes,
+      reason,
+      status: "pending",
+      createdAt: now,
+      submittedBy: user._id,
+    });
+    await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId,
+      actorUserId: user._id,
+      action: "overtime.submitted",
+      entityType: "overtimeRequest",
+      entityId: String(requestId),
+      metadata: { employeeCode: employee.employeeCode, workDate: args.workDate, requestedMinutes: args.requestedMinutes },
+      createdAt: now,
+    });
+    return requestId;
+  },
+});
 
 export const generateDocumentUploadUrl = mutation({
   args: {},
