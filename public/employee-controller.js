@@ -641,7 +641,7 @@
     if (message) message.textContent = "";
     const reason = document.getElementById("reqReason");
     if (reason) reason.value = "";
-    ["reqFrom", "reqTo"].forEach(id => document.getElementById(id)?.addEventListener("change", renderLeaveDaySelections, { once: true }));
+    ["reqFrom", "reqTo"].forEach(id => { const field = document.getElementById(id); if (field) field.onchange = renderLeaveDaySelections; });
     renderLeaveDaySelections();
     const submit = document.getElementById("submitEmployeeRequest");
     if (submit) { submit.disabled = false; submit.textContent = "Submit Request"; }
