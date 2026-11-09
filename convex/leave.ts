@@ -2,7 +2,11 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./lib/auth";
 
-const validDate=(s:string)=>/^\\d{4}-\\d{2}-\\d{2}$/.test(s)&&new Date(s+"T00:00:00Z").toISOString().slice(0,10)===s;
+const validDate = (value: string): boolean => {
+ if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+ const date = new Date(value + "T00:00:00.000Z");
+ return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
 const audit=async(ctx:any,user:any,action:string,type:string,id:string,metadata?:any)=>ctx.db.insert("auditLogs",{organizationId:user.organizationId,actorUserId:user._id,action,entityType:type,entityId:id,metadata,createdAt:Date.now()});
 const workingDayCount=(from:string,to:string,off:number[],holidays:Set<string>)=>{let count=0;for(let d=new Date(from+"T00:00:00Z"),end=new Date(to+"T00:00:00Z");d<=end;d.setUTCDate(d.getUTCDate()+1)){const key=d.toISOString().slice(0,10);if(!off.includes(d.getUTCDay())&&!holidays.has(key))count++;}return count;};
 
