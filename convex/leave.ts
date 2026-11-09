@@ -12,7 +12,7 @@ export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{yea
   ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveTypes").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveRequests").withIndex("by_org_status",q=>q.eq("organizationId",user.organizationId)).take(500),
-  ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).gte("date",String(year)+"-01-01").lte("date",String(year)+"-12-31").collect(),
+  ctx.db.query("holidays").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId).gte("date",String(year)+"-01-01").lte("date",String(year)+"-12-31")).collect(),
   ctx.db.query("locations").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect()
  ]);
