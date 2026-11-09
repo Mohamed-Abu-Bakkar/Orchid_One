@@ -64,8 +64,6 @@ export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),per
  const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");
  const rows=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
  const old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
- const balances=(await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId", (await ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",u.organizationId)).first())?._id as any).eq("periodYear",a.periodYear)).collect());
- void balances;
  if(old)await ctx.db.patch(old._id,{allocated:a.allocated,updatedAt:Date.now(),updatedBy:u._id});
  else await ctx.db.insert("leaveDefaults",{organizationId:u.organizationId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,updatedAt:Date.now(),updatedBy:u._id});
  await audit(ctx,u,old?"leave.default.updated":"leave.default.created","leaveDefault",String(old?._id??a.leaveTypeId),{leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated});
