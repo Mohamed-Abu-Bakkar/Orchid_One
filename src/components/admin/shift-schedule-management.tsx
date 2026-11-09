@@ -1,0 +1,42 @@
+"use client";
+import {useMemo,useState} from "react";
+import {useMutation,useQuery} from "convex/react";
+import {api} from "@/../convex/_generated/api";
+import {CalendarDays,Clock3,Plus,Archive,Users} from "lucide-react";
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
+const minute=(value:string)=>{const [h,m]=value.split(":").map(Number);return h*60+m;};
+const time=(value:number)=>`${String(Math.floor(value/60)%24).padStart(2,"0")}:${String(value%60).padStart(2,"0")}`;
+const label=(start:number,end:number)=>end<=start?`${time(start)} – ${time(end)} (+1 day)`:`${time(start)} – ${time(end)}`;
+export function ShiftScheduleManagement(){
+ const [date,setDate]=useState(today),[employeeId,setEmployeeId]=useState(""),[defaultShiftId,setDefaultShiftId]=useState(""),[shiftIds,setShiftIds]=useState<string[]>([]);
+ const [name,setName]=useState(""),[start,setStart]=useState("09:00"),[end,setEnd]=useState("18:00"),[breakMinutes,setBreakMinutes]=useState(""),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[error,setError]=useState("");
+ const data=useQuery(api.teamsWork.adminWorkspace,{workDate:date});
+ const create=useMutation(api.teamsWork.createShift),saveDefault=useMutation(api.teamsWork.setEmployeeDefaultShift),saveDate=useMutation(api.teamsWork.setEmployeeShiftsForDate),archive=useMutation(api.teamsWork.archiveShift);
+ const employee=data?.employees.find((e:any)=>e._id===employeeId);
+ const activeShifts=data?.shifts??[];
+ const selectedShifts=useMemo(()=>activeShifts.filter((s:any)=>shiftIds.includes(s._id)),[activeShifts,shiftIds]);
+ async function action(fn:()=>Promise<unknown>,success:string){setBusy(true);setError("");setNotice("");try{await fn();setNotice(success);}catch(e){setError(e instanceof Error?e.message:"The operation could not be completed.");}finally{setBusy(false);}}
+ if(data===undefined)return <section className="sec"><p className="sub">Loading shift schedules…</p></section>;
+ return <section className="sec">
+ <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Shifts & Schedules</h2><p className="sub">Maintain shift definitions, employee default shifts and date-specific schedules.</p></div><label className="policy-field">Schedule date<input className="input" type="date" value={date} onChange={e=>{setDate(e.target.value);setEmployeeId("");setShiftIds([]);setDefaultShiftId("");}}/></label></div>
+ {notice&&<div className="onboarding-success" role="status">{notice}</div>}{error&&<div className="auth-error" role="alert">{error}</div>}
+ <div className="grid-2-equal">
+ <div className="kpi card"><span className="kpi-label">Active shift templates</span><span className="kpi-val">{activeShifts.length}</span></div>
+ <div className="kpi card"><span className="kpi-label">Active employees</span><span className="kpi-val">{data.employees.length}</span></div>
+ </div>
+ <div className="panel mt-4"><div className="panel-head"><div><b>Shift templates</b><p className="t-caption text-tertiary">Reusable shift definitions. Overnight shifts are supported.</p></div><Clock3 size={18}/></div>
+ <div className="panel-body">
+ <div className="grid-2-equal wage-form"><label className="policy-field">Shift name<input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Morning shift"/></label><label className="policy-field">Break duration (minutes)<input className="input" type="number" min="0" max="720" step="1" value={breakMinutes} onChange={e=>setBreakMinutes(e.target.value)} placeholder="Enter configured break minutes"/></label><label className="policy-field">Start time<input className="input" type="time" value={start} onChange={e=>setStart(e.target.value)}/></label><label className="policy-field">End time<input className="input" type="time" value={end} onChange={e=>setEnd(e.target.value)}/></label></div>
+ <button className="btn btn-primary mt-3" disabled={busy||!name.trim()||!breakMinutes.trim()||!Number.isInteger(Number(breakMinutes))||Number(breakMinutes)<0||Number(breakMinutes)>720||!start||!end||start===end} onClick={()=>void action(async()=>{await create({name,startMinute:minute(start),endMinute:minute(end),breakMinutes:Number(breakMinutes)});setName("");setBreakMinutes("");},"Shift template created.")}><Plus size={15}/> Create shift</button>
+ <div className="wage-record-list mt-4">{activeShifts.map((s:any)=><div className="wage-employee-record" key={s._id}><div className="wage-employee-heading"><div><strong>{s.name}</strong><small>{label(s.startMinute,s.endMinute)} · {s.breakMinutes} min break</small></div><span className="badge badge-success">Active</span></div><button className="section-link" disabled={busy} onClick={()=>void action(()=>archive({shiftId:s._id}),"Shift archived.")}><Archive size={13}/> Archive unused shift</button></div>)}{activeShifts.length===0&&<div className="empty-state"><Clock3 size={24}/><strong>No shift templates yet</strong><p>Create a shift template before assigning employee schedules.</p></div>}</div>
+ </div></div>
+ <div className="panel mt-4"><div className="panel-head"><div><b>Employee schedule</b><p className="t-caption text-tertiary">A date-specific schedule overrides the default shift for that date.</p></div><CalendarDays size={18}/></div><div className="panel-body wage-form">
+ <label className="policy-field">Employee<select className="input" value={employeeId} onChange={e=>{const id=e.target.value;setEmployeeId(id);const row=data.employees.find((x:any)=>x._id===id);setDefaultShiftId(row?.defaultShiftId??"");setShiftIds(row?.scheduledShiftIds??[]);}}><option value="">Select active employee</option>{data.employees.map((e:any)=><option key={e._id} value={e._id}>{e.employeeCode} · {e.name}</option>)}</select></label>
+ {employee&&<><div className="grid-2-equal"><label className="policy-field">Default shift<select className="input" value={defaultShiftId} onChange={e=>setDefaultShiftId(e.target.value)}><option value="">No default shift</option>{activeShifts.map((s:any)=><option key={s._id} value={s._id}>{s.name} · {label(s.startMinute,s.endMinute)}</option>)}</select></label><div className="policy-field"><span>Current effective schedule</span><div className="card p-3">{(employee.scheduledShiftIds.length?selectedShifts:activeShifts.filter((s:any)=>s._id===employee.defaultShiftId)).map((s:any)=><p key={s._id}>{s.name} · {label(s.startMinute,s.endMinute)}</p>)}{!employee.scheduledShiftIds.length&&!employee.defaultShiftId&&<p className="t-caption text-tertiary">No shift assigned</p>}</div></div></div>
+ <button className="btn btn-outline" disabled={busy} onClick={()=>void action(()=>saveDefault({employeeId:employeeId as any,shiftId:defaultShiftId?defaultShiftId as any:null}),"Default shift updated.")}>Save default shift</button>
+ <div className="col gap-2 mt-3"><b>Date-specific shifts · {date}</b><p className="t-caption text-tertiary">Selecting one or more shifts replaces the default shift on this date. The system rejects overlapping shifts.</p>{activeShifts.map((s:any)=><label className="row gap-2" key={s._id}><input type="checkbox" checked={shiftIds.includes(s._id)} onChange={e=>setShiftIds(old=>e.target.checked?[...old,s._id]:old.filter(id=>id!==s._id))}/><span>{s.name} · {label(s.startMinute,s.endMinute)}</span></label>)}
+ <button className="btn btn-primary" disabled={busy} onClick={()=>void action(()=>saveDate({employeeId:employeeId as any,workDate:date,shiftIds:shiftIds as any}),"Date-specific schedule saved.")}>Save date schedule</button></div></>}
+ </div></div>
+ <div className="panel mt-4"><div className="panel-head"><b>Schedule roster · {date}</b><Users size={18}/></div><div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Employee</th><th>Default shift</th><th>Effective schedule</th></tr></thead><tbody>{data.employees.map((e:any)=><tr key={e._id}><td><strong>{e.name}</strong><small>{e.employeeCode}</small></td><td>{activeShifts.find((s:any)=>s._id===e.defaultShiftId)?.name??"Not assigned"}</td><td>{(e.scheduledShiftIds.length?e.scheduledShiftIds.map((id:string)=>activeShifts.find((s:any)=>s._id===id)?.name??"Unavailable").join(", "):activeShifts.find((s:any)=>s._id===e.defaultShiftId)?.name??"No shift")}</td></tr>)}</tbody></table>{data.employees.length===0&&<div className="empty-state">No active employees.</div>}</div></div>
+ </section>;
+}
