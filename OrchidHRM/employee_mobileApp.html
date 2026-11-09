@@ -1391,26 +1391,47 @@ Submit Request
         }
         const SCREEN_IDS = ['attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'polScreen', 'polDetailScreen'];
         var navStack = [];
-        function hideAll() { SCREEN_IDS.forEach(id => document.getElementById(id).classList.add('hidden')); }
+        function getScreen(id) {
+            const screen = document.getElementById(id);
+            if (!screen) console.warn(`[Orchid Navigation] Screen element not found: ${id}`);
+            return screen;
+        }
+        function hideAll() {
+            SCREEN_IDS.forEach(id => {
+                const screen = getScreen(id);
+                if (screen) screen.classList.add('hidden');
+            });
+        }
         function goTo(id) {
+            const target = id === 'home' ? null : getScreen(id);
+            if (id !== 'home' && !target) return;
             hideAll();
             navStack = [id];
-            if (id !== 'home') document.getElementById(id).classList.remove('hidden');
+            if (target) target.classList.remove('hidden');
         }
         function pushScreen(id) {
+            const target = getScreen(id);
+            if (!target) return;
             hideAll();
             navStack.push(id);
-            document.getElementById(id).classList.remove('hidden');
+            target.classList.remove('hidden');
         }
         function goBack() {
             if (navStack.length > 1) {
                 const cur = navStack.pop();
-                document.getElementById(cur).classList.add('hidden');
+                const currentScreen = getScreen(cur);
+                if (currentScreen) currentScreen.classList.add('hidden');
                 const prev = navStack[navStack.length - 1];
-                if (prev !== 'home') document.getElementById(prev).classList.remove('hidden');
+                if (prev !== 'home') {
+                    const previousScreen = getScreen(prev);
+                    if (previousScreen) previousScreen.classList.remove('hidden');
+                }
             } else {
                 const cur = navStack[0];
-                if (cur !== 'home') document.getElementById(cur).classList.add('hidden');
+                if (cur !== 'home' && cur) {
+                    const currentScreen = getScreen(cur);
+                    if (currentScreen) currentScreen.classList.add('hidden');
+                }
                 navStack = [];
             }
         }
