@@ -1352,6 +1352,11 @@ Submit Request
             toast('Employee request submission is not available yet.');
         }
         function renderRequests() {
+            const formatRequestDate = value => {
+                if (!value) return '—';
+                const date = new Date(value + 'T00:00:00');
+                return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+            };
             const workspace = window.__orchidWorkspace;
             const content = document.getElementById('reqContent');
             const tabs = document.querySelectorAll('#reqTabs button');
@@ -1418,8 +1423,8 @@ Submit Request
                     const detail = document.createElement('p');
                     detail.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
                     detail.textContent = item.type === 'leave'
-                        ? fmtDate(item.date) + ' – ' + fmtDate(item.endDate) + ' · ' + item.detail
-                        : fmtDate(item.date) + ' · ' + item.detail;
+                        ? formatRequestDate(item.date) + ' – ' + formatRequestDate(item.endDate) + ' · ' + item.detail
+                        : formatRequestDate(item.date) + ' · ' + item.detail;
                     copy.append(title, detail);
                     if (item.type === 'overtime' && item.status === 'approved' && Number.isFinite(item.approvedMinutes)) {
                         const approved = document.createElement('p');
