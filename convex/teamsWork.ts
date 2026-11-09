@@ -146,11 +146,12 @@ export const archiveShift=mutation({args:{shiftId:v.id("shifts")},handler:async(
  const user=await requireAdmin(ctx),shift=await ctx.db.get(shiftId);
  if(!shift||shift.organizationId!==user.organizationId)throw Error("SHIFT_NOT_FOUND");
  if(!shift.isActive)return {archived:false};
- const [teams,assignments]=await Promise.all([
+ const [teams,assignments,employees]=await Promise.all([
   ctx.db.query("teams").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
-  ctx.db.query("shiftAssignments").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).collect()
+  ctx.db.query("shiftAssignments").withIndex("by_org_date",q=>q.eq("organizationId",user.organizationId)).collect(),
+  ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",user.organizationId)).collect()
  ]);
- if(teams.some(team=>team.isActive&&team.shiftId===shiftId)||assignments.some(row=>row.shiftId===shiftId))throw Error("SHIFT_IN_USE_ARCHIVE_BLOCKED");
+ if(teams.some(team=>team.shiftId===shiftId)||assignments.some(row=>row.shiftId===shiftId)||employees.some(employee=>employee.defaultShiftId===shiftId))throw Error("SHIFT_IN_USE_ARCHIVE_BLOCKED");
  await ctx.db.patch(shiftId,{isActive:false});
  await ctx.db.insert("auditLogs",{organizationId:user.organizationId,actorUserId:user._id,action:"shift.archived",entityType:"shift",entityId:String(shiftId),metadata:{name:shift.name},createdAt:Date.now()});
  return {archived:true};
