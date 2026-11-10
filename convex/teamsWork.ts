@@ -122,7 +122,76 @@ export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees
 }});
 
 export const createWorkTaskTemplate=mutation({args:{title:v.string(),description:v.optional(v.string()),category:v.string(),priority:v.union(v.literal("low"),v.literal("normal"),v.literal("high"))},handler:async(ctx,a)=>{const u=await requireAdmin(ctx),title=a.title.trim(),category=a.category.trim();if(!title||title.length>120||!category||category.length>60)throw Error("INVALID_WORK_TEMPLATE");const id=await ctx.db.insert("workTaskTemplates",{organizationId:u.organizationId,title,description:a.description?.trim()||undefined,category,priority:a.priority,isActive:true,createdBy:u._id,createdAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_template.created",entityType:"workTaskTemplate",entityId:String(id),metadata:{title,category},createdAt:Date.now()});return id;}});
-export const createWorkAssignment=mutation({args:{title:v.string(),description:v.optional(v.string()),category:v.string(),priority:v.union(v.literal("low"),v.literal("normal"),v.literal("high")),workDate:v.string(),targetType:v.union(v.literal("employee"),v.literal("employees"),v.literal("team")),employeeId:v.optional(v.id("employees")),employeeIds:v.optional(v.array(v.id("employees"))),teamId:v.optional(v.id("teams"))},handler:async(ctx,a)=>{const u=await requireAdmin(ctx);if(!dateOk(a.workDate)||!a.title.trim()||a.title.length>120||!a.category.trim())throw Error("INVALID_WORK");let ids:Id<"employees">[]=[];if(a.targetType==="employee"){if(!a.employeeId||a.employeeIds?.length||a.teamId)throw Error("INVALID_TARGET");ids=[a.employeeId];}else if(a.targetType==="employees"){if(!a.employeeIds?.length||a.employeeIds.length>100||new Set(a.employeeIds).size!==a.employeeIds.length||a.employeeId||a.teamId)throw Error("INVALID_TARGET");ids=a.employeeIds;}else{if(!a.teamId||a.employeeId||a.employeeIds?.length)throw Error("INVALID_TARGET");const t=await ctx.db.get(a.teamId);if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");const ms=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect();ids=ms.filter(m=>m.isActive).map(m=>m.employeeId);if(!ids.length)throw Error("TEAM_HAS_NO_MEMBERS");}for(const id of ids){const e=await ctx.db.get(id);if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");}const id=await ctx.db.insert("workAssignments",{organizationId:u.organizationId,title:a.title.trim(),description:a.description?.trim()||undefined,category:a.category.trim(),priority:a.priority,workDate:a.workDate,targetType:a.targetType,employeeId:a.employeeId,teamId:a.teamId,createdBy:u._id,createdAt:Date.now(),isActive:true});for(const employeeId of ids){await ctx.db.insert("workAssignmentProgress",{organizationId:u.organizationId,assignmentId:id,employeeId,workDate:a.workDate,status:"not_started",updatedAt:Date.now()});const recipients=await ctx.db.query("users").withIndex("by_org_employee",q=>q.eq("organizationId",u.organizationId).eq("employeeId",employeeId)).collect();for(const recipient of recipients)await ctx.db.insert("notifications",{organizationId:u.organizationId,userId:recipient._id,title:"New work assigned",body:a.title.trim(),createdAt:Date.now()});}await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.created",entityType:"workAssignment",entityId:String(id),metadata:{workDate:a.workDate,employeeCount:ids.length},createdAt:Date.now()});return id;}});
+
+const nextScheduledDate=(from:string,frequency:"daily"|"weekly",weekdays:number[]|undefined)=>{
+ let day=dayNumber(from);
+ for(let offset=0;offset<=7;offset++){
+  const candidate=dateFromDay(day+offset),weekday=new Date(candidate+"T00:00:00Z").getUTCDay();
+  if(frequency==="daily"||(weekdays??[]).includes(weekday))return candidate;
+ }
+ throw Error("INVALID_RECURRENCE");
+};
+export const createRecurringWorkSchedule=mutation({args:{title:v.string(),description:v.optional(v.string()),category:v.string(),priority:v.union(v.literal("low"),v.literal("normal"),v.literal("high")),targetType:v.union(v.literal("employee"),v.literal("employees"),v.literal("team")),employeeId:v.optional(v.id("employees")),employeeIds:v.optional(v.array(v.id("employees"))),teamId:v.optional(v.id("teams")),frequency:v.union(v.literal("daily"),v.literal("weekly")),weekdays:v.optional(v.array(v.number())),startDate:v.string(),endDate:v.optional(v.string())},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx),title=a.title.trim(),category=a.category.trim();
+ if(!title||title.length>120||!category||category.length>60||!dateOk(a.startDate)||(a.endDate&&(!dateOk(a.endDate)||a.endDate<a.startDate)))throw Error("INVALID_RECURRING_SCHEDULE");
+ if(a.frequency==="weekly"&&(!a.weekdays?.length||a.weekdays.some(d=>!Number.isInteger(d)||d<0||d>6)||new Set(a.weekdays).size!==a.weekdays.length))throw Error("WEEKDAYS_REQUIRED");
+ if(a.frequency==="daily"&&a.weekdays?.length)throw Error("WEEKDAYS_NOT_ALLOWED");
+ let employeeIds:Id<"employees">[]=[];
+ if(a.targetType==="employee"){if(!a.employeeId||a.employeeIds?.length||a.teamId)throw Error("INVALID_TARGET");employeeIds=[a.employeeId];}
+ else if(a.targetType==="employees"){if(!a.employeeIds?.length||a.employeeIds.length>100||new Set(a.employeeIds).size!==a.employeeIds.length||a.employeeId||a.teamId)throw Error("INVALID_TARGET");employeeIds=a.employeeIds;}
+ else {if(!a.teamId||a.employeeId||a.employeeIds?.length)throw Error("INVALID_TARGET");const t=await ctx.db.get(a.teamId);if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");}
+ if(a.targetType!=="team")for(const id of employeeIds){const e=await ctx.db.get(id);if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");}
+ const nextRunDate=nextScheduledDate(a.startDate,a.frequency,a.weekdays);
+ if(a.endDate&&nextRunDate>a.endDate)throw Error("NO_OCCURRENCES_IN_DATE_RANGE");
+ const id=await ctx.db.insert("recurringWorkSchedules",{organizationId:u.organizationId,title,description:a.description?.trim()||undefined,category,priority:a.priority,targetType:a.targetType,employeeId:a.employeeId,employeeIds:a.employeeIds,teamId:a.teamId,frequency:a.frequency,weekdays:a.frequency==="weekly"?a.weekdays:undefined,startDate:a.startDate,endDate:a.endDate,nextRunDate,isActive:true,createdBy:u._id,createdAt:Date.now(),updatedAt:Date.now()});
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"recurring_work_schedule.created",entityType:"recurringWorkSchedule",entityId:String(id),metadata:{frequency:a.frequency,startDate:a.startDate,endDate:a.endDate??null,nextRunDate},createdAt:Date.now()});
+ return id;
+}});
+export const setRecurringWorkScheduleStatus=mutation({args:{scheduleId:v.id("recurringWorkSchedules"),isActive:v.boolean()},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx),schedule=await ctx.db.get(a.scheduleId);
+ if(!schedule||schedule.organizationId!==u.organizationId)throw Error("SCHEDULE_NOT_FOUND");
+ await ctx.db.patch(schedule._id,{isActive:a.isActive,updatedAt:Date.now()});
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:a.isActive?"recurring_work_schedule.resumed":"recurring_work_schedule.paused",entityType:"recurringWorkSchedule",entityId:String(schedule._id),createdAt:Date.now()});
+ return true;
+}});
+export const generateDueRecurringWork=internalMutation({args:{},handler:async(ctx)=>{
+ const schedules=await ctx.db.query("recurringWorkSchedules").withIndex("by_active_next_date",q=>q.eq("isActive",true)).collect();
+ let generated=0;
+ for(const schedule of schedules){
+  const org=await ctx.db.get(schedule.organizationId);if(!org)continue;
+  const today=new Intl.DateTimeFormat("en-CA",{timeZone:org.timezone||"Asia/Kolkata"}).format(new Date());
+  let due=schedule.nextRunDate,latest=due;
+  while(due<=today&&(!schedule.endDate||due<=schedule.endDate)){
+   let ids:Id<"employees">[]=[];
+   if(schedule.targetType==="team"&&schedule.teamId){
+    const team=await ctx.db.get(schedule.teamId);
+    if(team&&team.organizationId===schedule.organizationId&&team.isActive){
+     const memberships=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",team._id).eq("workDate",due)).collect();
+     ids=memberships.filter(m=>m.isActive).map(m=>m.employeeId);
+    }
+   } else if(schedule.targetType==="employee"&&schedule.employeeId)ids=[schedule.employeeId];
+   else ids=schedule.employeeIds??[];
+   const valid:Id<"employees">[]=[];
+   for(const employeeId of ids){const e=await ctx.db.get(employeeId);if(e&&e.organizationId===schedule.organizationId&&e.status==="active")valid.push(employeeId);}
+   const prior=await ctx.db.query("workAssignments").withIndex("by_recurring_date",q=>q.eq("recurringScheduleId",schedule._id).eq("workDate",due)).first();
+   if(valid.length&&!prior){
+    const assignmentId=await ctx.db.insert("workAssignments",{organizationId:schedule.organizationId,title:schedule.title,description:schedule.description,category:schedule.category,priority:schedule.priority,workDate:due,targetType:schedule.targetType,employeeId:schedule.employeeId,teamId:schedule.teamId,recurringScheduleId:schedule._id,createdBy:schedule.createdBy,createdAt:Date.now(),isActive:true});
+    for(const employeeId of valid){
+     await ctx.db.insert("workAssignmentProgress",{organizationId:schedule.organizationId,assignmentId,employeeId,workDate:due,status:"not_started",updatedAt:Date.now()});
+     const users=await ctx.db.query("users").withIndex("by_org_employee",q=>q.eq("organizationId",schedule.organizationId).eq("employeeId",employeeId)).collect();
+     for(const recipient of users)await ctx.db.insert("notifications",{organizationId:schedule.organizationId,userId:recipient._id,title:"Recurring work assigned",body:schedule.title,createdAt:Date.now()});
+    }
+    await ctx.db.insert("auditLogs",{organizationId:schedule.organizationId,actorUserId:undefined,action:"recurring_work.generated",entityType:"workAssignment",entityId:String(assignmentId),metadata:{scheduleId:String(schedule._id),workDate:due,employeeCount:valid.length},createdAt:Date.now()});
+    generated++;
+   }
+   latest=due;due=nextScheduledDate(dateFromDay(dayNumber(due)+1),schedule.frequency,schedule.weekdays);
+  }
+  const exhausted=Boolean(schedule.endDate&&due>schedule.endDate);
+  if(latest!==schedule.nextRunDate||exhausted)await ctx.db.patch(schedule._id,{nextRunDate:due,isActive:!exhausted,updatedAt:Date.now()});
+ }
+ return {generated};
+}});
+\nexport const createWorkAssignment=mutation({args:{title:v.string(),description:v.optional(v.string()),category:v.string(),priority:v.union(v.literal("low"),v.literal("normal"),v.literal("high")),workDate:v.string(),targetType:v.union(v.literal("employee"),v.literal("employees"),v.literal("team")),employeeId:v.optional(v.id("employees")),employeeIds:v.optional(v.array(v.id("employees"))),teamId:v.optional(v.id("teams"))},handler:async(ctx,a)=>{const u=await requireAdmin(ctx);if(!dateOk(a.workDate)||!a.title.trim()||a.title.length>120||!a.category.trim())throw Error("INVALID_WORK");let ids:Id<"employees">[]=[];if(a.targetType==="employee"){if(!a.employeeId||a.employeeIds?.length||a.teamId)throw Error("INVALID_TARGET");ids=[a.employeeId];}else if(a.targetType==="employees"){if(!a.employeeIds?.length||a.employeeIds.length>100||new Set(a.employeeIds).size!==a.employeeIds.length||a.employeeId||a.teamId)throw Error("INVALID_TARGET");ids=a.employeeIds;}else{if(!a.teamId||a.employeeId||a.employeeIds?.length)throw Error("INVALID_TARGET");const t=await ctx.db.get(a.teamId);if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");const ms=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect();ids=ms.filter(m=>m.isActive).map(m=>m.employeeId);if(!ids.length)throw Error("TEAM_HAS_NO_MEMBERS");}for(const id of ids){const e=await ctx.db.get(id);if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");}const id=await ctx.db.insert("workAssignments",{organizationId:u.organizationId,title:a.title.trim(),description:a.description?.trim()||undefined,category:a.category.trim(),priority:a.priority,workDate:a.workDate,targetType:a.targetType,employeeId:a.employeeId,teamId:a.teamId,createdBy:u._id,createdAt:Date.now(),isActive:true});for(const employeeId of ids){await ctx.db.insert("workAssignmentProgress",{organizationId:u.organizationId,assignmentId:id,employeeId,workDate:a.workDate,status:"not_started",updatedAt:Date.now()});const recipients=await ctx.db.query("users").withIndex("by_org_employee",q=>q.eq("organizationId",u.organizationId).eq("employeeId",employeeId)).collect();for(const recipient of recipients)await ctx.db.insert("notifications",{organizationId:u.organizationId,userId:recipient._id,title:"New work assigned",body:a.title.trim(),createdAt:Date.now()});}await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.created",entityType:"workAssignment",entityId:String(id),metadata:{workDate:a.workDate,employeeCount:ids.length},createdAt:Date.now()});return id;}});
 export const updateMyWorkStatus=mutation({args:{progressId:v.id("workAssignmentProgress"),status:v.union(v.literal("in_progress"),v.literal("submitted_for_review"))},handler:async(ctx,a)=>{
  const u=await requireIdentity(ctx);if(!u.employeeId)throw Error("EMPLOYEE_PROFILE_REQUIRED");
  const p=await ctx.db.get(a.progressId);if(!p||p.organizationId!==u.organizationId||p.employeeId!==u.employeeId)throw Error("FORBIDDEN");
