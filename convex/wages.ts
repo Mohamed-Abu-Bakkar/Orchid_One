@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireRole } from "./lib/auth";
+import { requireAdmin, requireRole, requireSuperadmin } from "./lib/auth";
 
 const componentCategory = v.union(v.literal("earning"), v.literal("deduction"));
 const compensationLine = v.object({
@@ -46,7 +46,7 @@ export const listForAdmin = query({
 export const createSalaryComponent = mutation({
   args: { name: v.string(), code: v.string(), category: componentCategory },
   handler: async (ctx, args) => {
-    const user = await requireAdmin(ctx);
+    const user = await requireSuperadmin(ctx);
     const name = args.name.trim();
     const code = args.code.trim().toUpperCase().replace(/\s+/g, "_");
     if (!name || name.length > 80) throw new Error("INVALID_COMPONENT_NAME");
@@ -63,7 +63,7 @@ export const createSalaryComponent = mutation({
 export const setSalaryComponentActive = mutation({
   args: { componentId: v.id("salaryComponents"), isActive: v.boolean() },
   handler: async (ctx, args) => {
-    const user = await requireAdmin(ctx);
+    const user = await requireSuperadmin(ctx);
     const component = await ctx.db.get(args.componentId);
     if (!component || component.organizationId !== user.organizationId) throw new Error("COMPONENT_NOT_FOUND");
     if (component.isActive === args.isActive) return;
@@ -81,7 +81,7 @@ export const saveEmployeeCompensation = mutation({
     components: v.array(compensationLine),
   },
   handler: async (ctx, args) => {
-    const user = await requireAdmin(ctx);
+    const user = await requireSuperadmin(ctx);
     const effectiveDate = new Date(args.effectiveFrom + "T00:00:00.000Z");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(args.effectiveFrom) || Number.isNaN(effectiveDate.getTime()) || effectiveDate.toISOString().slice(0, 10) !== args.effectiveFrom) throw new Error("INVALID_EFFECTIVE_DATE");
     const employee = await ctx.db.get(args.employeeId);
