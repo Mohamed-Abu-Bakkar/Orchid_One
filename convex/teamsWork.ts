@@ -233,8 +233,8 @@ export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx
  const today= a.workDate;
  const assignmentRows=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status,workDate:t.workDate,reviewNote:p.reviewNote??null}:null;}));
  const validAssignments=assignmentRows.filter((row):row is NonNullable<typeof row>=>row!==null);
- const assignments=validAssignments.filter(row=>row.workDate>=today).sort((x,y)=>x.workDate.localeCompare(y.workDate));
- const history=validAssignments.filter(row=>row.workDate<today).sort((x,y)=>y.workDate.localeCompare(x.workDate));
+ const assignments=validAssignments.filter(row=>row.workDate>=today||row.status!=="completed").sort((x,y)=>x.workDate.localeCompare(y.workDate));
+ const history=validAssignments.filter(row=>row.workDate<today&&row.status==="completed").sort((x,y)=>y.workDate.localeCompare(x.workDate));
  const validTeams=teams.filter((team):team is NonNullable<typeof team>=>team!==null);
  return {team:validTeams[0]??null,teams:validTeams,assignments,history};
 }});
