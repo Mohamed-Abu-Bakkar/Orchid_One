@@ -9,6 +9,7 @@ type PlaceResult = { place_id: number; display_name: string; lat: string; lon: s
 
 export function LocationManagement() {
   const locations = useQuery(api.locations.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
   const saveConfiguration = useMutation(api.locations.saveConfiguration);
   const [selectedId, setSelectedId] = useState<string>("");
   const [address, setAddress] = useState("");
@@ -105,8 +106,9 @@ export function LocationManagement() {
     } finally { setSaving(false); }
   }
 
-  if (locations === undefined) return <section className="sec"><p className="sub">Loading locations…</p></section>;
+  if (locations === undefined || account === undefined) return <section className="sec"><p className="sub">Loading locations…</p></section>;
 
+  if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Location management</h2><p className="sub">Read-only workplace and geofence reference.</p></div></div><div className="grid-2-equal">{locations.map(item=><article className="panel" key={item._id}><div className="panel-head"><strong>{item.name}</strong><span className={`badge ${item.isActive?"badge-success":"badge-neutral"}`}>{item.isActive?"Active":"Draft"}</span></div><div className="panel-body"><p>{item.address||"Address not configured"}</p><p className="t-caption text-tertiary">Coordinates: {item.latitude}, {item.longitude} · Radius: {item.geofenceRadiusM} m</p></div></article>)}</div></section>;
   return <section className="sec location-management">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Location management</h2><p className="sub">Configure workplace addresses and GPS geofences before activating locations for employee assignment.</p></div><span className="badge badge-neutral">{locations.length} locations</span></div>
     <div className="location-layout">
