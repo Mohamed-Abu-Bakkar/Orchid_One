@@ -123,7 +123,7 @@ export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decis
  if(a.decision==="approved"&&balance.used+Math.max(0,balance.pending-r.requestedDays)+days>balance.allocated)throw Error("INSUFFICIENT_LEAVE_BALANCE");
  if(balance.pending<r.requestedDays)throw Error("LEAVE_PENDING_BALANCE_MISMATCH");
  await ctx.db.patch(balance._id,{pending:Math.max(0,balance.pending-r.requestedDays),used:balance.used+(a.decision==="approved"?days:0)});
- await ctx.db.patch(r._id,{status:a.decision});
+ await ctx.db.patch(r._id,{status:a.decision,reviewedBy:u._id,reviewedAt:Date.now()});
  await audit(ctx,u,"leave.request."+a.decision,"leaveRequest",String(r._id),{requestedDays:days,note:a.note?.trim()??""});
  return {status:a.decision,workingDays:days};
 }});
