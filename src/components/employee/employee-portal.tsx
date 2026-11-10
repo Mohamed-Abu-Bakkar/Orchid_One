@@ -38,9 +38,6 @@ export function EmployeePortal() {
  const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
  const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
 
- const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
- const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
- const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
  const [busy,setBusy]=useState(false),[uploadBusy,setUploadBusy]=useState(false),[docType,setDocType]=useState("Identity"),[uploadNotice,setUploadNotice]=useState("");
  useEffect(()=>{const t=window.setInterval(()=>setClock(new Date()),1000);return()=>window.clearInterval(t)},[]);
  const linked=workspace?.linked===true, profile=linked?workspace.profile:null, shifts=linked?(workspace.shifts??[]):[], shift=shifts[0]??null;
