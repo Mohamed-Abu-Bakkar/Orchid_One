@@ -371,7 +371,7 @@ export const createLocationDraftForAdmin = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
     const name = args.name.trim().replace(/\s+/g, " ");
     if (!name || name.length > 80) throw new Error("INVALID_LOCATION_NAME");
     const existing = await ctx.db.query("locations").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
