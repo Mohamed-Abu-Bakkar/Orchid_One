@@ -391,7 +391,7 @@ export const listAccountsForLinking = query({
   args: {},
   handler: async (ctx) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
     const users = await ctx.db.query("users")
       .withIndex("by_org", q => q.eq("organizationId", admin.organizationId))
       .order("desc")
@@ -433,7 +433,7 @@ export const createForAdmin = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
     const firstName = args.firstName.trim();
     const lastName = args.lastName?.trim();
     const phone = args.phone.trim();
@@ -516,7 +516,7 @@ export const linkAccount = mutation({
   args: { userId: v.id("users"), employeeId: v.id("employees") },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
     const [account, employee] = await Promise.all([ctx.db.get(args.userId), ctx.db.get(args.employeeId)]);
     if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
     if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
@@ -547,7 +547,7 @@ export const unlinkAccount = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
     const account = await ctx.db.get(userId);
     if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
     if (account.role !== "employee") throw new Error("ONLY_EMPLOYEE_ACCOUNTS_CAN_BE_UNLINKED");
