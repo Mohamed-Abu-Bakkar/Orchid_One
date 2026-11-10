@@ -23,7 +23,7 @@ export const myWorkspace = query({
     nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
     const monthEnd = dayOffset(nextMonthDate.toISOString().slice(0, 10), -1);
     const nextMonthStartAt = new Date(nextMonthDate.toISOString().slice(0, 10) + "T00:00:00+05:30");
-    const [department, location, attendance, leaveBalances, leaveTypes, leaveRequests, overtimeRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignments, upcomingShifts, holidays, organizationEmployees, monthAttendanceDays] = await Promise.all([
+    const [department, location, attendance, leaveBalances, leaveTypes, leaveRequests, overtimeRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignments, upcomingShifts, holidays, organizationEmployees, monthAttendanceDays, workCalendars] = await Promise.all([
       ctx.db.get(employee.departmentId), ctx.db.get(employee.locationId),
       ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").take(500),
       ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id).eq("periodYear", Number(today.slice(0, 4)))).collect(),
@@ -37,9 +37,10 @@ export const myWorkspace = query({
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", today)).collect(),
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gt("workDate", today).lte("workDate", upcomingEnd)).collect(),
-      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", today).lte("date", upcomingEnd)).collect(),
+      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", monthStart).lte("date", monthEnd)).collect(),
       ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("attendanceDays").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
+      ctx.db.query("workCalendars").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
     ]);
     const currentShiftRows = todayShiftAssignments.length ? todayShiftAssignments : (employee.defaultShiftId ? [{ shiftId: employee.defaultShiftId, workDate: today }] : []);
     const currentShifts = await Promise.all(currentShiftRows.map(async assignment => {
@@ -48,6 +49,34 @@ export const myWorkspace = query({
     }));
     const validCurrentShifts = currentShifts.filter((shift): shift is NonNullable<typeof shift> => Boolean(shift));
     const currentShift = validCurrentShifts[0] ?? null;
+    const defaultScheduleShift = employee.defaultShiftId ? await ctx.db.get(employee.defaultShiftId) : null;
+    const hasDefaultScheduleShift = Boolean(defaultScheduleShift && defaultScheduleShift.organizationId === user.organizationId && defaultScheduleShift.isActive);
+    const employeeCalendar = workCalendars.find(calendar => calendar.locationId === employee.locationId)
+      ?? workCalendars.find(calendar => !calendar.locationId);
+    const weeklyOffDays = employeeCalendar?.weeklyOffDays ?? [];
+    const holidayRows = holidays.filter(holiday => !holiday.locationId || holiday.locationId === employee.locationId);
+    const scheduleDays = [];
+    for (let cursor = new Date(monthStart + "T00:00:00Z"); cursor <= new Date(monthEnd + "T00:00:00Z"); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+      const workDate = cursor.toISOString().slice(0, 10);
+      const datedAssignments = monthShifts.filter(assignment => assignment.workDate === workDate);
+      const isWeeklyOff = weeklyOffDays.includes(cursor.getUTCDay());
+      const effectiveShiftIds = datedAssignments.length
+        ? datedAssignments.map(assignment => assignment.shiftId)
+        : (!isWeeklyOff && hasDefaultScheduleShift ? [defaultScheduleShift!._id] : []);
+      const shiftsForDate = await Promise.all(effectiveShiftIds.map(async shiftId => {
+        const shift = await ctx.db.get(shiftId);
+        return shift && shift.organizationId === user.organizationId
+          ? { id: shift._id, name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute, breakMinutes: shift.breakMinutes }
+          : null;
+      }));
+      const dayHolidays = holidayRows.filter(holiday => holiday.date === workDate).map(holiday => holiday.name);
+      scheduleDays.push({
+        date: workDate,
+        shifts: shiftsForDate.filter((shift): shift is NonNullable<typeof shift> => Boolean(shift)),
+        weeklyOff: isWeeklyOff && datedAssignments.length === 0,
+        holidays: dayHolidays,
+      });
+    }
     const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
     const wagePeriods = await Promise.all(wageRecords.map(record => ctx.db.get(record.wagePeriodId)));
     const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(today.slice(0, 4)))).collect();
@@ -85,7 +114,7 @@ export const myWorkspace = query({
       profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address } : null,
-      shift: currentShift, shifts: validCurrentShifts,
+      shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
       attendance: attendance.map(event => ({ _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, accuracyM: event.accuracyM, geofencePassed: event.geofencePassed, reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, performance: { attendanceDays: monthAttendanceDays.map(day => ({ workDate: day.workDate, payableMinutes: day.payableMinutes, status: day.status })), scheduledShifts: scheduledDays }, todayAttendance, upcoming,
       leaveBalances: leaveBalancesWithTypes, leaveTypes: leaveTypes.filter(type => type.isActive).map(type => ({ id: type._id, name: type.name, code: type.code })), leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt })), documents: docsWithUrls,
       wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
