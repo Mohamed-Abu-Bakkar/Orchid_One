@@ -157,7 +157,9 @@ export const submitMyLeaveRequest = mutation({
       const entitlement = defaults.find(item => item.leaveTypeId === leaveType._id);
       if (!entitlement) throw new Error("LEAVE_BALANCE_NOT_CONFIGURED");
       const balanceId = await ctx.db.insert("leaveBalances", { organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: leaveType._id, periodYear: Number(args.fromDate.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false });
-      balance = { _id: balanceId, organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: leaveType._id, periodYear: Number(args.fromDate.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false };
+      const createdBalance = await ctx.db.get(balanceId);
+      if (!createdBalance) throw new Error("LEAVE_BALANCE_CREATION_FAILED");
+      balance = createdBalance;
     }
     if (balance.used + balance.pending + requestedDays > balance.allocated) throw new Error("INSUFFICIENT_LEAVE_BALANCE");
     await ctx.db.patch(balance._id, { pending: balance.pending + requestedDays });
