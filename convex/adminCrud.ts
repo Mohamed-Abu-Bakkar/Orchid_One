@@ -1,6 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireSuperadmin } from "./lib/auth";
+import { requireAdmin, requireSuperadmin } from "./lib/auth";
 
 const employmentType = v.union(v.literal("permanent"), v.literal("hourly"), v.literal("daily"), v.literal("contract"));
 const employeeStatus = v.union(v.literal("active"), v.literal("inactive"), v.literal("pending"), v.literal("archived"));
@@ -190,7 +190,7 @@ export const archiveTeam = mutation({
 export const updateWorkCategory = mutation({
   args: { categoryId: v.id("workCategories"), name: v.string() },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireAdmin(ctx);
     const category = await ctx.db.get(args.categoryId);
     const name = args.name.trim().replace(/\\s+/g, " ");
     if (!category || category.organizationId !== admin.organizationId) throw new Error("CATEGORY_NOT_FOUND");
@@ -206,7 +206,7 @@ export const updateWorkCategory = mutation({
 export const archiveWorkCategory = mutation({
   args: { categoryId: v.id("workCategories") },
   handler: async (ctx, { categoryId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireAdmin(ctx);
     const category = await ctx.db.get(categoryId);
     if (!category || category.organizationId !== admin.organizationId) throw new Error("CATEGORY_NOT_FOUND");
     await ctx.db.patch(categoryId, { isActive: false });
@@ -221,7 +221,7 @@ export const updateWorkAssignment = mutation({
     category: v.string(), priority, workDate: v.string(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireAdmin(ctx);
     const assignment = await ctx.db.get(args.assignmentId);
     if (!assignment || assignment.organizationId !== admin.organizationId || !assignment.isActive) throw new Error("WORK_ASSIGNMENT_NOT_FOUND");
     if (!args.title.trim() || args.title.trim().length > 120 || !args.category.trim() || !/^\\d{4}-\\d{2}-\\d{2}$/.test(args.workDate)) throw new Error("INVALID_WORK_ASSIGNMENT");
@@ -234,7 +234,7 @@ export const updateWorkAssignment = mutation({
 export const archiveWorkAssignment = mutation({
   args: { assignmentId: v.id("workAssignments") },
   handler: async (ctx, { assignmentId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireAdmin(ctx);
     const assignment = await ctx.db.get(assignmentId);
     if (!assignment || assignment.organizationId !== admin.organizationId) throw new Error("WORK_ASSIGNMENT_NOT_FOUND");
     if (!assignment.isActive) return true;
