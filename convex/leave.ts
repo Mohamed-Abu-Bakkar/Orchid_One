@@ -31,7 +31,7 @@ export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{yea
   return [];
 })).map(b=>({...b,employeeName:employeeRows.find(e=>e._id===b.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===b.employeeId)?.employeeCode??"",leaveTypeName:types.find(t=>t._id===b.leaveTypeId)?.name??"Unknown"})));
  const requestRows=await Promise.all(requests.map(async r=>({ ...r,employeeName:employeeRows.find(e=>e._id===r.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===r.employeeId)?.employeeCode??"",locationId:employeeRows.find(e=>e._id===r.employeeId)?.locationId,leaveTypeName:types.find(t=>t._id===r.leaveTypeId)?.name??"Unknown"})));
- return {employees:employeeRows,leaveTypes:types,balances:balanceRows,defaults,requests:requestRows,holidays,locations,calendars};
+ return {employees:employeeRows,leaveTypes:types,balances:balanceRows,defaults:defaults??[],requests:requestRows,holidays,locations,calendars};
 }});
 
 export const saveLeaveType=mutation({args:{leaveTypeId:v.optional(v.id("leaveTypes")),name:v.string(),code:v.string(),isPaid:v.boolean()},handler:async(ctx,a)=>{
