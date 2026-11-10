@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireIdentity } from "./lib/auth";
+import { requireAdmin, requireIdentity, requireSuperadmin } from "./lib/auth";
 
 const MAX_POLICY_BYTES = 15 * 1024 * 1024;
 const policyCategory = v.union(
