@@ -13,6 +13,7 @@ const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
 
 export function CompanyDocumentManagement() {
   const documents = useQuery(api.companyDocuments.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
   const generateUploadUrl = useMutation(api.companyDocuments.generateUploadUrl);
   const createDocument = useMutation(api.companyDocuments.create);
   const archiveDocument = useMutation(api.companyDocuments.archive);
@@ -80,7 +81,7 @@ export function CompanyDocumentManagement() {
     }
   }
 
-  if (documents === undefined) return <section className="sec"><p className="sub">Loading company documents…</p></section>;
+  if (documents === undefined || account === undefined) return <section className="sec"><p className="sub">Loading company documents…</p></section>;
   const preview = documents.find(item => item._id === previewId);
 
   return <section className="sec">
@@ -121,7 +122,7 @@ export function CompanyDocumentManagement() {
           <div className="policy-row-main"><strong>{item.title}</strong><span>{item.category} · {item.originalFileName} · {(item.fileSize / 1024 / 1024).toFixed(2)} MB</span>{item.description && <small>{item.description}</small>}</div>
           <span className={"badge " + (item.status === "published" ? "badge-success" : "badge-neutral")}>{item.status}</span>
           <button className="icon-btn" title="Preview document" aria-label={"Preview " + item.title} onClick={() => setPreviewId(item._id)}><Eye size={16} /></button>
-          {item.status === "published" && <button className="icon-btn" title="Archive document" aria-label={"Archive " + item.title} onClick={async () => { try { await archiveDocument({ documentId: item._id }); setMessage("Document archived and hidden from employees."); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to archive document."); } }}><Archive size={16} /></button>}
+          {account.role==="superadmin"&&item.status === "published" && <button className="icon-btn" title="Archive document" aria-label={"Archive " + item.title} onClick={async () => { try { await archiveDocument({ documentId: item._id }); setMessage("Document archived and hidden from employees."); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to archive document."); } }}><Archive size={16} /></button>}
         </div>)}
       </div>
     </div>
