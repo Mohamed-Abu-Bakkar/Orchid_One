@@ -46,7 +46,7 @@ export function PolicyManagement() {
     finally {setBusy(false);}
   }
 
-  if(policies===undefined||account===undefined) return <section className="sec"><p className="sub">Loading policies…</p></section>;
+  if(policies===undefined||account===undefined||account===null) return <section className="sec"><p className="sub">Loading policies…</p></section>;
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Policy management</h2><p className="sub">Upload, publish and track company policy acknowledgements.</p></div></div>
     {account.role==="superadmin"&&<div className="panel"><div className="panel-head"><span className="t-h3">Upload a policy</span><span className="badge badge-neutral">PDF · Max 15 MB</span></div>
