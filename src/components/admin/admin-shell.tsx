@@ -62,7 +62,7 @@ export default function AdminShell() {
 function Dashboard({go,notice,displayName}:{go:(id:string)=>void;notice:(s:string)=>void;displayName:string}) {
  const employees=useQuery(api.employee.listForAdmin,{});
  const account=useQuery(api.account.getMyAccountStatus,{});
- if(employees===undefined||account===undefined)return <section className="sec"><p className="sub">Loading dashboard records…</p></section>;
+ if(employees===undefined||account===undefined||account===null)return <section className="sec"><p className="sub">Loading dashboard records…</p></section>;
  const totalEmployees=employees.length;
  const activeEmployees=employees.filter(employee=>employee.status==="active").length;
  const pendingEmployees=employees.filter(employee=>employee.status==="pending").length;
