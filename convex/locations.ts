@@ -1,12 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireIdentity } from "./lib/auth";
+import { requireIdentity, requireRole } from "./lib/auth";
 
 export const listForAdmin = query({
   args: {},
   handler: async (ctx) => {
-    const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const admin = await requireRole(ctx, ["superadmin"]);
     return await ctx.db.query("locations")
       .withIndex("by_org", q => q.eq("organizationId", admin.organizationId))
       .order("asc")
