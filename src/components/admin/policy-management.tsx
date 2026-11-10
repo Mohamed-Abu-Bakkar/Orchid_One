@@ -12,6 +12,7 @@ const categories = [
 
 export function PolicyManagement() {
   const policies = useQuery(api.policies.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
   const uploadUrl = useMutation(api.policies.generateUploadUrl);
   const createDraft = useMutation(api.policies.createDraft);
   const publish = useMutation(api.policies.publish);
@@ -45,7 +46,7 @@ export function PolicyManagement() {
     finally {setBusy(false);}
   }
 
-  if(policies===undefined) return <section className="sec"><p className="sub">Loading policies…</p></section>;
+  if(policies===undefined||account===undefined) return <section className="sec"><p className="sub">Loading policies…</p></section>;
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Policy management</h2><p className="sub">Upload, publish and track company policy acknowledgements.</p></div></div>
     <div className="panel"><div className="panel-head"><span className="t-h3">Upload a policy</span><span className="badge badge-neutral">PDF · Max 15 MB</span></div>
@@ -67,9 +68,9 @@ export function PolicyManagement() {
         {policies.map(policy=><div className="policy-row" key={policy._id}>
           <div className="policy-file-icon"><FileText size={20}/></div><div className="policy-row-main"><strong>{policy.title}</strong><span>Version {policy.version} · {categories.find(c=>c[0]===policy.category)?.[1]??policy.category} · {policy.originalFileName}</span>{policy.description&&<small>{policy.description}</small>}</div>
           <span className={"badge "+(policy.status==="published"?"badge-success":policy.status==="draft"?"badge-warning":"badge-neutral")}>{policy.status}</span>
-          {policy.status==="draft"&&<button className="btn btn-primary btn-sm" onClick={async()=>{try{await publish({policyId:policy._id});setMessage("Policy published to all active employees.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to publish.");}}}>Publish</button>}
+          {account.role==="superadmin"&&policy.status==="draft"&&<button className="btn btn-primary btn-sm" onClick={async()=>{try{await publish({policyId:policy._id});setMessage("Policy published to all active employees.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to publish.");}}}>Publish</button>}
           {policy.status==="published"&&<button className="btn btn-outline btn-sm" onClick={()=>{setReportId(String(policy._id));setReportPolicy(policy);}}>Acknowledgements</button>}
-          {policy.status!=="archived"&&<button className="icon-btn" title="Archive version" onClick={()=>archive({policyId:policy._id})}><Archive size={16}/></button>}
+          {account.role==="superadmin"&&policy.status!=="archived"&&<button className="icon-btn" title="Archive version" onClick={()=>archive({policyId:policy._id})}><Archive size={16}/></button>}
         </div>)}
       </div>
     </div>
