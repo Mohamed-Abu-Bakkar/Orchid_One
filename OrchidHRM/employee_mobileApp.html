@@ -409,6 +409,24 @@
 <button class="w-full mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg py-3 hover:bg-primary-container transition-colors" onclick="submitFeedback()">Submit feedback</button>
 </div>
 </div>
+<!-- My Schedule Screen -->
+<div class="fixed inset-x-0 top-0 bottom-0 z-[91] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="scheduleScreen">
+<div class="flex flex-col h-full">
+<header class="flex items-center gap-3 w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
+<button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closeMySchedule()" aria-label="Back to More"><span class="material-symbols-outlined">arrow_back</span></button>
+<div class="flex flex-col"><span class="text-title-md font-title-md font-bold text-on-surface leading-tight">My Schedule</span><span class="text-label-sm font-label-sm text-on-surface-variant">Your assigned shifts</span></div>
+</header>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<div class="bento-card p-3">
+<div class="flex items-center justify-between mb-3"><p id="scheduleMonthTitle" class="text-title-md font-title-md font-semibold text-on-surface">—</p><span class="text-label-sm font-label-sm text-on-surface-variant">Monthly view</span></div>
+<div class="grid grid-cols-7 gap-1 mb-2 text-center"><span class="text-[10px] font-semibold text-on-surface-variant py-1">S</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">M</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">T</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">W</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">T</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">F</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">S</span></div>
+<div id="scheduleCalendarGrid" class="grid grid-cols-7 gap-1" aria-label="Monthly shift calendar"></div>
+<div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-outline-variant/40"><span class="inline-flex items-center gap-1.5 text-[10px] text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span>Shift</span><span class="inline-flex items-center gap-1.5 text-[10px] text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-outline"></span>Weekly off</span><span class="inline-flex items-center gap-1.5 text-[10px] text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-[#D97706]"></span>Holiday</span></div>
+</div>
+<div class="bento-card p-4"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Selected date</p><p id="scheduleSelectedDate" class="text-title-md font-title-md font-semibold text-on-surface mt-1">—</p><div id="scheduleDayDetails" class="mt-3"><p class="text-body-sm text-on-surface-variant">Select a date to view its schedule.</p></div></div>
+<div><div class="flex items-center justify-between mb-2"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Upcoming shifts</p><span id="scheduleUpcomingCount" class="text-label-sm font-label-sm text-on-surface-variant"></span></div><div id="scheduleUpcomingList" class="bento-card p-0 overflow-hidden"><p class="text-body-sm text-on-surface-variant text-center py-6">Loading schedule…</p></div></div>
+<p class="text-[11px] text-on-surface-variant text-center">Your schedule is read-only. Contact your supervisor if an assignment needs to be changed.</p>
+</div></div></div>
 <!-- Attendance Screen -->
 <div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="attScreen">
 <div class="flex flex-col h-full">
@@ -955,7 +973,7 @@ Submit Request
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Shift schedule opens')">
+<div class="more-item" onclick="openMySchedule()">
 <span class="more-ic bg-[#fdf1e1] text-[#B26A00]"><span class="material-symbols-outlined">calendar_month</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">My Schedule</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Upcoming shifts and swaps</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
