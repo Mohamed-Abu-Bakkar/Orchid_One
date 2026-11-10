@@ -86,7 +86,7 @@ export function CompanyDocumentManagement() {
 
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{ fontSize: 22 }}>Company documents</h2><p className="sub">Publish shared documents for all active employees.</p></div></div>
-    <div className="panel">
+    {account.role==="superadmin"&&<div className="panel">
       <div className="panel-head"><span className="t-h3">Upload a document</span><span className="badge badge-neutral">PDF, JPG, PNG · Max 15 MB</span></div>
       <form className="panel-body" onSubmit={upload} style={{ display: "grid", gap: 14 }}>
         <label className="policy-field">Document title<input className="input" value={title} maxLength={160} onChange={event => setTitle(event.target.value)} placeholder="e.g. Employee handbook" required /></label>
@@ -112,7 +112,7 @@ export function CompanyDocumentManagement() {
         <div><button className="btn btn-primary" type="submit" disabled={busy || !file}>{busy ? "Uploading…" : "Upload and publish"}</button></div>
         {message && <p className="sub" role="status">{message}</p>}
       </form>
-    </div>
+    </div>}
     <div className="panel" style={{ marginTop: 20 }}>
       <div className="panel-head"><span className="t-h3">Uploaded documents</span><span className="t-caption text-tertiary">{documents.length} records</span></div>
       <div className="panel-body" style={{ display: "grid", gap: 12 }}>
