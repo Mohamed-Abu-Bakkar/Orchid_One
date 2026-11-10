@@ -49,7 +49,7 @@ export function PolicyManagement() {
   if(policies===undefined||account===undefined) return <section className="sec"><p className="sub">Loading policies…</p></section>;
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Policy management</h2><p className="sub">Upload, publish and track company policy acknowledgements.</p></div></div>
-    <div className="panel"><div className="panel-head"><span className="t-h3">Upload a policy</span><span className="badge badge-neutral">PDF · Max 15 MB</span></div>
+    {account.role==="superadmin"&&<div className="panel"><div className="panel-head"><span className="t-h3">Upload a policy</span><span className="badge badge-neutral">PDF · Max 15 MB</span></div>
       <form className="panel-body" onSubmit={saveDraft} style={{display:"grid",gap:14}}>
         <label className="policy-field">Policy title<input className="input" value={title} maxLength={160} onChange={e=>setTitle(e.target.value)} placeholder="e.g. Attendance and Punctuality Policy" required /></label>
         <div className="policy-form-grid">
@@ -61,7 +61,7 @@ export function PolicyManagement() {
         <div><button className="btn btn-primary" type="submit" disabled={busy}>{busy?"Uploading…":"Save as draft"}</button></div>
         {message&&<p className="sub" role="status">{message}</p>}
       </form>
-    </div>
+    </div>}
     <div className="panel" style={{marginTop:20}}><div className="panel-head"><span className="t-h3">Policies</span><span className="t-caption text-tertiary">{policies.length} versions</span></div>
       <div className="panel-body" style={{display:"grid",gap:12}}>
         {policies.length===0&&<p className="sub">No policies uploaded yet.</p>}
