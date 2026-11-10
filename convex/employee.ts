@@ -81,7 +81,7 @@ export const myWorkspace = query({
     // the default shift; weekly offs and applicable holidays are not attendance days.
     const scheduledDateKeys = new Set(
       scheduleDays
-        .filter(day => day.shifts.length > 0 && day.holidays.length === 0)
+        .filter(day => day.date <= today && day.shifts.length > 0 && day.holidays.length === 0)
         .map(day => day.date)
     );
     const attendedDateKeys = new Set(
