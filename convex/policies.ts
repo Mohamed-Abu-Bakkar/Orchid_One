@@ -93,7 +93,7 @@ export const listPublishedForEmployee = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
-    if ((user.role !== "employee" && user.role !== "superadmin") || !user.employeeId) return [];
+    if ((user.role !== "employee" && user.role !== "superadmin" && user.role !== "supervisor") || !user.employeeId) return [];
     const employee = await ctx.db.get(user.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") return [];
     const policies = await ctx.db.query("policies")
