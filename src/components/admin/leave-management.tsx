@@ -14,7 +14,7 @@ export function LeaveManagement(){
  const data=useQuery(api.leave.adminWorkspace,{year});const account=useQuery(api.account.getMyAccountStatus,{});
  const saveType=useMutation(api.leave.saveLeaveType),setTypeActive=useMutation(api.leave.setLeaveTypeActive),saveCalendar=useMutation(api.leave.saveWorkCalendar),saveHoliday=useMutation(api.leave.saveHoliday),deleteHoliday=useMutation(api.leave.deleteHoliday),saveBalance=useMutation(api.leave.saveBalance),saveDefault=useMutation(api.leave.saveLeaveDefault),resetBalance=useMutation(api.leave.resetBalanceToDefault),decide=useMutation(api.leave.decideRequest),recommend=useMutation(api.leave.recommendRequest);
  async function run(fn:()=>Promise<any>,message:string){try{await fn();setNotice(message);}catch(e){setNotice(e instanceof Error?e.message:"Unable to complete action.");}}
- if(!data||account===undefined)return <section className="sec"><p className="sub">Loading leave configuration…</p></section>;
+ if(!data||account===undefined||account===null)return <section className="sec"><p className="sub">Loading leave configuration…</p></section>;
  const calendar=data.calendars.find((x:any)=>String(x.locationId??"organization")===location);
  const balanceFor=(e:string,t:string)=>data.balances.find((b:any)=>b.employeeId===e&&b.leaveTypeId===t);
  return <section className="sec">
