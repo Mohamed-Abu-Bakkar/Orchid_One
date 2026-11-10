@@ -77,6 +77,22 @@ export const myWorkspace = query({
         holidays: dayHolidays,
       });
     }
+    // Count only effective scheduled working dates. Date-specific assignments override
+    // the default shift; weekly offs and applicable holidays are not attendance days.
+    const scheduledDateKeys = new Set(
+      scheduleDays
+        .filter(day => day.shifts.length > 0 && day.holidays.length === 0)
+        .map(day => day.date)
+    );
+    const attendedDateKeys = new Set(
+      monthEvents
+        .filter(event => event.eventType === "check_in" && (event.geofencePassed || event.reviewStatus === "approved"))
+        .map(event => dateKey(new Date(event.receivedAt)))
+        .filter(workDate => scheduledDateKeys.has(workDate))
+    );
+    const attendedDays = attendedDateKeys.size;
+    const scheduledDays = scheduledDateKeys.size;
+    const todayAttendance = attendedDateKeys.has(today) ? { workDate: today } : null;
     const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
     const wagePeriods = await Promise.all(wageRecords.map(record => ctx.db.get(record.wagePeriodId)));
     const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(today.slice(0, 4)))).collect();
@@ -88,10 +104,6 @@ export const myWorkspace = query({
     }
     const leaveBalancesWithTypes = await Promise.all(effectiveLeaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" })));
     const leaveRequestsWithTypes = await Promise.all(leaveRequests.map(async request => ({ ...request, leaveTypeName: (await ctx.db.get(request.leaveTypeId))?.name ?? "Leave" })));
-    const attendedDateKeys = new Set(monthEvents.filter(event => event.geofencePassed || event.reviewStatus === "approved").filter(event => event.eventType === "check_in").map(event => dateKey(new Date(event.receivedAt))));
-    const attendedDays = attendedDateKeys.size;
-    const scheduledDays = new Set(monthShifts.map(assignment => assignment.workDate)).size;
-    const todayAttendance = monthEvents.some(event => dateKey(new Date(event.receivedAt)) === today && (event.geofencePassed || event.reviewStatus === "approved")) ? { workDate: today } : null;
     const weeklyWage = wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
       .find(record => record.period?.periodType === "weekly" && (record.status === "approved" || record.status === "locked") && record.period.fromDate <= weekEnd && record.period.toDate >= weekStart) ?? null;
     const upcoming: { type: string; title: string; date: string; subtitle: string }[] = [];
