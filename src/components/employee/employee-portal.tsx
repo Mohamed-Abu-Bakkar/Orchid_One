@@ -28,7 +28,10 @@ export function EmployeePortal() {
  const account=useQuery(api.account.getMyAccountStatus,session.data?{}:"skip");
  const allowed=!!session.data&&account?.status==="active"&&(account.role==="employee"||account.role==="superadmin");
  const workspace=useQuery(api.employee.myWorkspace,allowed?{}:"skip");
- const companyDocuments=useQuery(api.companyDocuments.listPublishedForEmployee,allowed?{}:"skip");\n const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);\n const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");\n const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
+ const companyDocuments=useQuery(api.companyDocuments.listPublishedForEmployee,allowed?{}:"skip");
+ const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
+ const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
+ const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
  const punch=useMutation(api.attendance.recordPunch);
  const uploadUrl=useMutation(api.employee.generateDocumentUploadUrl);
  const saveDocument=useMutation(api.employee.saveMyDocument);
