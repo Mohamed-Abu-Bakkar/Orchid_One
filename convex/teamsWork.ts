@@ -157,13 +157,15 @@ export const setRecurringWorkScheduleStatus=mutation({args:{scheduleId:v.id("rec
  return true;
 }});
 export const generateDueRecurringWork=internalMutation({args:{},handler:async(ctx)=>{
- const schedules=await ctx.db.query("recurringWorkSchedules").withIndex("by_active_next_date",q=>q.eq("isActive",true)).collect();
+ const utcToday=new Date().toISOString().slice(0,10);
+ const scanThrough=dateFromDay(dayNumber(utcToday)+1);
+ const schedules=await ctx.db.query("recurringWorkSchedules").withIndex("by_active_next_date",q=>q.eq("isActive",true).lte("nextRunDate",scanThrough)).collect();
  let generated=0;
  for(const schedule of schedules){
   const org=await ctx.db.get(schedule.organizationId);if(!org)continue;
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:org.timezone||"Asia/Kolkata"}).format(new Date());
-  let due=schedule.nextRunDate,latest=due;
-  while(due<=today&&(!schedule.endDate||due<=schedule.endDate)){
+  let due=schedule.nextRunDate,latest=due,processed=0;
+  while(due<=today&&(!schedule.endDate||due<=schedule.endDate)&&processed<31){
    let ids:Id<"employees">[]=[];
    if(schedule.targetType==="team"&&schedule.teamId){
     const team=await ctx.db.get(schedule.teamId);
@@ -186,7 +188,7 @@ export const generateDueRecurringWork=internalMutation({args:{},handler:async(ct
     await ctx.db.insert("auditLogs",{organizationId:schedule.organizationId,actorUserId:undefined,action:"recurring_work.generated",entityType:"workAssignment",entityId:String(assignmentId),metadata:{scheduleId:String(schedule._id),workDate:due,employeeCount:valid.length},createdAt:Date.now()});
     generated++;
    }
-   latest=due;due=nextScheduledDate(dateFromDay(dayNumber(due)+1),schedule.frequency,schedule.weekdays);
+   latest=due;processed++;due=nextScheduledDate(dateFromDay(dayNumber(due)+1),schedule.frequency,schedule.weekdays);
   }
   const exhausted=Boolean(schedule.endDate&&due>schedule.endDate);
   if(latest!==schedule.nextRunDate||exhausted)await ctx.db.patch(schedule._id,{nextRunDate:due,isActive:!exhausted,updatedAt:Date.now()});
