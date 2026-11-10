@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireIdentity } from "./lib/auth";
+import { requireAdmin, requireIdentity, requireSuperadmin } from "./lib/auth";
 
 const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
