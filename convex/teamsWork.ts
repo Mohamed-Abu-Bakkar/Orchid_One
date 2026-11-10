@@ -231,7 +231,7 @@ export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx
   const members=await Promise.all(ms.filter(m=>m.isActive).map(async m=>{const x=await ctx.db.get(m.employeeId);return x?{name:[x.firstName,x.lastName].filter(Boolean).join(" "),employeeCode:x.employeeCode}:null;}));
   return {name:t.name,shiftName:s?.name??"Shift unavailable",members:members.filter(Boolean)};
  }));
- const rows=await ctx.db.query("workAssignmentProgress").withIndex("by_employee",q=>q.eq("employeeId",e._id)).take(200);
+ const rows=await ctx.db.query("workAssignmentProgress").withIndex("by_employee",q=>q.eq("employeeId",e._id)).order("desc").take(200);
  const today= a.workDate;
  const assignmentRows=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status,workDate:t.workDate,reviewNote:p.reviewNote??null}:null;}));
  const validAssignments=assignmentRows.filter((row):row is NonNullable<typeof row>=>row!==null);
