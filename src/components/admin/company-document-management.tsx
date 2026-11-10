@@ -81,7 +81,7 @@ export function CompanyDocumentManagement() {
     }
   }
 
-  if (documents === undefined || account === undefined) return <section className="sec"><p className="sub">Loading company documents…</p></section>;
+  if (documents === undefined || account === undefined || account === null) return <section className="sec"><p className="sub">Loading company documents…</p></section>;
   const preview = documents.find(item => item._id === previewId);
 
   return <section className="sec">
