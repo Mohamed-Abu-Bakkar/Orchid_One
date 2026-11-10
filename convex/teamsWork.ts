@@ -26,7 +26,7 @@ export const adminWorkspace=query({args:{workDate:v.string()},handler:async(ctx,
   return {_id:e._id,employeeCode:e.employeeCode,name:[e.firstName,e.lastName].filter(Boolean).join(" "),defaultShiftId:e.defaultShiftId??null,scheduledShiftIds:dated.map(s=>s.shiftId),shiftIds:effectiveShiftIds};
  });
  const teamRows=await Promise.all(teams.filter(t=>t.isActive).map(async t=>{const shift=await ctx.db.get(t.shiftId);const rows=await Promise.all(memberships.filter(m=>m.teamId===t._id&&m.isActive).map(async m=>{const e=await ctx.db.get(m.employeeId);return e?{name:[e.firstName,e.lastName].filter(Boolean).join(" "),employeeCode:e.employeeCode}:null;}));return {_id:t._id,name:t.name,shiftId:t.shiftId,shiftName:shift?.name??"Shift unavailable",members:rows.filter(Boolean)};}));
- const assignmentRows=await Promise.all(assignments.filter(a=>a.isActive).map(async a=>{const [team,employee,progress]=await Promise.all([a.teamId?ctx.db.get(a.teamId):null,a.employeeId?ctx.db.get(a.employeeId):null,ctx.db.query("workAssignmentProgress").withIndex("by_assignment",q=>q.eq("assignmentId",a._id)).collect()]);const rows=await Promise.all(progress.map(async p=>{const e=await ctx.db.get(p.employeeId);return {status:p.status,name:e?[e.firstName,e.lastName].filter(Boolean).join(" "):"Unknown",code:e?.employeeCode??""};}));return {_id:a._id,title:a.title,description:a.description??"",category:a.category,priority:a.priority,workDate:a.workDate,targetName:team?.name??(employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Unknown"),progress:rows};}));
+ const assignmentRows=await Promise.all(assignments.filter(a=>a.isActive).map(async a=>{const [team,employee,progress]=await Promise.all([a.teamId?ctx.db.get(a.teamId):null,a.employeeId?ctx.db.get(a.employeeId):null,ctx.db.query("workAssignmentProgress").withIndex("by_assignment",q=>q.eq("assignmentId",a._id)).collect()]);const rows=await Promise.all(progress.map(async p=>{const e=await ctx.db.get(p.employeeId);return {progressId:p._id,status:p.status,reviewNote:p.reviewNote??null,name:e?[e.firstName,e.lastName].filter(Boolean).join(" "):"Unknown",code:e?.employeeCode??""};}));return {_id:a._id,title:a.title,description:a.description??"",category:a.category,priority:a.priority,workDate:a.workDate,targetName:team?.name??(employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Unknown"),progress:rows};}));
  return {employees:employeeRows,shifts:shifts.filter(s=>s.isActive).map(s=>({_id:s._id,name:s.name,startMinute:s.startMinute,endMinute:s.endMinute,breakMinutes:s.breakMinutes,isActive:s.isActive})),categories:categories.filter(c=>c.isActive).map(c=>c.name),categoryRecords:categories.filter(c=>c.isActive).map(c=>({_id:c._id,name:c.name})),teams:teamRows,memberships:memberships.filter(m=>m.isActive).map(m=>({teamId:m.teamId,employeeId:m.employeeId})),assignments:assignmentRows};
 }});
 
@@ -123,7 +123,29 @@ export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees
 }});
 
 export const createWorkAssignment=mutation({args:{title:v.string(),description:v.optional(v.string()),category:v.string(),priority:v.union(v.literal("low"),v.literal("normal"),v.literal("high")),workDate:v.string(),targetType:v.union(v.literal("employee"),v.literal("team")),employeeId:v.optional(v.id("employees")),teamId:v.optional(v.id("teams"))},handler:async(ctx,a)=>{const u=await requireSuperadmin(ctx);if(!dateOk(a.workDate)||!a.title.trim()||a.title.length>120||!a.category.trim())throw Error("INVALID_WORK");let ids:Id<"employees">[]=[];if(a.targetType==="employee"){if(!a.employeeId||a.teamId)throw Error("INVALID_TARGET");const e=await ctx.db.get(a.employeeId);if(!e||e.organizationId!==u.organizationId||e.status!=="active")throw Error("EMPLOYEE_NOT_AVAILABLE");ids=[a.employeeId];}else{if(!a.teamId||a.employeeId)throw Error("INVALID_TARGET");const t=await ctx.db.get(a.teamId);if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");const ms=await ctx.db.query("teamMemberships").withIndex("by_team_date",q=>q.eq("teamId",t._id).eq("workDate",a.workDate)).collect();ids=ms.filter(m=>m.isActive).map(m=>m.employeeId);if(!ids.length)throw Error("TEAM_HAS_NO_MEMBERS");}const id=await ctx.db.insert("workAssignments",{organizationId:u.organizationId,title:a.title.trim(),description:a.description?.trim()||undefined,category:a.category.trim(),priority:a.priority,workDate:a.workDate,targetType:a.targetType,employeeId:a.employeeId,teamId:a.teamId,createdBy:u._id,createdAt:Date.now(),isActive:true});for(const employeeId of ids){await ctx.db.insert("workAssignmentProgress",{organizationId:u.organizationId,assignmentId:id,employeeId,workDate:a.workDate,status:"not_started",updatedAt:Date.now()});const recipients=await ctx.db.query("users").withIndex("by_org_employee",q=>q.eq("organizationId",u.organizationId).eq("employeeId",employeeId)).collect();for(const recipient of recipients)await ctx.db.insert("notifications",{organizationId:u.organizationId,userId:recipient._id,title:"New work assigned",body:a.title.trim(),createdAt:Date.now()});}await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.created",entityType:"workAssignment",entityId:String(id),createdAt:Date.now()});return id;}});
-export const updateMyWorkStatus=mutation({args:{progressId:v.id("workAssignmentProgress"),status:statuses},handler:async(ctx,a)=>{const u=await requireIdentity(ctx);if(!u.employeeId)throw Error("EMPLOYEE_PROFILE_REQUIRED");const p=await ctx.db.get(a.progressId);if(!p||p.organizationId!==u.organizationId||p.employeeId!==u.employeeId)throw Error("FORBIDDEN");const task=await ctx.db.get(p.assignmentId);if(!task||task.organizationId!==u.organizationId||!task.isActive)throw Error("WORK_UNAVAILABLE");await ctx.db.patch(p._id,{status:a.status,updatedAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.status_updated",entityType:"workAssignmentProgress",entityId:String(p._id),metadata:{status:a.status},createdAt:Date.now()});return true;}});
+export const updateMyWorkStatus=mutation({args:{progressId:v.id("workAssignmentProgress"),status:v.union(v.literal("in_progress"),v.literal("submitted_for_review"))},handler:async(ctx,a)=>{
+ const u=await requireIdentity(ctx);if(!u.employeeId)throw Error("EMPLOYEE_PROFILE_REQUIRED");
+ const p=await ctx.db.get(a.progressId);if(!p||p.organizationId!==u.organizationId||p.employeeId!==u.employeeId)throw Error("FORBIDDEN");
+ const task=await ctx.db.get(p.assignmentId);if(!task||task.organizationId!==u.organizationId||!task.isActive)throw Error("WORK_UNAVAILABLE");
+ if(a.status==="in_progress"&&p.status!=="not_started"&&p.status!=="in_progress")throw Error("INVALID_WORK_TRANSITION");
+ if(a.status==="submitted_for_review"&&p.status!=="in_progress")throw Error("WORK_MUST_BE_IN_PROGRESS");
+ await ctx.db.patch(p._id,{status:a.status,reviewNote:undefined,reviewedBy:undefined,reviewedAt:undefined,updatedAt:Date.now()});
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.status_updated",entityType:"workAssignmentProgress",entityId:String(p._id),metadata:{status:a.status},createdAt:Date.now()});
+ return true;
+}});
+export const reviewWorkSubmission=mutation({args:{progressId:v.id("workAssignmentProgress"),decision:v.union(v.literal("approved"),v.literal("returned")),note:v.optional(v.string())},handler:async(ctx,a)=>{
+ const u=await requireAdmin(ctx),p=await ctx.db.get(a.progressId);
+ if(!p||p.organizationId!==u.organizationId)throw Error("WORK_PROGRESS_NOT_FOUND");
+ if(p.status!=="submitted_for_review")throw Error("WORK_NOT_AWAITING_REVIEW");
+ const note=a.note?.trim();
+ if(a.decision==="returned"&&(!note||note.length>1000))throw Error("REVIEW_NOTE_REQUIRED");
+ const status=a.decision==="approved"?"completed":"in_progress";
+ await ctx.db.patch(p._id,{status,reviewNote:note||undefined,reviewedBy:u._id,reviewedAt:Date.now(),updatedAt:Date.now()});
+ await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_assignment.reviewed",entityType:"workAssignmentProgress",entityId:String(p._id),metadata:{decision:a.decision,note:note||undefined},createdAt:Date.now()});
+ const employeeUsers=await ctx.db.query("users").withIndex("by_org_employee",q=>q.eq("organizationId",u.organizationId).eq("employeeId",p.employeeId)).collect();
+ for(const recipient of employeeUsers)await ctx.db.insert("notifications",{organizationId:u.organizationId,userId:recipient._id,title:a.decision==="approved"?"Work completed":"Work needs an update",body:a.decision==="approved"?"Your work submission was approved.":note||"Your work was returned for updates.",createdAt:Date.now()});
+ return {status};
+}});
 export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx,a)=>{
  const u=await requireIdentity(ctx);if(!dateOk(a.workDate))throw Error("INVALID_WORK_DATE");
  if(!u.employeeId)return {team:null,teams:[],assignments:[]};
@@ -135,10 +157,14 @@ export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx
   const members=await Promise.all(ms.filter(m=>m.isActive).map(async m=>{const x=await ctx.db.get(m.employeeId);return x?{name:[x.firstName,x.lastName].filter(Boolean).join(" "),employeeCode:x.employeeCode}:null;}));
   return {name:t.name,shiftName:s?.name??"Shift unavailable",members:members.filter(Boolean)};
  }));
- const rows=await ctx.db.query("workAssignmentProgress").withIndex("by_employee_date",q=>q.eq("employeeId",e._id).eq("workDate",a.workDate)).take(100);
- const assignments=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive&&t.workDate===a.workDate?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status}:null;}));
+ const rows=await ctx.db.query("workAssignmentProgress").withIndex("by_employee",q=>q.eq("employeeId",e._id)).take(200);
+ const today= a.workDate;
+ const assignmentRows=await Promise.all(rows.map(async p=>{const t=await ctx.db.get(p.assignmentId);return t&&t.organizationId===u.organizationId&&t.isActive?{progressId:p._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority,status:p.status,workDate:t.workDate,reviewNote:p.reviewNote??null}:null;}));
+ const validAssignments=assignmentRows.filter((row):row is NonNullable<typeof row>=>row!==null);
+ const assignments=validAssignments.filter(row=>row.workDate>=today).sort((x,y)=>x.workDate.localeCompare(y.workDate));
+ const history=validAssignments.filter(row=>row.workDate<today).sort((x,y)=>y.workDate.localeCompare(x.workDate));
  const validTeams=teams.filter((team):team is NonNullable<typeof team>=>team!==null);
- return {team:validTeams[0]??null,teams:validTeams,assignments:assignments.filter(Boolean)};
+ return {team:validTeams[0]??null,teams:validTeams,assignments,history};
 }});
 
 
