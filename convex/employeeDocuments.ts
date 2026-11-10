@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireIdentity, requireAdmin } from "./lib/auth";
+import { requireIdentity, requireAdmin, requireRole } from "./lib/auth";
 const allowedTypes=["application/pdf","image/jpeg","image/png"];
 export const generateUploadUrl=mutation({args:{},handler:async(ctx)=>{
  const user=await requireIdentity(ctx);if(!user.employeeId)throw Error("EMPLOYEE_PROFILE_REQUIRED");
