@@ -1237,6 +1237,8 @@ Submit Request
         function closeHelpdesk() { goBack(); }
         function openMore() { pushScreen('moreScreen'); }
         function closeMore() { goBack(); }
+        function openMySchedule() { pushScreen('scheduleScreen'); window.renderMySchedule?.(); }
+        function closeMySchedule() { goBack(); }
         async function signOutEmployee() {
             const button = document.querySelector('#moreScreen button[onclick="signOutEmployee()"]');
             if (button) { button.disabled = true; button.textContent = 'Signing out…'; }
