@@ -29,14 +29,15 @@ export function EmployeePortal() {
  const allowed=!!session.data&&account?.status==="active"&&(account.role==="employee"||account.role==="superadmin");
  const workspace=useQuery(api.employee.myWorkspace,allowed?{}:"skip");
  const companyDocuments=useQuery(api.companyDocuments.listPublishedForEmployee,allowed?{}:"skip");
- const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
- const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
- const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
  const punch=useMutation(api.attendance.recordPunch);
  const uploadUrl=useMutation(api.employee.generateDocumentUploadUrl);
  const saveDocument=useMutation(api.employee.saveMyDocument);
  const [screen,setScreen]=useState<Screen>("home"),[tab,setTab]=useState<Tab>("home");
  const [clock,setClock]=useState(()=>new Date()),[notice,setNotice]=useState("");
+ const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
+ const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
+ const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
+
  const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
  const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
  const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
