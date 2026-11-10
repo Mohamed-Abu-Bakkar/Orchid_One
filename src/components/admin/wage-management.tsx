@@ -12,6 +12,7 @@ const localDate = () => { const date = new Date(); return [date.getFullYear(), S
 
 export function WageManagement() {
   const data = useQuery(api.wages.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
   const rateData=useQuery(api.wages.wageRateAdminData,{});
   const saveHourlyRate=useMutation(api.wages.saveHourlyRate);const saveDailyRate=useMutation(api.wages.saveDailyRate);
   const [wageTab,setWageTab]=useState<"permanent"|"hourly"|"daily">("permanent");
@@ -67,8 +68,9 @@ export function WageManagement() {
     finally { setSaving(false); }
   };
 
-  if (data === undefined || rateData === undefined) return <section className="sec"><p className="sub">Loading wage configuration…</p></section>;
+  if (data === undefined || rateData === undefined || account === undefined) return <section className="sec"><p className="sub">Loading wage configuration…</p></section>;
 
+  if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Read-only compensation reference. Final payable-hours decisions are handled in Hourly Workforce.</p></div></div><div className="grid-2-equal"><article className="panel"><div className="panel-head"><strong>Permanent compensation</strong></div><div className="panel-body">{data.employees.map(item=><p className="t-body-sm" key={item._id}>{item.firstName} {item.lastName} · {item.employeeCode} · {item.compensation.length} configuration(s)</p>)}</div></article><article className="panel"><div className="panel-head"><strong>Hourly and daily rates</strong></div><div className="panel-body">{[...rateData.hourlyEmployees.map(e=>({...e,type:"Hourly"})),...rateData.dailyEmployees.map(e=>({...e,type:"Daily"}))].map(e=><p className="t-body-sm" key={e._id}>{e.name} · {e.employeeCode} · {e.type} · {e.rates.length} rate record(s)</p>)}</div></article></div></section>;
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Configure permanent monthly compensation and effective-dated hourly or daily wage rates.</p></div><span className="badge badge-neutral">{data.employees.length} permanent employees</span></div>
     <div className="wage-scope-note"><Wallet size={18}/><span><strong>Hourly and monthly wage configuration</strong> — approved hourly attendance is calculated separately from permanent employee monthly compensation. This does not generate payslips, process statutory deductions or record payments.</span></div>
