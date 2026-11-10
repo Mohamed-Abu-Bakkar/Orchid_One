@@ -68,7 +68,7 @@ export function WageManagement() {
     finally { setSaving(false); }
   };
 
-  if (data === undefined || rateData === undefined || account === undefined) return <section className="sec"><p className="sub">Loading wage configuration…</p></section>;
+  if (data === undefined || rateData === undefined || account === undefined || account === null) return <section className="sec"><p className="sub">Loading wage configuration…</p></section>;
 
   if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Read-only compensation reference. Final payable-hours decisions are handled in Hourly Workforce.</p></div></div><div className="grid-2-equal"><article className="panel"><div className="panel-head"><strong>Permanent compensation</strong></div><div className="panel-body">{data.employees.map(item=><p className="t-body-sm" key={item._id}>{item.firstName} {item.lastName} · {item.employeeCode} · {item.compensation.length} configuration(s)</p>)}</div></article><article className="panel"><div className="panel-head"><strong>Hourly and daily rates</strong></div><div className="panel-body">{[...rateData.hourlyEmployees.map(e=>({...e,type:"Hourly"})),...rateData.dailyEmployees.map(e=>({...e,type:"Daily"}))].map(e=><p className="t-body-sm" key={e._id}>{e.name} · {e.employeeCode} · {e.type} · {e.rates.length} rate record(s)</p>)}</div></article></div></section>;
   return <section className="sec">
