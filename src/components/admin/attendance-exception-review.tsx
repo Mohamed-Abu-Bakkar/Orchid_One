@@ -29,7 +29,7 @@ export function AttendanceExceptionReview() {
     }
   }
 
-  if (items === undefined || account === undefined) return <section className="sec"><p className="sub">Loading attendance exceptions…</p></section>;
+  if (items === undefined || account === undefined || account === null) return <section className="sec"><p className="sub">Loading attendance exceptions…</p></section>;
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{ fontSize: 22 }}>Geofence exceptions</h2><p className="sub">Review attendance punches recorded outside the employee’s assigned work location.</p></div><span className="badge badge-neutral">{items.length} pending</span></div>
     {error && <p role="alert" className="text-sm" style={{ color: "var(--error)", marginBottom: 16 }}>{error}</p>}
