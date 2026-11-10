@@ -526,7 +526,8 @@
       // Employee performance is derived only from recorded attendance days and finalized wages.
       const performance = workspace.performance ?? {};
       const performanceDays = performance.attendanceDays ?? [];
-      const validWorkDays = performanceDays.filter(day => ["present", "late"].includes(day.status));
+      const scheduledPerformanceDates = new Set(performance.scheduledWorkDates ?? []);
+      const validWorkDays = performanceDays.filter(day => ["present", "late"].includes(day.status) && (!performance.scheduledWorkDates || scheduledPerformanceDates.has(day.workDate)));
       const totalPayableMinutes = validWorkDays.reduce((sum, day) => sum + Math.max(0, Number(day.payableMinutes) || 0), 0);
       const hoursValue = totalPayableMinutes / 60;
       text("#performanceTotalHours", hoursValue.toLocaleString("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "h");
