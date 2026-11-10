@@ -69,7 +69,50 @@ export function EmployeePortal() {
  {screen==="payslips"&&<section className="oe-screen"><PageHeading title="Payslips" eyebrow="MY PAY" subtitle="Wage records published for your employee profile"/><div className="oe-list-card">{linked&&workspace.wageRecords.length?workspace.wageRecords.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">₹</span><span className="oe-list-copy"><strong>{x.period?`${dateLabel(x.period.fromDate)} – ${dateLabel(x.period.toDate)}`:"Wage period"}</strong><small>{x.payableUnits} payable units · {x.status.replace("_"," ")}</small></span><strong>{money(x.totalPaise)}</strong></div>):<Empty title="No payslips available" detail="Wage records will appear after HR publishes an approved wage period."/>}</div></section>}
  {screen==="requests"&&<section className="oe-screen"><PageHeading title="My Requests" eyebrow="MY WORK" subtitle="Track your leave requests and balances"/><div className="oe-list-card">{linked&&workspace.leaveRequests.length?workspace.leaveRequests.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">▤</span><span className="oe-list-copy"><strong>{dateLabel(x.fromDate)} – {dateLabel(x.toDate)}</strong><small>{x.requestedDays} day(s) · {x.reason}</small></span><span className="oe-status oe-status-neutral">{x.status}</span></div>):<Empty title="No requests submitted" detail="Request submission will be enabled when leave types, date counting and approval rules are finalized."/>}</div><p className="oe-section-label">Leave balances</p><div className="oe-list-card">{linked&&workspace.leaveBalances.length?workspace.leaveBalances.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-copy"><strong>{x.leaveTypeName}</strong><small>{x.periodYear} · {x.used} used · {x.pending} pending</small></span><strong>{Math.max(0,x.allocated-x.used-x.pending)} left</strong></div>):<Empty title="No leave balance configured" detail="HR has not assigned leave balances to your profile."/>}</div></section>}
  {screen==="documents"&&<section className="oe-screen"><PageHeading title="My Documents" eyebrow="MY RECORDS" subtitle="Your employee documents and verification status"/>{linked&&<div className="oe-upload-card"><strong>Upload document</strong><p>Add a document to your employee records.</p><select value={docType} onChange={e=>setDocType(e.target.value)}><option>Identity</option><option>Education</option><option>Employment</option><option>Address proof</option><option>Other</option></select><label className="oe-upload-button">{uploadBusy?"Uploading…":"Choose file"}<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" disabled={uploadBusy} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);e.currentTarget.value=""}}/></label>{uploadNotice&&<p role="status">{uploadNotice}</p>}</div>}<div className="oe-list-card">{linked&&workspace.documents.length?workspace.documents.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">▧</span><span className="oe-list-copy"><strong>{x.documentType}</strong><small>{x.originalFileName} · {dateLabel(x.uploadedAt)}</small></span><span className="oe-status oe-status-neutral">{x.reviewStatus}</span>{x.url&&<a href={x.url} target="_blank" rel="noreferrer">Open</a>}</div>):<Empty title={linked?"No documents available":"Employee profile not linked"} detail="Employee documents will appear after they are uploaded or assigned."/>}</div><p className="oe-section-label">Company documents</p><div className="oe-list-card">{companyDocuments?.length?companyDocuments.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-copy"><strong>{x.title}</strong><small>{x.category} · {x.originalFileName}</small></span>{x.url&&<a href={x.url} target="_blank" rel="noreferrer">Open</a>}</div>):<Empty title="No company documents published" detail="Documents shared by Orchid Flowers will appear here."/>}</div></section>}
- {screen==="tasks"&&<section className="oe-screen"><PageHeading title="My Tasks" eyebrow="WORK ASSIGNMENTS" subtitle="Work assigned to you by Orchid Flowers"/>{!linked?<Empty title="Employee profile not linked" detail="Your account must be linked to an active employee record to view assigned work."/>:!myWork?<p className="oe-muted">Loading your assignments…</p>:<><p className="oe-section-label">Upcoming and due work</p><div className="oe-list-card">{myWork.assignments?.length?myWork.assignments.map((task:any)=><article className="oe-list-row" key={task.progressId}><span className="oe-list-copy"><strong>{task.title}</strong><small>{task.category} · {dateLabel(task.workDate)} · {task.priority} priority</small>{task.description&&<small>{task.description}</small>}{task.reviewNote&&<small>Reviewer note: {task.reviewNote}</small>}</span><span className="oe-status oe-status-neutral">{task.status.replaceAll("_"," ")}</span><span className="oe-task-actions">{task.status==="not_started"&&<button className="oe-secondary-button" onClick={()=>void updateWork({progressId:task.progressId,status:"in_progress"}).catch(e=>setNotice(e instanceof Error?e.message:"Unable to update task."))}>Start</button>}{task.status==="in_progress"&&<button className="oe-secondary-button" onClick={()=>void updateWork({progressId:task.progressId,status:"submitted_for_review"}).catch(e=>setNotice(e instanceof Error?e.message:"Unable to submit task."))}>Submit for review</button>}</span></article>):<Empty title="No assigned tasks" detail="New work assignments will appear here when your supervisor assigns them."/></div><p className="oe-section-label">Completed and past work</p><div className="oe-list-card">{myWork.history?.length?myWork.history.map((task:any)=><div className="oe-list-row" key={task.progressId}><span className="oe-list-copy"><strong>{task.title}</strong><small>{task.category} · {dateLabel(task.workDate)}</small></span><span className="oe-status oe-status-neutral">{task.status.replaceAll("_"," ")}</span></div>):<Empty title="No work history yet" detail="Past assignments will appear here."/></div></>}</section>}
+ {screen==="tasks"&&(
+  <section className="oe-screen">
+   <PageHeading title="My Tasks" eyebrow="WORK ASSIGNMENTS" subtitle="Work assigned to you by Orchid Flowers"/>
+   {!linked ? (
+    <Empty title="Employee profile not linked" detail="Your account must be linked to an active employee record to view assigned work."/>
+   ) : !myWork ? (
+    <p className="oe-muted">Loading your assignments…</p>
+   ) : (
+    <>
+     <p className="oe-section-label">Upcoming and due work</p>
+     <div className="oe-list-card">
+      {myWork.assignments?.length ? myWork.assignments.map((task:any)=>(
+       <article className="oe-list-row" key={task.progressId}>
+        <span className="oe-list-copy">
+         <strong>{task.title}</strong>
+         <small>{task.category} · {dateLabel(task.workDate)} · {task.priority} priority</small>
+         {task.description && <small>{task.description}</small>}
+         {task.reviewNote && <small>Reviewer note: {task.reviewNote}</small>}
+        </span>
+        <span className="oe-status oe-status-neutral">{task.status.replaceAll("_"," ")}</span>
+        <span className="oe-task-actions">
+         {task.status==="not_started" && <button className="oe-secondary-button" onClick={()=>void updateWork({progressId:task.progressId,status:"in_progress"}).catch(e=>setNotice(e instanceof Error?e.message:"Unable to update task."))}>Start</button>}
+         {task.status==="in_progress" && <button className="oe-secondary-button" onClick={()=>void updateWork({progressId:task.progressId,status:"submitted_for_review"}).catch(e=>setNotice(e instanceof Error?e.message:"Unable to submit task."))}>Submit for review</button>}
+        </span>
+       </article>
+      )) : <Empty title="No assigned tasks" detail="New work assignments will appear here when your supervisor assigns them."/>}
+     </div>
+     <p className="oe-section-label">Completed and past work</p>
+     <div className="oe-list-card">
+      {myWork.history?.length ? myWork.history.map((task:any)=>(
+       <div className="oe-list-row" key={task.progressId}>
+        <span className="oe-list-copy">
+         <strong>{task.title}</strong>
+         <small>{task.category} · {dateLabel(task.workDate)}</small>
+        </span>
+        <span className="oe-status oe-status-neutral">{task.status.replaceAll("_"," ")}</span>
+       </div>
+      )) : <Empty title="No work history yet" detail="Past assignments will appear here."/>}
+     </div>
+    </>
+   )}
+  </section>
+ )}
+
  {screen==="performance"&&<section className="oe-screen"><PageHeading title="Performance" eyebrow="MY WORK" subtitle="Your performance information"/><Empty title="Performance metrics are not configured" detail="Scores and rankings will remain unavailable until Orchid Flowers defines its performance metrics and review process."/></section>}
  {screen==="notifications"&&<section className="oe-screen"><PageHeading title="Notifications" eyebrow="UPDATES" subtitle="Updates related to your employee account"/><div className="oe-list-card">{linked&&workspace.notifications.length?workspace.notifications.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">♧</span><span className="oe-list-copy"><strong>{x.title}</strong><small>{x.body} · {dateLabel(x.createdAt)}</small></span><span className="oe-status oe-status-neutral">{x.readAt?"Read":"New"}</span></div>):<Empty title="You're all caught up" detail="New notifications will appear here."/>}</div></section>}
  {screen==="policies"&&<section className="oe-screen"><PageHeading title="Policies" eyebrow="ORCHID FLOWERS" subtitle="Review company policies and acknowledgements"/><EmployeePolicies/></section>}
