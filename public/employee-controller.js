@@ -162,6 +162,93 @@
       });
     }
   }
+
+  function renderMyWork() {
+    const root = document.getElementById("myWorkList");
+    const historyRoot = document.getElementById("myWorkHistory");
+    const counts = document.getElementById("myWorkSummary");
+    if (!root || !historyRoot) return;
+    root.replaceChildren();
+    historyRoot.replaceChildren();
+    const work = window.__orchidWork || {};
+    const active = work.assignments || [];
+    const history = work.history || [];
+    if (counts) counts.textContent = active.length + " active · " + history.length + " in history";
+    const renderTask = (task, target, isHistory) => {
+      const card = document.createElement("article");
+      card.className = "rounded-xl border border-outline-variant/50 bg-surface p-4 mb-3";
+      const top = document.createElement("div");
+      top.className = "flex items-start justify-between gap-3";
+      const title = document.createElement("h3");
+      title.className = "text-body-lg font-semibold text-on-surface";
+      title.textContent = task.title;
+      const status = document.createElement("span");
+      status.className = "text-[10px] rounded-full px-2 py-1 bg-surface-container text-on-surface-variant whitespace-nowrap";
+      status.textContent = String(task.status || "not_started").replaceAll("_", " ");
+      top.append(title, status);
+      const meta = document.createElement("p");
+      meta.className = "text-label-sm text-on-surface-variant mt-2";
+      meta.textContent = [task.category, task.priority, scheduleDateLabel(task.workDate, { day: "2-digit", month: "short", year: "numeric" })].filter(Boolean).join(" · ");
+      card.append(top, meta);
+      if (task.description) {
+        const description = document.createElement("p");
+        description.className = "text-body-sm text-on-surface-variant mt-3 whitespace-pre-wrap";
+        description.textContent = task.description;
+        card.append(description);
+      }
+      if (task.reviewNote) {
+        const note = document.createElement("p");
+        note.className = "text-body-sm text-amber-700 bg-amber-50 rounded-lg p-2 mt-3";
+        note.textContent = "Supervisor note: " + task.reviewNote;
+        card.append(note);
+      }
+      if (!isHistory && task.status === "not_started") {
+        const start = document.createElement("button");
+        start.type = "button"; start.className = "w-full mt-4 rounded-lg bg-primary text-white py-2.5 font-semibold";
+        start.textContent = "Start Work";
+        start.addEventListener("click", () => updateMyWork(task.progressId, "in_progress", start));
+        card.append(start);
+      } else if (!isHistory && task.status === "in_progress") {
+        const submit = document.createElement("button");
+        submit.type = "button"; submit.className = "w-full mt-4 rounded-lg bg-primary text-white py-2.5 font-semibold";
+        submit.textContent = "Submit for Review";
+        submit.addEventListener("click", () => updateMyWork(task.progressId, "submitted_for_review", submit));
+        card.append(submit);
+      } else if (task.status === "submitted_for_review") {
+        const info = document.createElement("p");
+        info.className = "text-label-sm text-primary mt-3";
+        info.textContent = "Submitted. Waiting for supervisor review.";
+        card.append(info);
+      }
+      target.append(card);
+    };
+    if (!active.length) empty(root, "No current or upcoming work has been assigned to you.");
+    else active.forEach(task => renderTask(task, root, false));
+    if (!history.length) empty(historyRoot, "No previous work assignments.");
+    else history.forEach(task => renderTask(task, historyRoot, true));
+  }
+  async function updateMyWork(progressId, status, button) {
+    if (!progressId || !button) return;
+    const label = button.textContent;
+    button.disabled = true; button.textContent = "Saving…";
+    try {
+      const response = await fetch("/api/employee/work", {
+        method: "PATCH", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ progressId, status })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to update work.");
+      await hydrate();
+      renderMyWork();
+      window.toast?.(status === "in_progress" ? "Work started." : "Work submitted for supervisor review.");
+    } catch (error) {
+      button.disabled = false; button.textContent = label;
+      window.toast?.(error instanceof Error ? error.message : "Unable to update work.");
+    }
+  }
+  window.renderMyWork = renderMyWork;
+
   window.renderMySchedule = renderMySchedule;
 
 
@@ -197,6 +284,7 @@
       if (!response.ok) throw new Error("Unable to load employee workspace");
       const { workspace, policies, work } = await response.json();
       window.__orchidWorkspace = workspace;
+      window.__orchidWork = work || { assignments: [], history: [] };
       if (!workspace?.linked || !workspace.profile) {
         window.location.replace("/profile-pending");
         return;
