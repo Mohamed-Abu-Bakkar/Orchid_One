@@ -23,8 +23,7 @@ export const saveConfiguration = mutation({
     activate: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin" && admin.role !== "supervisor") throw new Error("FORBIDDEN");
+    const admin = await requireRole(ctx, ["superadmin"]);
     const location = await ctx.db.get(args.locationId);
     if (!location || location.organizationId !== admin.organizationId) throw new Error("LOCATION_NOT_FOUND");
 
