@@ -31,9 +31,17 @@ export const listPendingForAdmin=query({args:{},handler:async(ctx)=>{
   return {...doc,employeeName:employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Employee",employeeCode:employee?.employeeCode??"",departmentName:department?.name??"",url,replacingFileName:previous?.originalFileName??null};
  }));
 }});
-export const reviewDocument=mutation({args:{documentId:v.id("employeeDocuments"),decision:v.union(v.literal("verified"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,args)=>{
- const admin=await requireAdmin(ctx),doc=await ctx.db.get(args.documentId);if(!doc||doc.organizationId!==admin.organizationId)throw Error("DOCUMENT_NOT_FOUND");
+export const recommendDocument=mutation({args:{documentId:v.id("employeeDocuments"),decision:v.union(v.literal("verified"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,args)=>{
+ const reviewer=await requireRole(ctx,["supervisor"]),doc=await ctx.db.get(args.documentId);if(!doc||doc.organizationId!==reviewer.organizationId)throw Error("DOCUMENT_NOT_FOUND");
  if(doc.reviewStatus!=="pending")throw Error("DOCUMENT_ALREADY_REVIEWED");
+ const note=args.note?.trim();if(args.decision==="rejected"&&!note)throw Error("REJECTION_REASON_REQUIRED");
+ await ctx.db.patch(doc._id,{supervisorRecommendation:args.decision,supervisorReviewedBy:reviewer._id,supervisorReviewedAt:Date.now(),supervisorNote:note||undefined});
+ await ctx.db.insert("auditLogs",{organizationId:reviewer.organizationId,actorUserId:reviewer._id,action:"employee.document.recommended",entityType:"employeeDocument",entityId:String(doc._id),metadata:{recommendation:args.decision,note:note??null},createdAt:Date.now()});
+ return {recommended:true};
+}});
+export const reviewDocument=mutation({args:{documentId:v.id("employeeDocuments"),decision:v.union(v.literal("verified"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,args)=>{
+ const admin=await requireRole(ctx,["superadmin"]),doc=await ctx.db.get(args.documentId);if(!doc||doc.organizationId!==admin.organizationId)throw Error("DOCUMENT_NOT_FOUND");
+ if(doc.reviewStatus!=="pending")throw Error("DOCUMENT_ALREADY_REVIEWED");if(!doc.supervisorRecommendation)throw Error("SUPERVISOR_REVIEW_REQUIRED");
  const now=Date.now(),note=args.note?.trim();if(args.decision==="rejected"&&!note)throw Error("REJECTION_REASON_REQUIRED");
  if(args.decision==="verified"&&doc.replacesDocumentId){
   const old=await ctx.db.get(doc.replacesDocumentId);
