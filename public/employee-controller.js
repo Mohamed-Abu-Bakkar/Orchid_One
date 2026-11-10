@@ -17,6 +17,153 @@
     return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date);
   };
   const safe = (value) => value == null || value === "" ? "—" : String(value);
+  const scheduleTime = (minute) => {
+    const value = Number(minute);
+    if (!Number.isFinite(value)) return "—";
+    const normalized = ((value % 1440) + 1440) % 1440;
+    return String(Math.floor(normalized / 60)).padStart(2, "0") + ":" + String(normalized % 60).padStart(2, "0");
+  };
+  const scheduleDateLabel = (value, options = { weekday: "long", day: "2-digit", month: "long", year: "numeric" }) => {
+    const date = new Date(value + "T00:00:00Z");
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { ...options, timeZone: "UTC" }).format(date);
+  };
+  function renderMySchedule() {
+    const workspace = window.__orchidWorkspace;
+    const schedule = workspace?.schedule;
+    const monthTitle = document.getElementById("scheduleMonthTitle");
+    const calendar = document.getElementById("scheduleCalendarGrid");
+    const selectedTitle = document.getElementById("scheduleSelectedDate");
+    const dayDetails = document.getElementById("scheduleDayDetails");
+    const upcomingList = document.getElementById("scheduleUpcomingList");
+    const upcomingCount = document.getElementById("scheduleUpcomingCount");
+    if (!calendar || !dayDetails || !upcomingList) return;
+    calendar.replaceChildren();
+    dayDetails.replaceChildren();
+    upcomingList.replaceChildren();
+    if (!schedule?.month || !Array.isArray(schedule.days) || !schedule.days.length) {
+      if (monthTitle) monthTitle.textContent = "Schedule unavailable";
+      empty(calendar, "No schedule data is available.");
+      empty(dayDetails, "Your schedule could not be loaded.");
+      empty(upcomingList, "No upcoming shifts available.");
+      if (upcomingCount) upcomingCount.textContent = "";
+      return;
+    }
+    const [year, month] = schedule.month.split("-").map(Number);
+    const firstDay = new Date(Date.UTC(year, month - 1, 1));
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    if (monthTitle) monthTitle.textContent = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(firstDay);
+    const byDate = new Map(schedule.days.map(day => [day.date, day]));
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+    let selectedDate = byDate.has(today) ? today : schedule.days[0].date;
+    const renderDetails = (dateKey) => {
+      const day = byDate.get(dateKey);
+      if (!day) return;
+      if (selectedTitle) selectedTitle.textContent = scheduleDateLabel(dateKey);
+      dayDetails.replaceChildren();
+      (day.holidays || []).forEach(name => {
+        const holiday = document.createElement("p");
+        holiday.className = "text-body-sm font-medium text-[#B26A00] mb-2";
+        holiday.textContent = "Holiday · " + name;
+        dayDetails.append(holiday);
+      });
+      if (day.shifts?.length) {
+        day.shifts.forEach(shift => {
+          const card = document.createElement("div");
+          card.className = "rounded-lg bg-surface-container-low p-3 mb-2";
+          const name = document.createElement("p");
+          name.className = "text-body-md font-semibold text-on-surface";
+          name.textContent = shift.name;
+          const timing = document.createElement("p");
+          timing.className = "text-label-sm text-on-surface-variant mt-1";
+          const overnight = Number(shift.endMinute) <= Number(shift.startMinute) ? " (+1 day)" : "";
+          timing.textContent = scheduleTime(shift.startMinute) + " – " + scheduleTime(shift.endMinute) + overnight;
+          const breakTime = document.createElement("p");
+          breakTime.className = "text-label-sm text-on-surface-variant mt-1";
+          breakTime.textContent = "Break · " + (Number(shift.breakMinutes) || 0) + " minutes";
+          card.append(name, timing, breakTime);
+          dayDetails.append(card);
+        });
+      } else if (day.weeklyOff) {
+        const off = document.createElement("p");
+        off.className = "text-body-sm text-on-surface-variant";
+        off.textContent = "Weekly off";
+        dayDetails.append(off);
+      } else if (!(day.holidays || []).length) {
+        const none = document.createElement("p");
+        none.className = "text-body-sm text-on-surface-variant";
+        none.textContent = "No shift assigned for this date.";
+        dayDetails.append(none);
+      }
+      calendar.querySelectorAll("[data-schedule-date]").forEach(button => {
+        const active = button.dataset.scheduleDate === dateKey;
+        button.classList.toggle("bg-primary", active);
+        button.classList.toggle("text-white", active);
+        button.classList.toggle("border-primary", active);
+        button.classList.toggle("bg-surface-container-low", !active && Boolean(byDate.get(button.dataset.scheduleDate)?.shifts?.length));
+        button.classList.toggle("text-on-surface", !active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    };
+    const leading = firstDay.getUTCDay();
+    for (let index = 0; index < leading; index++) {
+      const spacer = document.createElement("span");
+      spacer.className = "min-h-10";
+      calendar.append(spacer);
+    }
+    for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
+      const dateKey = schedule.month + "-" + String(dayNumber).padStart(2, "0");
+      const item = byDate.get(dateKey);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.scheduleDate = dateKey;
+      button.className = "min-h-10 rounded-lg border border-outline-variant/40 flex flex-col items-center justify-center gap-0.5 text-xs font-medium";
+      button.setAttribute("aria-label", scheduleDateLabel(dateKey) + (item?.shifts?.length ? ", shift assigned" : item?.weeklyOff ? ", weekly off" : ""));
+      const number = document.createElement("span");
+      number.textContent = String(dayNumber);
+      button.append(number);
+      if (item?.shifts?.length || item?.weeklyOff || item?.holidays?.length) {
+        const dot = document.createElement("span");
+        dot.className = "w-1.5 h-1.5 rounded-full " + (item?.holidays?.length ? "bg-[#D97706]" : item?.shifts?.length ? "bg-primary" : "bg-outline");
+        if (item?.holidays?.length) dot.style.backgroundColor = "#D97706";
+        button.append(dot);
+      }
+      if (dateKey === today) button.classList.add("ring-1", "ring-primary");
+      button.addEventListener("click", () => renderDetails(dateKey));
+      calendar.append(button);
+    }
+    renderDetails(selectedDate);
+    const upcoming = schedule.days.filter(day => day.date >= today && day.shifts?.length).flatMap(day => day.shifts.map(shift => ({ date: day.date, shift })));
+    if (upcomingCount) upcomingCount.textContent = upcoming.length ? String(upcoming.length) : "";
+    if (!upcoming.length) {
+      empty(upcomingList, "No upcoming shifts scheduled this month.");
+    } else {
+      upcoming.slice(0, 12).forEach((item, index) => {
+        if (index) {
+          const divider = document.createElement("div");
+          divider.className = "h-px bg-outline-variant/30 mx-4";
+          upcomingList.append(divider);
+        }
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between gap-3 px-4 py-3";
+        const copy = document.createElement("div");
+        copy.className = "flex flex-col min-w-0";
+        const name = document.createElement("p");
+        name.className = "text-body-md font-medium text-on-surface";
+        name.textContent = item.shift.name;
+        const date = document.createElement("p");
+        date.className = "text-label-sm text-on-surface-variant mt-0.5";
+        date.textContent = scheduleDateLabel(item.date, { weekday: "short", day: "2-digit", month: "short" });
+        copy.append(name, date);
+        const time = document.createElement("span");
+        time.className = "text-label-sm font-semibold text-on-surface-variant flex-shrink-0";
+        time.textContent = scheduleTime(item.shift.startMinute) + " – " + scheduleTime(item.shift.endMinute);
+        row.append(copy, time);
+        upcomingList.append(row);
+      });
+    }
+  }
+  window.renderMySchedule = renderMySchedule;
+
 
   // Register document upload immediately; it must not wait for workspace hydration.
   window.uploadEmployeeDocument=async()=>{
