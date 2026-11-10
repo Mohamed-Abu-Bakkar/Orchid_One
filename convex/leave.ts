@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin } from "./lib/auth";
+import { requireAdmin, requireSuperadmin, requireRole } from "./lib/auth";
 
 const validDate = (value: string): boolean => {
  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -35,31 +35,31 @@ export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{yea
 }});
 
 export const saveLeaveType=mutation({args:{leaveTypeId:v.optional(v.id("leaveTypes")),name:v.string(),code:v.string(),isPaid:v.boolean()},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx),name=a.name.trim(),code=a.code.trim().toUpperCase();
+ const u=await requireSuperadmin(ctx),name=a.name.trim(),code=a.code.trim().toUpperCase();
  if(!name||name.length>80||!code||code.length>20)throw Error("INVALID_LEAVE_TYPE");
  const all=await ctx.db.query("leaveTypes").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect();
  if(all.some(x=>x._id!==a.leaveTypeId&&(x.code===code||x.name.toLowerCase()===name.toLowerCase())))throw Error("LEAVE_TYPE_EXISTS");
  if(a.leaveTypeId){const old=await ctx.db.get(a.leaveTypeId);if(!old||old.organizationId!==u.organizationId)throw Error("LEAVE_TYPE_NOT_FOUND");await ctx.db.patch(a.leaveTypeId,{name,code,isPaid:a.isPaid});await audit(ctx,u,"leave.type.updated","leaveType",String(a.leaveTypeId),{name,code,isPaid:a.isPaid});return a.leaveTypeId;}
  const id=await ctx.db.insert("leaveTypes",{organizationId:u.organizationId,name,code,isPaid:a.isPaid,isActive:true});await audit(ctx,u,"leave.type.created","leaveType",String(id),{name,code,isPaid:a.isPaid});return id;
 }});
-export const setLeaveTypeActive=mutation({args:{leaveTypeId:v.id("leaveTypes"),isActive:v.boolean()},handler:async(ctx,a)=>{const u=await requireAdmin(ctx),row=await ctx.db.get(a.leaveTypeId);if(!row||row.organizationId!==u.organizationId)throw Error("LEAVE_TYPE_NOT_FOUND");await ctx.db.patch(a.leaveTypeId,{isActive:a.isActive});await audit(ctx,u,a.isActive?"leave.type.activated":"leave.type.archived","leaveType",String(a.leaveTypeId));}});
+export const setLeaveTypeActive=mutation({args:{leaveTypeId:v.id("leaveTypes"),isActive:v.boolean()},handler:async(ctx,a)=>{const u=await requireSuperadmin(ctx),row=await ctx.db.get(a.leaveTypeId);if(!row||row.organizationId!==u.organizationId)throw Error("LEAVE_TYPE_NOT_FOUND");await ctx.db.patch(a.leaveTypeId,{isActive:a.isActive});await audit(ctx,u,a.isActive?"leave.type.activated":"leave.type.archived","leaveType",String(a.leaveTypeId));}});
 export const saveWorkCalendar=mutation({args:{locationId:v.optional(v.id("locations")),weeklyOffDays:v.array(v.number())},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx);if(a.weeklyOffDays.some(d=>!Number.isInteger(d)||d<0||d>6)||new Set(a.weeklyOffDays).size!==a.weeklyOffDays.length||a.weeklyOffDays.length===7)throw Error("INVALID_WEEKLY_OFF_DAYS");
+ const u=await requireSuperadmin(ctx);if(a.weeklyOffDays.some(d=>!Number.isInteger(d)||d<0||d>6)||new Set(a.weeklyOffDays).size!==a.weeklyOffDays.length||a.weeklyOffDays.length===7)throw Error("INVALID_WEEKLY_OFF_DAYS");
  if(a.locationId){const loc=await ctx.db.get(a.locationId);if(!loc||loc.organizationId!==u.organizationId)throw Error("LOCATION_NOT_FOUND");}
  const rows=await ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect(),old=rows.find(x=>x.locationId===a.locationId);
  if(old)await ctx.db.patch(old._id,{weeklyOffDays:a.weeklyOffDays,updatedAt:Date.now(),updatedBy:u._id});else await ctx.db.insert("workCalendars",{organizationId:u.organizationId,locationId:a.locationId,weeklyOffDays:a.weeklyOffDays,updatedAt:Date.now(),updatedBy:u._id});
  await audit(ctx,u,"leave.calendar.updated","workCalendar",String(a.locationId??"organization"),{weeklyOffDays:a.weeklyOffDays});
 }});
 export const saveHoliday=mutation({args:{holidayId:v.optional(v.id("holidays")),name:v.string(),date:v.string(),locationId:v.optional(v.id("locations"))},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx),name=a.name.trim();if(!name||name.length>100||!validDate(a.date))throw Error("INVALID_HOLIDAY");
+ const u=await requireSuperadmin(ctx),name=a.name.trim();if(!name||name.length>100||!validDate(a.date))throw Error("INVALID_HOLIDAY");
  if(a.locationId){const l=await ctx.db.get(a.locationId);if(!l||l.organizationId!==u.organizationId)throw Error("LOCATION_NOT_FOUND");}
  if(a.holidayId){const old=await ctx.db.get(a.holidayId);if(!old||old.organizationId!==u.organizationId)throw Error("HOLIDAY_NOT_FOUND");await ctx.db.patch(a.holidayId,{name,date:a.date,locationId:a.locationId});await audit(ctx,u,"holiday.updated","holiday",String(a.holidayId),{name,date:a.date});return a.holidayId;}
  const id=await ctx.db.insert("holidays",{organizationId:u.organizationId,name,date:a.date,locationId:a.locationId});await audit(ctx,u,"holiday.created","holiday",String(id),{name,date:a.date});return id;
 }});
-export const deleteHoliday=mutation({args:{holidayId:v.id("holidays")},handler:async(ctx,{holidayId})=>{const u=await requireAdmin(ctx),row=await ctx.db.get(holidayId);if(!row||row.organizationId!==u.organizationId)throw Error("HOLIDAY_NOT_FOUND");await ctx.db.delete(holidayId);await audit(ctx,u,"holiday.deleted","holiday",String(holidayId),{name:row.name,date:row.date});}});
+export const deleteHoliday=mutation({args:{holidayId:v.id("holidays")},handler:async(ctx,{holidayId})=>{const u=await requireSuperadmin(ctx),row=await ctx.db.get(holidayId);if(!row||row.organizationId!==u.organizationId)throw Error("HOLIDAY_NOT_FOUND");await ctx.db.delete(holidayId);await audit(ctx,u,"holiday.deleted","holiday",String(holidayId),{name:row.name,date:row.date});}});
 
 export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),periodYear:v.number(),allocated:v.number()},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx);
+ const u=await requireSuperadmin(ctx);
  if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
  const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");
  const rows=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
@@ -80,7 +80,7 @@ export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),per
 }});
 
 export const saveBalance=mutation({args:{employeeId:v.id("employees"),leaveTypeId:v.id("leaveTypes"),periodYear:v.number(),allocated:v.number()},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx);if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
+ const u=await requireSuperadmin(ctx);if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
  const [e,t]=await Promise.all([ctx.db.get(a.employeeId),ctx.db.get(a.leaveTypeId)]);if(!e||e.organizationId!==u.organizationId||!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("INVALID_EMPLOYEE_OR_LEAVE_TYPE");
  const rows=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",a.employeeId).eq("periodYear",a.periodYear)).collect(),old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
  if(old){if(a.allocated<old.used+old.pending)throw Error("ALLOCATION_BELOW_COMMITTED_DAYS");await ctx.db.patch(old._id,{allocated:a.allocated,isOverride:true});await audit(ctx,u,"leave.balance.updated","leaveBalance",String(old._id),{allocated:a.allocated});return old._id;}
@@ -88,7 +88,7 @@ export const saveBalance=mutation({args:{employeeId:v.id("employees"),leaveTypeI
 }});
 
 export const resetBalanceToDefault=mutation({args:{employeeId:v.id("employees"),leaveTypeId:v.id("leaveTypes"),periodYear:v.number()},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx);
+ const u=await requireSuperadmin(ctx);
  const [employee,type]=await Promise.all([ctx.db.get(a.employeeId),ctx.db.get(a.leaveTypeId)]);
  if(!employee||employee.organizationId!==u.organizationId||!type||type.organizationId!==u.organizationId)throw Error("INVALID_EMPLOYEE_OR_LEAVE_TYPE");
  const defaults=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
@@ -101,8 +101,19 @@ export const resetBalanceToDefault=mutation({args:{employeeId:v.id("employees"),
  return true;
 }});
 
+
+export const recommendRequest=mutation({args:{requestId:v.id("leaveRequests"),recommendation:v.union(v.literal("approved"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,a)=>{
+ const u=await requireRole(ctx,["supervisor"]);const r=await ctx.db.get(a.requestId);
+ if(!r||r.organizationId!==u.organizationId)throw Error("LEAVE_REQUEST_NOT_FOUND");
+ if(r.status!=="pending")throw Error("LEAVE_REQUEST_ALREADY_DECIDED");
+ const note=a.note?.trim();if(a.recommendation==="rejected"&&!note)throw Error("REJECTION_REASON_REQUIRED");
+ await ctx.db.patch(r._id,{supervisorRecommendation:a.recommendation,supervisorReviewedBy:u._id,supervisorReviewedAt:Date.now(),supervisorNote:note||undefined});
+ await audit(ctx,u,"leave.request.recommended","leaveRequest",String(r._id),{recommendation:a.recommendation,note:note??null});
+ return {recommended:true};
+}});
+
 export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decision:v.union(v.literal("approved"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,a)=>{
- const u=await requireAdmin(ctx),r=await ctx.db.get(a.requestId);if(!r||r.organizationId!==u.organizationId)throw Error("LEAVE_REQUEST_NOT_FOUND");if(r.status!=="pending")throw Error("LEAVE_REQUEST_ALREADY_DECIDED");
+ const u=await requireSuperadmin(ctx),r=await ctx.db.get(a.requestId);if(!r||r.organizationId!==u.organizationId)throw Error("LEAVE_REQUEST_NOT_FOUND");if(r.status!=="pending")throw Error("LEAVE_REQUEST_ALREADY_DECIDED");if(!r.supervisorRecommendation)throw Error("SUPERVISOR_REVIEW_REQUIRED");
  const [employee,type]=await Promise.all([ctx.db.get(r.employeeId),ctx.db.get(r.leaveTypeId)]);
  if(!employee||!type)throw Error("LEAVE_REFERENCE_MISSING");
  const days=r.requestedDays;
