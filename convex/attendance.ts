@@ -72,6 +72,7 @@ export const pendingGeofenceExceptions = query({
       const [employee, location] = await Promise.all([ctx.db.get(event.employeeId), ctx.db.get(event.locationId)]);
       return {
         _id: event._id, eventType: event.eventType, latitude: event.latitude, longitude: event.longitude,
+        supervisorRecommendation: event.supervisorRecommendation, supervisorNote: event.supervisorNote,
         accuracyM: event.accuracyM, clientTimestamp: event.clientTimestamp, receivedAt: event.receivedAt,
         employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Unknown employee",
         employeeCode: employee?.employeeCode ?? "—",
@@ -89,32 +90,32 @@ export const pendingGeofenceExceptions = query({
 });
 
 export const reviewGeofenceException = mutation({
-  args: {
-    eventId: v.id("attendanceEvents"),
-    decision: v.union(v.literal("approved"), v.literal("rejected")),
-    note: v.optional(v.string()),
-  },
+  args: { eventId: v.id("attendanceEvents"), decision: v.union(v.literal("approved"), v.literal("rejected")), note: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const reviewer = await requireRole(ctx, ["supervisor", "superadmin"]);
+    const reviewer = await requireRole(ctx, ["supervisor"]);
     const event = await ctx.db.get(args.eventId);
     if (!event || event.organizationId !== reviewer.organizationId) throw new Error("ATTENDANCE_EVENT_NOT_FOUND");
-    if (event.exceptionCode !== "OUTSIDE_GEOFENCE" || event.geofencePassed) throw new Error("NOT_A_GEOFENCE_EXCEPTION");
-    if (event.reviewStatus !== "pending") throw new Error("EXCEPTION_ALREADY_REVIEWED");
-    const now = Date.now();
-    await ctx.db.patch(event._id, {
-      reviewStatus: args.decision,
-      reviewedBy: reviewer._id,
-      reviewedAt: now,
-      reviewNote: args.note?.trim() || undefined,
-    });
-    await ctx.db.insert("auditLogs", {
-      organizationId: reviewer.organizationId, actorUserId: reviewer._id,
-      action: args.decision === "approved" ? "attendance.geofence_exception.approved" : "attendance.geofence_exception.rejected",
-      entityType: "attendanceEvent", entityId: String(event._id),
-      metadata: { employeeId: String(event.employeeId), eventType: event.eventType, note: args.note?.trim() || null },
-      createdAt: now,
-    });
-    return { reviewed: true, decision: args.decision };
+    if (event.exceptionCode !== "OUTSIDE_GEOFENCE" || event.geofencePassed || event.reviewStatus !== "pending") throw new Error("EXCEPTION_NOT_REVIEWABLE");
+    const note = args.note?.trim();
+    if (args.decision === "rejected" && !note) throw new Error("REJECTION_REASON_REQUIRED");
+    await ctx.db.patch(event._id, { supervisorRecommendation: args.decision, supervisorReviewedBy: reviewer._id, supervisorReviewedAt: Date.now(), supervisorNote: note || undefined });
+    await ctx.db.insert("auditLogs", { organizationId: reviewer.organizationId, actorUserId: reviewer._id, action: "attendance.geofence_exception.recommended", entityType: "attendanceEvent", entityId: String(event._id), metadata: { recommendation: args.decision, note: note || null }, createdAt: Date.now() });
+    return { recommended: true, decision: args.decision };
+  },
+});
+
+export const finalizeGeofenceException = mutation({
+  args: { eventId: v.id("attendanceEvents"), decision: v.union(v.literal("approved"), v.literal("rejected")), note: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const admin = await requireRole(ctx, ["superadmin"]);
+    const event = await ctx.db.get(args.eventId);
+    if (!event || event.organizationId !== admin.organizationId) throw new Error("ATTENDANCE_EVENT_NOT_FOUND");
+    if (event.reviewStatus !== "pending" || !event.supervisorRecommendation) throw new Error("SUPERVISOR_REVIEW_REQUIRED");
+    const note = args.note?.trim();
+    if (args.decision === "rejected" && !note) throw new Error("REJECTION_REASON_REQUIRED");
+    await ctx.db.patch(event._id, { reviewStatus: args.decision, reviewedBy: admin._id, reviewedAt: Date.now(), reviewNote: note || undefined });
+    await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: args.decision === "approved" ? "attendance.geofence_exception.approved" : "attendance.geofence_exception.rejected", entityType: "attendanceEvent", entityId: String(event._id), metadata: { supervisorRecommendation: event.supervisorRecommendation, supervisorNote: event.supervisorNote || null, note: note || null }, createdAt: Date.now() });
+    return { finalized: true, decision: args.decision };
   },
 });
 
