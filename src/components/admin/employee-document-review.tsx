@@ -13,7 +13,7 @@ export function EmployeeDocumentReview(){
   try{if(account?.role==="supervisor")await recommend({documentId:id,decision,note:note.trim()||undefined});else await review({documentId:id,decision,note:note.trim()||undefined});setMessage(account?.role==="supervisor"?"Recommendation submitted to Superadmin.":decision==="verified"?"Document verified. The previous file, if any, was deleted from storage.":"Document rejected. The previous verified document remains active.");}
   catch(error){setMessage(error instanceof Error?error.message:"Unable to review document.");}finally{setBusy(null);}
  }
- if(documents===undefined||account===undefined)return <section className="sec"><p className="sub">Loading employee document reviews…</p></section>;
+ if(documents===undefined||account===undefined||account===null)return <section className="sec"><p className="sub">Loading employee document reviews…</p></section>;
  return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Employee document review</h2><p className="sub">Review employee uploads. Existing verified files remain active until a replacement is approved.</p></div><span className="badge badge-neutral">{documents.length} pending</span></div>
  {message&&<p className="sub" role="status" style={{marginBottom:12}}>{message}</p>}
  <div className="panel"><div className="panel-body" style={{display:"grid",gap:14}}>{!documents.length&&<p className="sub">No employee documents are awaiting review.</p>}
