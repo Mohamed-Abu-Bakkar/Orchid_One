@@ -94,7 +94,7 @@ function EmployeeManagement() {
   const text=[e.employeeCode,e.firstName,e.lastName,e.email,e.phone,e.designation,e.departmentName,e.locationName,e.defaultShiftName].join(" ").toLowerCase();
   return (status==="all"||e.status===status)&&(!term||text.includes(term));
  }),[employees,search,status]);
- if(employees===undefined||account===undefined)return <section className="sec"><p className="sub">Loading employee records…</p></section>;
+ if(employees===undefined||account===undefined||account===null)return <section className="sec"><p className="sub">Loading employee records…</p></section>;
  const count=(s:string)=>employees.filter(e=>e.status===s).length;
  const names:Record<string,string>={active:"Active",inactive:"Inactive",pending:"Pending",archived:"Archived"};
  const types:Record<string,string>={permanent:"Permanent",hourly:"Hourly",daily:"Daily",contract:"Contract"};
