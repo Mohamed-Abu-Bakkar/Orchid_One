@@ -39,6 +39,19 @@ export const recordPunch = mutation({
     const latest = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").first();
     if (latest?.reviewStatus === "pending") throw new Error("ATTENDANCE_REVIEW_PENDING");
+    const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+    const todayEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id))
+      .order("desc").take(100);
+    const latestToday = todayEvents.find(event =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(event.receivedAt)) === localToday &&
+      (event.geofencePassed || event.reviewStatus === "approved")
+    );
+    const activeSession = Boolean(latestToday && latestToday.eventType !== "check_out");
+    if (args.eventType === "check_in" && activeSession) throw new Error("ALREADY_CHECKED_IN");
+    if (args.eventType === "break_start" && (!activeSession || latestToday?.eventType === "break_start")) throw new Error("BREAK_NOT_AVAILABLE");
+    if (args.eventType === "break_end" && latestToday?.eventType !== "break_start") throw new Error("NO_ACTIVE_BREAK");
+    if (args.eventType === "check_out" && (!activeSession || latestToday?.eventType === "break_start")) throw new Error(latestToday?.eventType === "break_start" ? "END_BREAK_BEFORE_CHECKOUT" : "NOT_CHECKED_IN");
 
     const distance = distanceMeters(location.latitude, location.longitude, args.latitude, args.longitude);
     const geofencePassed = distance <= location.geofenceRadiusM;
