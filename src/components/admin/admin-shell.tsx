@@ -20,6 +20,7 @@ import { WageManagement } from "@/components/admin/wage-management";
 import { HourlyWorkforce } from "@/components/admin/hourly-workforce";
 import { OvertimeManagement } from "@/components/admin/overtime-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
+import { EmployeeEditModal } from "@/components/admin/employee-edit-modal";
 import orchidLogo from "../../../OrchidHRM/assets/android/launchericon-192x192.png";
 import { Activity, BookOpen, Building2, CalendarDays, ChartNoAxesCombined, CheckCircle2, Clock3, Download, Flower2, Folder, GraduationCap, Grid2X2, LogOut, MapPin, Menu, Plus, Search, Settings, Star, UserRound, Users, Wallet, X, Zap } from "lucide-react";
 
@@ -85,10 +86,11 @@ function Panel({title,subtitle,icon:Icon,text,action,onAction}:any){return <div 
 function EmployeeManagement() {
  const employees=useQuery(api.employee.listForAdmin,{});
  const account=useQuery(api.account.getMyAccountStatus,{});
- const updateEmployee=useMutation(api.adminCrud.updateEmployee);
  const archiveEmployee=useMutation(api.adminCrud.archiveEmployee);
  const [search,setSearch]=useState("");
  const [status,setStatus]=useState("all");
+ const [editingEmployee,setEditingEmployee]=useState<any>(null);
+ const [notice,setNotice]=useState("");
  const filtered=useMemo(()=> (employees??[]).filter(e=>{
   const term=search.trim().toLowerCase();
   const text=[e.employeeCode,e.firstName,e.lastName,e.email,e.phone,e.designation,e.departmentName,e.locationName,e.defaultShiftName].join(" ").toLowerCase();
@@ -108,9 +110,11 @@ function EmployeeManagement() {
     <label className="employee-status-filter"><span className="t-caption text-tertiary">Status</span><select className="input" value={status} onChange={e=>setStatus(e.target.value)}><option value="all">All statuses ({employees.length})</option>{["active","pending","inactive","archived"].map(s=><option key={s} value={s}>{names[s]} ({count(s)})</option>)}</select></label>
    </div>
    <div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Employee</th><th>Department</th><th>Designation</th><th>Employment</th><th>Default shift</th><th>Location</th><th>Joined</th><th>Status</th>{account.role==="superadmin"&&<th>Actions</th>}</tr></thead><tbody>
-    {filtered.map(e=><tr key={e._id}><td><div className="employee-directory-person"><span className="employee-directory-avatar">{e.firstName.slice(0,1)}{e.lastName.slice(0,1)}</span><span><strong>{e.firstName} {e.lastName}</strong><small>{e.employeeCode}</small><small>{e.email||e.phone}</small></span></div></td><td>{e.departmentName}</td><td>{e.designation}</td><td>{types[e.employmentType]??e.employmentType}</td><td>{e.defaultShiftName}</td><td>{e.locationName}</td><td>{e.joiningDate||"—"}</td><td><span className={"badge "+(e.status==="active"?"badge-success":"badge-neutral")}>{names[e.status]??e.status}</span></td>{account.role==="superadmin"&&<td><div className="row gap-2"><button className="btn btn-outline btn-sm" onClick={()=>{const firstName=window.prompt("First name",e.firstName);if(firstName===null)return;const lastName=window.prompt("Last name",e.lastName);if(lastName===null)return;const phone=window.prompt("Phone",e.phone);if(phone===null)return;const designation=window.prompt("Designation",e.designation);if(designation===null)return;const nextStatus=window.prompt("Status: active, inactive, pending, archived",e.status);if(!nextStatus||!["active","inactive","pending","archived"].includes(nextStatus))return;void updateEmployee({employeeId:e._id,firstName,lastName,email:e.email||undefined,phone,designation,employmentType:e.employmentType,status:nextStatus as any,joiningDate:e.joiningDate,departmentId:e.departmentId,locationId:e.locationId,defaultShiftId:e.defaultShiftId});}}>Edit</button><button className="btn btn-outline btn-sm" disabled={e.status==="archived"} onClick={()=>{if(window.confirm("Archive this employee? Historical records will be retained."))void archiveEmployee({employeeId:e._id});}}>Archive</button></div></td>}</tr>)}
+    {filtered.map(e=><tr key={e._id}><td><div className="employee-directory-person"><span className="employee-directory-avatar">{e.firstName.slice(0,1)}{e.lastName.slice(0,1)}</span><span><strong>{e.firstName} {e.lastName}</strong><small>{e.employeeCode}</small><small>{e.email||e.phone}</small></span></div></td><td>{e.departmentName}</td><td>{e.designation}</td><td>{types[e.employmentType]??e.employmentType}</td><td>{e.defaultShiftName}</td><td>{e.locationName}</td><td>{e.joiningDate||"—"}</td><td><span className={"badge "+(e.status==="active"?"badge-success":"badge-neutral")}>{names[e.status]??e.status}</span></td>{account.role==="superadmin"&&<td><div className="row gap-2"><button className="btn btn-outline btn-sm" type="button" onClick={()=>setEditingEmployee(e)}>Edit</button><button className="btn btn-outline btn-sm" type="button" disabled={e.status==="archived"} onClick={()=>{if(window.confirm("Archive this employee? Historical records will be retained."))void archiveEmployee({employeeId:e._id});}}>Archive</button></div></td>}</tr>)}
    </tbody></table>{filtered.length===0&&<div className="empty-state"><Users size={26}/><strong>{employees.length===0?"No employee records yet":"No matching employees"}</strong><p>{employees.length===0?"Employee records added to this organization will appear here.":"Try another search term or status filter."}</p></div>}</div>
    <div className="employee-directory-footer">Showing {filtered.length} of {employees.length} employee records</div>
   </div>
+  {editingEmployee&&<EmployeeEditModal employee={editingEmployee} onClose={()=>setEditingEmployee(null)} onSaved={()=>{setEditingEmployee(null);setNotice("Employee profile updated successfully.");}}/>}
+  {notice&&<div className="orchid-notice" role="status">{notice}<button className="icon-btn icon-btn-sm" type="button" onClick={()=>setNotice("")} aria-label="Dismiss"><X size={15}/></button></div>}
  </section>;
 }
