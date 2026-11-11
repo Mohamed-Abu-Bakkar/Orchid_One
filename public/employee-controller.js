@@ -511,8 +511,8 @@
       text("#employeeOfficeName", workspace.location?.name ?? "Work location not assigned");
       text("#employeeOfficeAddress", workspace.location?.address ?? "Office address not configured");
       if (shiftLabel) shiftLabel.textContent = shift ? shift.name + " · " + [shift.startMinute, shift.endMinute].map(value => String(Math.floor(value / 60)).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0")).join(" – ") : "No shift assigned today";
-      const clockDate = () => { const now = new Date(); text("#heroClock", now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })); text("#heroDate", now.toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })); };
-      clockDate(); if (window.__orchidClockTimer) clearInterval(window.__orchidClockTimer); window.__orchidClockTimer = setInterval(clockDate, 1000);
+      if (window.__orchidClockTimer) { clearInterval(window.__orchidClockTimer); window.__orchidClockTimer = null; }
+      text("#heroDate", new Date().toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" }));
       const summary = workspace.attendanceSummary;
       text("#statMonthAttendance", summary?.scheduledDays ? summary.attendedDays + " / " + summary.scheduledDays : "—");
       text("#statMonthAttendanceSub", summary?.scheduledDays ? (summary.percentage ?? 0) + "% attendance" : "No scheduled shifts this month");
