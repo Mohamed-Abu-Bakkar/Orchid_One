@@ -505,21 +505,37 @@
       const breakCountdown = document.getElementById("homeBreakCountdown");
       const breakActive = checkedIn && latestToday?.eventType === "break_start";
       const breakDurationMs = Math.max(0, Number(shift?.breakMinutes) || 0) * 60000;
-      const breakStartedAt = breakActive ? Number(latestToday.receivedAt || latestToday.clientTimestamp) : null;
-      window.__orchidBreakState = { active: breakActive, startedAt: breakStartedAt, durationMs: breakDurationMs, enabled: checkedIn && breakDurationMs > 0 && !pendingReview };
-      if (breakPanel) breakPanel.classList.toggle("hidden", !window.__orchidBreakState.enabled);
+      let completedBreakMs = 0;
+      let openBreakStartedAt = null;
+      todayEvents.forEach(event => {
+        const eventAt = Number(event.receivedAt || event.clientTimestamp);
+        if (event.eventType === "break_start" && openBreakStartedAt === null) openBreakStartedAt = eventAt;
+        if (event.eventType === "break_end" && openBreakStartedAt !== null) {
+          completedBreakMs += Math.max(0, eventAt - openBreakStartedAt);
+          openBreakStartedAt = null;
+        }
+      });
+      const breakStartedAt = breakActive ? openBreakStartedAt : null;
+      const elapsedActiveBreakMs = breakActive && breakStartedAt ? Math.max(0, Date.now() - breakStartedAt) : 0;
+      const remainingBreakMs = Math.max(0, breakDurationMs - completedBreakMs - elapsedActiveBreakMs);
+      const breakEnabled = checkedIn && breakDurationMs > 0 && !pendingReview && (breakActive || remainingBreakMs > 0);
+      window.__orchidBreakState = { active: breakActive, startedAt: breakStartedAt, durationMs: breakDurationMs, remainingMs: remainingBreakMs, enabled: breakEnabled };
+      if (breakPanel) breakPanel.classList.toggle("hidden", !(checkedIn && breakDurationMs > 0 && !pendingReview));
       if (breakButton) {
-        breakButton.disabled = !window.__orchidBreakState.enabled;
-        breakButton.textContent = breakActive ? "End Break · Return to Work" : "Start Break";
+        breakButton.disabled = !breakEnabled;
+        breakButton.textContent = breakActive ? "End Break · Return to Work" : remainingBreakMs > 0 ? "Start Break" : "Break Used";
       }
-      if (breakTitle) breakTitle.textContent = breakActive ? "You are on break" : "Break countdown";
-      if (breakSub) breakSub.textContent = breakActive ? "End your break when you return to work. Starting again records a new break." : "Configured break · " + Math.round(breakDurationMs / 60000) + " minutes";
+      if (breakTitle) breakTitle.textContent = breakActive ? "You are on break" : remainingBreakMs > 0 ? "Break countdown" : "Daily break allowance used";
+      if (breakSub) breakSub.textContent = breakActive
+        ? "Your remaining break time is counting down."
+        : remainingBreakMs > 0
+          ? "Remaining break allowance for today · " + Math.ceil(remainingBreakMs / 60000) + " minutes"
+          : "Your unused break allowance expires at the end of today.";
       const updateBreakCountdown = () => {
         if (!breakCountdown) return;
-        if (!breakActive) { breakCountdown.textContent = breakDurationMs ? String(Math.floor(breakDurationMs / 60000)).padStart(2, "0") + ":00" : "—"; return; }
-        const remaining = Math.max(0, breakDurationMs - (Date.now() - breakStartedAt));
+        const remaining = Math.max(0, breakDurationMs - completedBreakMs - (breakActive && breakStartedAt ? Date.now() - breakStartedAt : 0));
         breakCountdown.textContent = String(Math.floor(remaining / 60000)).padStart(2, "0") + ":" + String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
-        if (remaining === 0 && breakSub) breakSub.textContent = "Break time is over. End break to record your return to work.";
+        if (remaining === 0 && breakActive && breakSub) breakSub.textContent = "Break time is over. End break to return to work.";
       };
       if (window.__orchidBreakTimer) clearInterval(window.__orchidBreakTimer);
       updateBreakCountdown();
