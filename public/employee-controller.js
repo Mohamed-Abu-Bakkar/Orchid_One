@@ -270,19 +270,26 @@
         finally{button.disabled=false;button.textContent="Upload for review";}
       };
 
-  async function hydrate() {
+  async function hydrate(prefetchedPayload) {
+    if (window.__orchidHydrating) return;
+    window.__orchidHydrating = true;
     try {
-      const response = await fetch("/api/employee/workspace", { credentials: "same-origin", cache: "no-store" });
-      if (response.status === 401) {
-        window.location.replace("/login?next=/");
-        return;
+      let payload = prefetchedPayload;
+      if (!payload) {
+        const response = await fetch("/api/employee/workspace", { credentials: "same-origin", cache: "no-store" });
+        if (response.status === 401) {
+          window.location.replace("/login?next=/");
+          return;
+        }
+        if (response.status === 403) {
+          window.location.replace("/profile-pending");
+          return;
+        }
+        if (!response.ok) throw new Error("Unable to load employee workspace");
+        payload = await response.json();
       }
-      if (response.status === 403) {
-        window.location.replace("/profile-pending");
-        return;
-      }
-      if (!response.ok) throw new Error("Unable to load employee workspace");
-      const { workspace, policies, work } = await response.json();
+      const { workspace, policies, work } = payload;
+      window.__orchidWorkspaceSnapshot = JSON.stringify({ workspace, policies, work });
       window.__orchidWorkspace = workspace;
       window.__orchidWork = work || { assignments: [], history: [] };
       if (!workspace?.linked || !workspace.profile) {
@@ -426,13 +433,13 @@
         });
       };
       window.renderDocs=renderEmployeeDocuments;
-      document.querySelectorAll("#docTabs [data-doc]").forEach(tab=>tab.addEventListener("click",()=>{document.querySelectorAll("#docTabs [data-doc]").forEach(item=>item.classList.toggle("active",item===tab));renderEmployeeDocuments(tab.dataset.doc||"all");}));
+      document.querySelectorAll("#docTabs [data-doc]").forEach(tab=>tab.onclick=()=>{document.querySelectorAll("#docTabs [data-doc]").forEach(item=>item.classList.toggle("active",item===tab));renderEmployeeDocuments(tab.dataset.doc||"all");});
       renderEmployeeDocuments("all");
       window.openDocs=()=>{window.pushScreen("docsScreen");renderEmployeeDocuments("all");};
       window.openUploadSheet=()=>document.getElementById("uploadSheet")?.classList.remove("hidden");
       window.closeUploadSheet=()=>document.getElementById("uploadSheet")?.classList.add("hidden");
       const employeeDocumentFile = document.getElementById("employeeDocumentFile");
-      employeeDocumentFile?.addEventListener("change", () => {
+      employeeDocumentFile && (employeeDocumentFile.onchange = () => {
         const label = document.getElementById("employeeDocumentFileLabel");
         if (label) label.textContent = employeeDocumentFile.files?.[0]?.name || "Tap to choose a document";
       });
@@ -695,7 +702,7 @@
           button.setAttribute("aria-pressed", String(active));
         });
       };
-      historyViewButtons.forEach(button => button.addEventListener("click", () => applyHistoryView(button.dataset.view === "month" ? "month" : "week")));
+      historyViewButtons.forEach(button => button.onclick = () => applyHistoryView(button.dataset.view === "month" ? "month" : "week"));
       applyHistoryView("week");
 
       const wageRecords = workspace.wageRecords ?? [];
@@ -853,8 +860,41 @@
       notice.className = "text-body-md text-error text-center p-4";
       notice.textContent = "Employee data could not be loaded. Refresh to try again.";
       document.querySelector(".p-4.flex.flex-col.gap-3")?.prepend(notice);
+    } finally {
+      window.__orchidHydrating = false;
     }
   }
+
+  let employeeRefreshInFlight = false;
+  const refreshEmployeeWorkspace = async () => {
+    if (employeeRefreshInFlight || document.visibilityState !== "visible" || !navigator.onLine) return;
+    const active = document.activeElement;
+    if (active && (active.matches("input, textarea, select") || active.isContentEditable)) return;
+    employeeRefreshInFlight = true;
+    try {
+      const response = await fetch("/api/employee/workspace", {
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Accept": "application/json" },
+      });
+      if (response.status === 401) { window.location.replace("/login?next=/"); return; }
+      if (response.status === 403) { window.location.replace("/profile-pending"); return; }
+      if (!response.ok) throw new Error("EMPLOYEE_WORKSPACE_REFRESH_FAILED");
+      const payload = await response.json();
+      const snapshot = JSON.stringify(payload);
+      if (snapshot !== window.__orchidWorkspaceSnapshot) await hydrate(payload);
+    } catch (error) {
+      console.warn("[Orchid employee] Automatic refresh deferred:", error);
+    } finally {
+      employeeRefreshInFlight = false;
+    }
+  };
+  window.__orchidRefreshEmployeeWorkspace = refreshEmployeeWorkspace;
+  window.setInterval(refreshEmployeeWorkspace, 45000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshEmployeeWorkspace();
+  });
+  window.addEventListener("online", refreshEmployeeWorkspace);
 
   
   window.toggleEmployeeBreak = async () => {
