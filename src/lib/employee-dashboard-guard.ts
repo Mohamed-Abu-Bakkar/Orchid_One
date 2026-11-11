@@ -3,11 +3,9 @@ import { fetchAuthQuery, isAuthenticated } from "@/lib/auth-server";
 import { api } from "@/../convex/_generated/api";
 
 /**
- * Server-side gate for the employee dashboard pages.
- * Unauthenticated users go to login; signed-in users without a linked
- * employee record (missing profile row or no employeeId) go to the
- * profile-pending page; back-office roles go to the admin dashboard.
- * Returns null when the request may proceed.
+ * Server-side gate for the employee dashboard.
+ * Employees must have a linked employee record. Superadmins may enter
+ * the employee experience as a preview without linking themselves as staff.
  */
 export async function employeeDashboardGuard(
   request: NextRequest,
@@ -22,10 +20,14 @@ export async function employeeDashboardGuard(
     if (!account) {
       return NextResponse.redirect(new URL("/profile-pending", request.url));
     }
-    if (account.role !== "employee") {
+    if (account.status !== "active") {
+      return NextResponse.redirect(new URL("/suspended", request.url));
+    }
+    if (account.role !== "employee" && account.role !== "superadmin") {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
-    if (!account.employeeId) {
+    // Preview mode for Superadmin does not require an employee profile link.
+    if (account.role === "employee" && !account.employeeId) {
       return NextResponse.redirect(new URL("/profile-pending", request.url));
     }
   } catch {
