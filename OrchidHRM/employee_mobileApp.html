@@ -281,6 +281,10 @@
 <p class="z-10 text-body-lg font-body-lg font-semibold text-on-surface" id="heroStateLabel">You are not checked in yet</p>
 <p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1 text-center" id="heroStateSub">Location verified · inside the attendance area</p>
 <button class="z-10 mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg px-7 py-3 shadow-sm hover:bg-primary-container transition-colors" id="heroBtn" onclick="toggleCheckIn()">Check In</button>
+<div id="homeBreakPanel" class="z-10 w-full mt-4 rounded-xl bg-surface/90 border border-outline-variant/50 p-4 hidden">
+  <div class="flex items-center justify-between gap-3"><div><p id="homeBreakTitle" class="text-body-md font-semibold text-on-surface">Break timer</p><p id="homeBreakSub" class="text-label-sm text-on-surface-variant mt-1">Use this when you start your shift break.</p></div><span id="homeBreakCountdown" class="text-title-lg font-bold tabular-nums text-primary">—</span></div>
+  <button id="homeBreakBtn" type="button" class="w-full mt-3 rounded-lg bg-primary text-white font-semibold py-3" onclick="toggleEmployeeBreak()">Start Break</button>
+</div>
 </div>
 <!-- Quick Stats -->
 <div class="grid grid-cols-2 gap-3">
