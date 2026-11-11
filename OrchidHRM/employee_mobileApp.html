@@ -274,7 +274,6 @@
 <span class="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span><span id="employeeShiftLabel">Shift not assigned</span>
 </span>
 </div>
-<p class="z-10 text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold tracking-tight mt-5 font-tabular-nums" id="heroClock">--:--:--</p>
 <p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1" id="heroDate"></p>
 <div class="z-10 my-7 flex items-center justify-center" id="heroRingWrap">
 <div class="hero-ring" id="heroRing"><span class="material-symbols-outlined text-primary text-[40px] relative z-10" style="font-variation-settings: 'FILL' 0;">fingerprint</span></div>
@@ -1153,14 +1152,6 @@ Submit Request
             s.style.pointerEvents = 'none';
             setTimeout(() => s.remove(), 550);
         }, 1500);
-        const heroClock = document.getElementById('heroClock');
-        if (heroClock) {
-            const pad = n => String(n).padStart(2, '0');
-            setInterval(() => {
-                const d = new Date();
-                heroClock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-            }, 1000);
-        }
         function renderDocs() {
             const content = document.getElementById('docContent');
             if (content) content.textContent = 'Loading your documents…';
