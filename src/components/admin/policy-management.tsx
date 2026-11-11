@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { FileText, Upload, Eye, Archive, CheckCircle2, Clock3 } from "lucide-react";
+import { FileText, Upload, Eye, Archive, CheckCircle2, Clock3, X, ExternalLink } from "lucide-react";
 
 const categories = [
   ["hr_employment","HR & Employment"],["attendance","Attendance"],["leave","Leave"],
@@ -65,13 +65,10 @@ export function PolicyManagement() {
     <div className="panel" style={{marginTop:20}}><div className="panel-head"><span className="t-h3">Policies</span><span className="t-caption text-tertiary">{policies.length} versions</span></div>
       <div className="panel-body" style={{display:"grid",gap:12}}>
         {policies.length===0&&<p className="sub">No policies uploaded yet.</p>}
-        {policies.map(policy=><div className="policy-row" key={policy._id}>
-          <div className="policy-file-icon"><FileText size={20}/></div><div className="policy-row-main"><strong>{policy.title}</strong><span>Version {policy.version} · {categories.find(c=>c[0]===policy.category)?.[1]??policy.category} · {policy.originalFileName}</span>{policy.description&&<small>{policy.description}</small>}</div>
-          <span className={"badge "+(policy.status==="published"?"badge-success":policy.status==="draft"?"badge-warning":"badge-neutral")}>{policy.status}</span>
-          {account.role==="superadmin"&&policy.status==="draft"&&<button className="btn btn-primary btn-sm" onClick={async()=>{try{await publish({policyId:policy._id});setMessage("Policy published to all active employees.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to publish.");}}}>Publish</button>}
-          {policy.status==="published"&&<button className="btn btn-outline btn-sm" onClick={()=>{setReportId(String(policy._id));setReportPolicy(policy);}}>Acknowledgements</button>}
-          {account.role==="superadmin"&&policy.status!=="archived"&&<button className="icon-btn" title="Archive version" onClick={()=>archive({policyId:policy._id})}><Archive size={16}/></button>}
-        </div>)}
+        {policies.map(policy=><AdminPolicyRow key={policy._id} policy={policy} accountRole={account.role}
+          onPublish={async()=>{try{await publish({policyId:policy._id});setMessage("Policy published to all active employees.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to publish.");}}}
+          onArchive={async()=>{try{await archive({policyId:policy._id});setMessage("Policy archived.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to archive.");}}}
+          onAcknowledgements={()=>{setReportId(String(policy._id));setReportPolicy(policy);}} />)}
       </div>
     </div>
     {reportId&&reportPolicy&&<PolicyAcknowledgementReport policyId={reportPolicy._id} title={reportPolicy.title} version={reportPolicy.version} onClose={()=>{setReportId(null);setReportPolicy(null);}}/>}
@@ -85,4 +82,26 @@ function PolicyAcknowledgementReport({policyId,title,version,onClose}:{policyId:
  return <div className="panel" style={{marginTop:20}}><div className="panel-head"><div><span className="t-h3">{title} · v{version}</span><p className="sub">{done} of {rows.length} active employees acknowledged</p></div><button className="btn btn-outline btn-sm" onClick={onClose}>Close</button></div><div className="panel-body" style={{display:"grid",gap:10}}>
  {rows.map(row=><div className="policy-report-row" key={row.employeeId}><span><strong>{row.name||row.employeeCode}</strong><small>{row.employeeCode}</small></span>{row.acknowledgedAt?<span className="policy-ack-done"><CheckCircle2 size={15}/> {new Date(row.acknowledgedAt).toLocaleString()}</span>:<span className="policy-ack-pending"><Clock3 size={15}/> Pending</span>}</div>)}
  </div></div>;
+}
+
+
+function AdminPolicyRow({policy,accountRole,onPublish,onArchive,onAcknowledgements}:{policy:any;accountRole:string;onPublish:()=>void;onArchive:()=>void;onAcknowledgements:()=>void}) {
+ const fileUrl=useQuery(api.policies.getPolicyFileUrl,{policyId:policy._id});
+ const [previewOpen,setPreviewOpen]=useState(false);
+ return <div className="policy-row" style={{flexWrap:"wrap"}}>
+  <div className="policy-file-icon"><FileText size={20}/></div>
+  <div className="policy-row-main"><strong>{policy.title}</strong><span>Version {policy.version} · {categories.find(c=>c[0]===policy.category)?.[1]??policy.category} · {policy.originalFileName}</span>{policy.description&&<small>{policy.description}</small>}</div>
+  <span className={"badge "+(policy.status==="published"?"badge-success":policy.status==="draft"?"badge-warning":"badge-neutral")}>{policy.status}</span>
+  {fileUrl&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>setPreviewOpen(value=>!value)}><Eye size={14}/>{previewOpen?"Hide preview":"View policy"}</button>}
+  {accountRole==="superadmin"&&policy.status==="draft"&&<button className="btn btn-primary btn-sm" onClick={onPublish}>Publish</button>}
+  {policy.status==="published"&&<button className="btn btn-outline btn-sm" onClick={onAcknowledgements}>Acknowledgements</button>}
+  {accountRole==="superadmin"&&policy.status!=="archived"&&<button className="icon-btn" title="Archive version" onClick={onArchive}><Archive size={16}/></button>}
+  {previewOpen&&fileUrl&&<div style={{width:"100%",flexBasis:"100%"}}>
+   <div className="row" style={{justifyContent:"space-between",alignItems:"center",marginTop:8,marginBottom:8}}>
+    <strong>Policy preview · {policy.originalFileName}</strong>
+    <div className="row gap-2"><a className="policy-open-link" href={fileUrl} target="_blank" rel="noreferrer"><ExternalLink size={14}/> Open in new tab</a><button type="button" className="icon-btn" aria-label="Close policy preview" onClick={()=>setPreviewOpen(false)}><X size={16}/></button></div>
+   </div>
+   <iframe title={policy.title} src={fileUrl} className="company-doc-preview-frame"/>
+  </div>}
+ </div>;
 }
