@@ -498,6 +498,32 @@
       text("#ringSub", checkedIn ? "Working time" : "Today"); text("#statTodaySub", checkedIn ? "Currently working" : "Recorded today");
       const ring = document.getElementById("heroRing"); if (ring) ring.classList.toggle("done", checkedIn);
       const shift = workspace.shift, shiftLabel = document.getElementById("employeeShiftLabel");
+      const breakPanel = document.getElementById("homeBreakPanel");
+      const breakButton = document.getElementById("homeBreakBtn");
+      const breakTitle = document.getElementById("homeBreakTitle");
+      const breakSub = document.getElementById("homeBreakSub");
+      const breakCountdown = document.getElementById("homeBreakCountdown");
+      const breakActive = checkedIn && latestToday?.eventType === "break_start";
+      const breakDurationMs = Math.max(0, Number(shift?.breakMinutes) || 0) * 60000;
+      const breakStartedAt = breakActive ? Number(latestToday.receivedAt || latestToday.clientTimestamp) : null;
+      window.__orchidBreakState = { active: breakActive, startedAt: breakStartedAt, durationMs: breakDurationMs, enabled: checkedIn && breakDurationMs > 0 && !pendingReview };
+      if (breakPanel) breakPanel.classList.toggle("hidden", !window.__orchidBreakState.enabled);
+      if (breakButton) {
+        breakButton.disabled = !window.__orchidBreakState.enabled;
+        breakButton.textContent = breakActive ? "End Break · Return to Work" : "Start Break";
+      }
+      if (breakTitle) breakTitle.textContent = breakActive ? "You are on break" : "Break countdown";
+      if (breakSub) breakSub.textContent = breakActive ? "End your break when you return to work. Starting again records a new break." : "Configured break · " + Math.round(breakDurationMs / 60000) + " minutes";
+      const updateBreakCountdown = () => {
+        if (!breakCountdown) return;
+        if (!breakActive) { breakCountdown.textContent = breakDurationMs ? String(Math.floor(breakDurationMs / 60000)).padStart(2, "0") + ":00" : "—"; return; }
+        const remaining = Math.max(0, breakDurationMs - (Date.now() - breakStartedAt));
+        breakCountdown.textContent = String(Math.floor(remaining / 60000)).padStart(2, "0") + ":" + String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+        if (remaining === 0 && breakSub) breakSub.textContent = "Break time is over. End break to record your return to work.";
+      };
+      if (window.__orchidBreakTimer) clearInterval(window.__orchidBreakTimer);
+      updateBreakCountdown();
+      if (breakActive) window.__orchidBreakTimer = setInterval(updateBreakCountdown, 1000);
       const formatShiftTime = (minute) => {
         if (typeof minute !== "number" || !Number.isFinite(minute)) return "—";
         const normalized = ((minute % 1440) + 1440) % 1440;
@@ -815,6 +841,38 @@
   }
 
   
+  window.toggleEmployeeBreak = async () => {
+    const state = window.__orchidBreakState;
+    if (!state?.enabled) { window.toast?.("A configured shift break is not available right now."); return; }
+    const eventType = state.active ? "break_end" : "break_start";
+    if (!navigator.geolocation) { window.toast?.("Location services are not available on this device."); return; }
+    const button = document.getElementById("homeBreakBtn");
+    if (button) { button.disabled = true; button.textContent = "Verifying location…"; }
+    navigator.geolocation.getCurrentPosition(async position => {
+      try {
+        const response = await fetch("/api/employee/workspace", {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventType, latitude: position.coords.latitude, longitude: position.coords.longitude,
+            accuracyM: position.coords.accuracy, clientTimestamp: Date.now(), idempotencyKey: crypto.randomUUID()
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "BREAK_PUNCH_FAILED");
+        if (result.requiresReview) window.toast?.("Break punch is outside the assigned work location and requires review.");
+        else window.toast?.(eventType === "break_start" ? "Break started." : "Break ended. Welcome back to work.");
+        window.location.reload();
+      } catch (error) {
+        if (button) { button.disabled = false; button.textContent = state.active ? "End Break · Return to Work" : "Start Break"; }
+        window.toast?.(error instanceof Error ? error.message : "Unable to record break.");
+      }
+    }, error => {
+      if (button) { button.disabled = false; button.textContent = state.active ? "End Break · Return to Work" : "Start Break"; }
+      window.toast?.(error.code === 1 ? "Location permission is required to record a break." : "Unable to verify your location.");
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  };
+
   window.toggleCheckIn = () => {
     const events = window.__orchidWorkspace?.attendance ?? [];
     const latest = events[0];
