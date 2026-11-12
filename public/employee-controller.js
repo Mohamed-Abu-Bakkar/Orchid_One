@@ -862,39 +862,38 @@
       document.querySelector(".p-4.flex.flex-col.gap-3")?.prepend(notice);
     } finally {
       window.__orchidHydrating = false;
+      if (window.__orchidPendingRealtimePayload) {
+        const pending = window.__orchidPendingRealtimePayload;
+        window.__orchidPendingRealtimePayload = null;
+        window.__orchidApplyRealtimePayload(pending);
+      }
     }
   }
 
-  let employeeRefreshInFlight = false;
-  const refreshEmployeeWorkspace = async () => {
-    if (employeeRefreshInFlight || document.visibilityState !== "visible" || !navigator.onLine) return;
+  window.__orchidApplyRealtimePayload = (payload) => {
+    if (!payload || !payload.workspace || !Array.isArray(payload.policies) || !payload.work) return;
     const active = document.activeElement;
-    if (active && (active.matches("input, textarea, select") || active.isContentEditable)) return;
-    employeeRefreshInFlight = true;
-    try {
-      const response = await fetch("/api/employee/workspace", {
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { "Accept": "application/json" },
-      });
-      if (response.status === 401) { window.location.replace("/login?next=/"); return; }
-      if (response.status === 403) { window.location.replace("/profile-pending"); return; }
-      if (!response.ok) throw new Error("EMPLOYEE_WORKSPACE_REFRESH_FAILED");
-      const payload = await response.json();
-      const snapshot = JSON.stringify(payload);
-      if (snapshot !== window.__orchidWorkspaceSnapshot) await hydrate(payload);
-    } catch (error) {
-      console.warn("[Orchid employee] Automatic refresh deferred:", error);
-    } finally {
-      employeeRefreshInFlight = false;
+    if (active && (active.matches("input, textarea, select") || active.isContentEditable)) {
+      window.__orchidPendingRealtimePayload = payload;
+      return;
     }
+    const snapshot = JSON.stringify(payload);
+    if (snapshot !== window.__orchidWorkspaceSnapshot) hydrate(payload);
   };
-  window.__orchidRefreshEmployeeWorkspace = refreshEmployeeWorkspace;
-  window.setInterval(refreshEmployeeWorkspace, 45000);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshEmployeeWorkspace();
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.origin !== window.location.origin) return;
+    if (event.data?.type === "ORCHID_EMPLOYEE_WORKSPACE") {
+      window.__orchidApplyRealtimePayload(event.data.payload);
+    }
   });
-  window.addEventListener("online", refreshEmployeeWorkspace);
+  document.addEventListener("focusout", () => {
+    if (window.__orchidPendingRealtimePayload) {
+      const pending = window.__orchidPendingRealtimePayload;
+      window.__orchidPendingRealtimePayload = null;
+      window.__orchidApplyRealtimePayload(pending);
+    }
+  });
 
   
   window.toggleEmployeeBreak = async () => {
