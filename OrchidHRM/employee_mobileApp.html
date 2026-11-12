@@ -544,10 +544,14 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 <button class="flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant" data-view="month">Month</button>
 </div>
 <!-- This week -->
-<div class="bento-card mt-4">
+<div class="grid grid-cols-2 gap-3 mt-4">
+<div class="bento-card"><p class="text-label-sm text-on-surface-variant">Hours worked</p><p id="hoursTotal" class="text-headline-lg font-bold text-primary mt-1">—</p></div>
+<div class="bento-card"><p class="text-label-sm text-on-surface-variant">Break time</p><p id="hoursBreakTotal" class="text-headline-lg font-bold text-on-surface mt-1">—</p></div>
+</div>
+<div class="bento-card mt-3">
 <div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">This week</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant" id="hoursWeekLabel">Last 7 days</span>
+<span id="hoursRangeTitle" class="text-body-lg font-body-lg font-semibold text-on-surface">This week</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant" id="hoursWeekLabel">—</span>
 </div>
 <div class="flex items-end gap-2 h-32" id="weekBars"></div>
 <div class="flex justify-between mt-2">
@@ -1480,41 +1484,50 @@ Submit Request
                 });
             }
         }
+        let employeeHoursView = 'week';
         function renderHours() {
-            const bars = [8.1, 8.1, 8.3, 7.6, 7.4, 0, 0];
-            const max = 8.3;
-            document.getElementById('weekBars').innerHTML = bars.map((b, i) =>
-                `<div class="bar ${b === 0 ? '' : 'main'}" style="height:${(b / max) * 100}%" title="${b} hrs"></div>`).join('');
-            const daily = [
-                { d: "Mon · 10 Aug", in: "05:58", out: "14:02", hrs: "8.1", wage: "₹977" },
-                { d: "Tue · 11 Aug", in: "05:54", out: "14:00", hrs: "8.1", wage: "₹977" },
-                { d: "Wed · 12 Aug", in: "05:50", out: "14:05", hrs: "8.3", wage: "₹1005" },
-                { d: "Thu · 13 Aug", in: "06:20", out: "14:00", hrs: "7.6", wage: "₹912" },
-                { d: "Fri · 14 Aug", in: "—", out: "—", hrs: "—", wage: "—" },
-            ];
-            document.getElementById('dailyHours').innerHTML = daily.map(d => `
-                <div class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer" onclick="toast('Day detail opens here')">
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-medium text-on-surface">${d.d}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In ${d.in} · Out ${d.out}</p>
-                    </div>
-                    <div class="flex flex-col items-end flex-shrink-0">
-                        <p class="text-body-md font-body-md font-medium text-on-surface">${d.hrs} hrs</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant">${d.wage}</p>
-                    </div>
-                </div>`).join('');
-            const segs = document.querySelectorAll('#hoursSeg button');
-            segs.forEach(s => {
-                s.onclick = () => {
-                    segs.forEach(x => {
-                        x.classList.remove('bg-surface', 'shadow-sm', 'text-primary');
-                        x.classList.add('text-on-surface-variant');
-                    });
-                    s.classList.add('bg-surface', 'shadow-sm', 'text-primary');
-                    s.classList.remove('text-on-surface-variant');
-                    if (s.dataset.view === 'month') toast('Monthly view');
-                };
-            });
+            const workspace = window.__orchidWorkspace;
+            const scheduleDays = workspace?.schedule?.days || [];
+            const attendance = workspace?.performance?.attendanceDays || [];
+            const attendanceByDate = new Map(attendance.map(day => [day.workDate, day]));
+            const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const parseDate = value => new Date(value + 'T00:00:00Z');
+            const duration = value => { const minutes = Math.max(0, Number(value) || 0); return Math.floor(minutes / 60) + 'h ' + String(minutes % 60).padStart(2, '0') + 'm'; };
+            const clock = value => value ? new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(value)) : '—';
+            const weekStart = parseDate(today); weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7));
+            const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+            const selected = scheduleDays.filter(day => employeeHoursView === 'week' ? parseDate(day.date) >= weekStart && parseDate(day.date) <= weekEnd : day.date.slice(0, 7) === workspace?.schedule?.month);
+            const rows = selected.filter(day => day.shifts?.length || attendanceByDate.has(day.date)).sort((a,b) => b.date.localeCompare(a.date));
+            const totals = rows.reduce((sum, day) => { const record = attendanceByDate.get(day.date); sum.work += Number(record?.payableMinutes) || 0; sum.break += Number(record?.breakMinutes) || 0; return sum; }, { work: 0, break: 0 });
+            const title = document.getElementById('hoursRangeTitle'); const label = document.getElementById('hoursWeekLabel');
+            if (title) title.textContent = employeeHoursView === 'week' ? 'This week' : 'This month';
+            if (label) label.textContent = employeeHoursView === 'week' ? scheduleDateLabel(weekStart.toISOString().slice(0,10), { day:'2-digit', month:'short' }) + ' – ' + scheduleDateLabel(weekEnd.toISOString().slice(0,10), { day:'2-digit', month:'short' }) : (workspace?.schedule?.month || 'Current month');
+            const total = document.getElementById('hoursTotal'); if (total) total.textContent = duration(totals.work);
+            const breaks = document.getElementById('hoursBreakTotal'); if (breaks) breaks.textContent = duration(totals.break);
+            const bars = document.getElementById('weekBars');
+            if (bars) {
+                const chartDates = employeeHoursView === 'week' ? Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);}) : selected.map(day=>day.date).sort();
+                const values = chartDates.map(date => Number(attendanceByDate.get(date)?.payableMinutes) || 0); const max = Math.max(480, ...values);
+                bars.replaceChildren(); chartDates.forEach((date,i) => { const bar=document.createElement('div');bar.className='bar'+(values[i]?' main':'');bar.style.height=(values[i]?Math.max(4,values[i]/max*100):0)+'%';bar.style.flex='1';bar.title=scheduleDateLabel(date,{weekday:'short',day:'2-digit',month:'short'})+' · '+duration(values[i]);bars.append(bar); });
+            }
+            const daily = document.getElementById('dailyHours');
+            if (daily) {
+                daily.replaceChildren();
+                if (!rows.length) { const message=document.createElement('p');message.className='text-body-md text-on-surface-variant text-center py-8';message.textContent='No scheduled shifts or recorded working hours in this period.';daily.append(message); }
+                rows.forEach(day => {
+                    const record=attendanceByDate.get(day.date); const shift=day.shifts?.[0];
+                    const row=document.createElement('div');row.className='flex items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant/30';
+                    const copy=document.createElement('div');copy.className='flex flex-col flex-1 min-w-0';
+                    const date=document.createElement('p');date.className='text-body-md font-medium text-on-surface';date.textContent=scheduleDateLabel(day.date,{weekday:'short',day:'2-digit',month:'short'});
+                    const times=document.createElement('p');times.className='text-label-sm text-on-surface-variant mt-0.5';times.textContent=record?'In '+clock(record.firstCheckInAt)+' · Out '+clock(record.lastCheckOutAt):shift?shift.name+' · '+scheduleTime(shift.startMinute)+' – '+scheduleTime(shift.endMinute):(day.weeklyOff?'Weekly off':'No attendance record');
+                    copy.append(date,times);
+                    const metrics=document.createElement('div');metrics.className='flex flex-col items-end flex-shrink-0';
+                    const worked=document.createElement('p');worked.className='text-body-md font-medium text-on-surface';worked.textContent=duration(record?.payableMinutes);
+                    const breakLine=document.createElement('p');breakLine.className='text-label-sm text-on-surface-variant';breakLine.textContent='Break '+duration(record?.breakMinutes);
+                    metrics.append(worked,breakLine);row.append(copy,metrics);daily.append(row);
+                });
+            }
+            document.querySelectorAll('#hoursSeg button').forEach(button => { const active=button.dataset.view===employeeHoursView;button.classList.toggle('bg-surface',active);button.classList.toggle('shadow-sm',active);button.classList.toggle('text-primary',active);button.classList.toggle('font-semibold',active);button.classList.toggle('text-on-surface-variant',!active);button.onclick=()=>{employeeHoursView=button.dataset.view==='month'?'month':'week';renderHours();}; });
         }
         function openUploadSheet() { document.getElementById('uploadSheet').classList.remove('hidden'); }
         function openFeedbackSheet() { document.getElementById('feedbackSheet').classList.remove('hidden'); }
