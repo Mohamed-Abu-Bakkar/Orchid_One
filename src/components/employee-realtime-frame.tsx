@@ -27,7 +27,16 @@ export function EmployeeRealtimeFrame() {
       title="Orchid One employee workspace"
       onLoad={() => setFrameReady(true)}
       onError={() => setFrameReady(false)}
-      className="fixed inset-0 block h-[100dvh] w-full border-0 bg-white"
+      style={{
+        position: "fixed",
+        inset: 0,
+        display: "block",
+        width: "100vw",
+        height: "100dvh",
+        maxWidth: "none",
+        border: 0,
+        background: "#fcf9f8",
+      }}
       allow="geolocation"
     />
   );
