@@ -1188,7 +1188,7 @@ Submit Request
             if (navStack[navStack.length - 1] !== id) navStack.push(id);
             showCurrentScreen();
             if (navigationReady) {
-                const state = { orchidEmployee: true, navStack: [...navStack] };
+                const state = { orchidEmployee: true, navStack: [...navStack], homeGuard: false };
                 if (options.replace) history.replaceState(state, '', location.pathname + location.search);
                 else history.pushState(state, '', location.pathname + location.search);
             }
@@ -1206,9 +1206,10 @@ Submit Request
             else if (navStack.length > 1) navStack = navStack.slice(0, -1);
             else navStack = ['home'];
             showCurrentScreen();
-            if (navStack.length === 1) history.pushState({ orchidEmployee: true, navStack: ['home'] }, '', location.pathname + location.search);
+            if (navStack.length === 1 && !event.state?.homeGuard) history.pushState({ orchidEmployee: true, navStack: ['home'], homeGuard: true }, '', location.pathname + location.search);
         });
-        history.replaceState({ orchidEmployee: true, navStack: ['home'] }, '', location.pathname + location.search);
+        history.replaceState({ orchidEmployee: true, navStack: ['home'], homeGuard: false }, '', location.pathname + location.search);
+        history.pushState({ orchidEmployee: true, navStack: ['home'], homeGuard: true }, '', location.pathname + location.search);
         navigationReady = true;
         showCurrentScreen();
         function openDocs() {
