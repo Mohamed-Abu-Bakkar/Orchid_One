@@ -686,19 +686,19 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 <span class="material-symbols-outlined">home</span>
 <span class="text-label-sm font-label-sm mt-1">Home</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openAtt()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openAtt(); return false;">
 <span class="material-symbols-outlined">fingerprint</span>
 <span class="text-label-sm font-label-sm mt-1">Attendance</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance(); return false;">
 <span class="material-symbols-outlined">monitoring</span>
 <span class="text-label-sm font-label-sm mt-1">Performance</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openRequests()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openRequests(); return false;">
 <span class="material-symbols-outlined">pending_actions</span>
 <span class="text-label-sm font-label-sm mt-1">Requests</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore(); return false;">
 <span class="material-symbols-outlined">menu</span>
 <span class="text-label-sm font-label-sm mt-1">More</span>
 </a>
@@ -1167,46 +1167,49 @@ Submit Request
             if (content) content.textContent = 'Loading your documents…';
         }
         const SCREEN_IDS = ['homeScreen', 'attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'myWorkScreen', 'scheduleScreen', 'polScreen', 'polDetailScreen'];
-        var navStack = ['home'];
+        const SCREEN_ALIASES = { home: 'homeScreen' };
+        let navStack = ['home'];
+        let navigationReady = false;
         function getScreen(id) {
-            const screen = document.getElementById(id === 'home' ? 'homeScreen' : id);
-            if (!screen) console.warn(`[Orchid Navigation] Screen element not found: ${id}`);
+            const screenId = SCREEN_ALIASES[id] || id;
+            const screen = document.getElementById(screenId);
+            if (!screen) console.warn('[Orchid Navigation] Screen element not found: ' + screenId);
             return screen;
         }
-        function hideAll() {
-            SCREEN_IDS.forEach(id => getScreen(id)?.classList.add('hidden'));
-        }
+        function hideAll() { SCREEN_IDS.forEach(id => document.getElementById(id)?.classList.add('hidden')); }
         function showCurrentScreen() {
             hideAll();
-            getScreen(navStack[navStack.length - 1] || 'home')?.classList.remove('hidden');
+            const current = navStack[navStack.length - 1] || 'home';
+            getScreen(current)?.classList.remove('hidden');
+            document.body.dataset.activeScreen = current;
         }
-        function addNavigationEntry() {
-            history.pushState({ orchidEmployee: true, screen: navStack[navStack.length - 1] }, '', location.href);
-        }
-        function goTo(id) {
+        function navigateTo(id, options = {}) {
             if (!getScreen(id)) return;
             if (navStack[navStack.length - 1] !== id) navStack.push(id);
             showCurrentScreen();
-            addNavigationEntry();
+            if (navigationReady) {
+                const state = { orchidEmployee: true, navStack: [...navStack] };
+                if (options.replace) history.replaceState(state, '', location.pathname + location.search);
+                else history.pushState(state, '', location.pathname + location.search);
+            }
         }
-        function pushScreen(id) {
-            if (!getScreen(id)) return;
-            navStack.push(id);
-            showCurrentScreen();
-            addNavigationEntry();
-        }
+        function goTo(id) { navigateTo(id); }
+        function pushScreen(id) { navigateTo(id); }
         function goBack() {
-            if (navStack.length > 1) history.back();
-            else { navStack = ['home']; showCurrentScreen(); }
+            if (navStack.length > 1) { history.back(); return; }
+            navStack = ['home']; showCurrentScreen();
         }
-        window.addEventListener('popstate', () => {
-            if (navStack.length > 1) navStack.pop();
+        window.addEventListener('popstate', event => {
+            const restored = event.state?.orchidEmployee && Array.isArray(event.state.navStack)
+                ? event.state.navStack.filter(id => id === 'home' || SCREEN_IDS.includes(id)) : null;
+            if (restored?.length) navStack = restored;
+            else if (navStack.length > 1) navStack = navStack.slice(0, -1);
             else navStack = ['home'];
             showCurrentScreen();
-            if (navStack.length === 1) history.pushState({ orchidEmployee: true, screen: 'home' }, '', location.href);
+            if (navStack.length === 1) history.pushState({ orchidEmployee: true, navStack: ['home'] }, '', location.pathname + location.search);
         });
-        history.replaceState({ orchidEmployee: true, screen: 'home' }, '', location.href);
-        history.pushState({ orchidEmployee: true, screen: 'home' }, '', location.href);
+        history.replaceState({ orchidEmployee: true, navStack: ['home'] }, '', location.pathname + location.search);
+        navigationReady = true;
         showCurrentScreen();
         function openDocs() {
             pushScreen('docsScreen');
@@ -1223,7 +1226,7 @@ Submit Request
         }
         function closeDocs() { goBack(); }
         function openAtt() { goTo('attScreen'); }
-        function closeAtt() { goTo('home'); }
+        function closeAtt() { goBack(); }
         function openWorkingHours() {
             pushScreen('hoursScreen');
             renderHours();
@@ -1232,9 +1235,9 @@ Submit Request
         function openPayslips() { pushScreen('payScreen'); }
         function closePayslips() { goBack(); }
         function openRequests() { goTo('reqScreen'); renderRequests(); }
-        function closeRequests() { goTo('home'); }
+        function closeRequests() { goBack(); }
         function openPerformance() { goTo('analyticsScreen'); }
-        function closePerformance() { goTo('home'); }
+        function closePerformance() { goBack(); }
         function openNotifications() { pushScreen('notifScreen'); renderNotifications('all'); }
         function closeNotifications() { goBack(); }
         function openNewRequest() { pushScreen('newReqScreen'); window.prepareNewRequest?.(); }
