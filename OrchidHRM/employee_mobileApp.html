@@ -1494,6 +1494,16 @@ Submit Request
             const parseDate = value => new Date(value + 'T00:00:00Z');
             const duration = value => { const minutes = Math.max(0, Number(value) || 0); return Math.floor(minutes / 60) + 'h ' + String(minutes % 60).padStart(2, '0') + 'm'; };
             const clock = value => value ? new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(value)) : '—';
+            const dateLabel = (value, options = { day: '2-digit', month: 'short' }) => {
+                const date = parseDate(value);
+                return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { ...options, timeZone: 'UTC' }).format(date);
+            };
+            const shiftTime = minute => {
+                const value = Number(minute);
+                if (!Number.isFinite(value)) return '—';
+                const normalized = ((value % 1440) + 1440) % 1440;
+                return String(Math.floor(normalized / 60)).padStart(2, '0') + ':' + String(normalized % 60).padStart(2, '0');
+            };
             const weekStart = parseDate(today); weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7));
             const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
             const selected = scheduleDays.filter(day => employeeHoursView === 'week' ? parseDate(day.date) >= weekStart && parseDate(day.date) <= weekEnd : day.date.slice(0, 7) === workspace?.schedule?.month);
@@ -1501,14 +1511,14 @@ Submit Request
             const totals = rows.reduce((sum, day) => { const record = attendanceByDate.get(day.date); sum.work += Number(record?.payableMinutes) || 0; sum.break += Number(record?.breakMinutes) || 0; return sum; }, { work: 0, break: 0 });
             const title = document.getElementById('hoursRangeTitle'); const label = document.getElementById('hoursWeekLabel');
             if (title) title.textContent = employeeHoursView === 'week' ? 'This week' : 'This month';
-            if (label) label.textContent = employeeHoursView === 'week' ? scheduleDateLabel(weekStart.toISOString().slice(0,10), { day:'2-digit', month:'short' }) + ' – ' + scheduleDateLabel(weekEnd.toISOString().slice(0,10), { day:'2-digit', month:'short' }) : (workspace?.schedule?.month || 'Current month');
+            if (label) label.textContent = employeeHoursView === 'week' ? dateLabel(weekStart.toISOString().slice(0,10), { day:'2-digit', month:'short' }) + ' – ' + dateLabel(weekEnd.toISOString().slice(0,10), { day:'2-digit', month:'short' }) : (workspace?.schedule?.month || 'Current month');
             const total = document.getElementById('hoursTotal'); if (total) total.textContent = duration(totals.work);
             const breaks = document.getElementById('hoursBreakTotal'); if (breaks) breaks.textContent = duration(totals.break);
             const bars = document.getElementById('weekBars');
             if (bars) {
                 const chartDates = employeeHoursView === 'week' ? Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);}) : selected.map(day=>day.date).sort();
                 const values = chartDates.map(date => Number(attendanceByDate.get(date)?.payableMinutes) || 0); const max = Math.max(480, ...values);
-                bars.replaceChildren(); chartDates.forEach((date,i) => { const bar=document.createElement('div');bar.className='bar'+(values[i]?' main':'');bar.style.height=(values[i]?Math.max(4,values[i]/max*100):0)+'%';bar.style.flex='1';bar.title=scheduleDateLabel(date,{weekday:'short',day:'2-digit',month:'short'})+' · '+duration(values[i]);bars.append(bar); });
+                bars.replaceChildren(); chartDates.forEach((date,i) => { const bar=document.createElement('div');bar.className='bar'+(values[i]?' main':'');bar.style.height=(values[i]?Math.max(4,values[i]/max*100):0)+'%';bar.style.flex='1';bar.title=dateLabel(date,{weekday:'short',day:'2-digit',month:'short'})+' · '+duration(values[i]);bars.append(bar); });
             }
             const daily = document.getElementById('dailyHours');
             if (daily) {
@@ -1518,8 +1528,8 @@ Submit Request
                     const record=attendanceByDate.get(day.date); const shift=day.shifts?.[0];
                     const row=document.createElement('div');row.className='flex items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant/30';
                     const copy=document.createElement('div');copy.className='flex flex-col flex-1 min-w-0';
-                    const date=document.createElement('p');date.className='text-body-md font-medium text-on-surface';date.textContent=scheduleDateLabel(day.date,{weekday:'short',day:'2-digit',month:'short'});
-                    const times=document.createElement('p');times.className='text-label-sm text-on-surface-variant mt-0.5';times.textContent=record?'In '+clock(record.firstCheckInAt)+' · Out '+clock(record.lastCheckOutAt):shift?shift.name+' · '+scheduleTime(shift.startMinute)+' – '+scheduleTime(shift.endMinute):(day.weeklyOff?'Weekly off':'No attendance record');
+                    const date=document.createElement('p');date.className='text-body-md font-medium text-on-surface';date.textContent=dateLabel(day.date,{weekday:'short',day:'2-digit',month:'short'});
+                    const times=document.createElement('p');times.className='text-label-sm text-on-surface-variant mt-0.5';times.textContent=record?'In '+clock(record.firstCheckInAt)+' · Out '+clock(record.lastCheckOutAt):shift?shift.name+' · '+shiftTime(shift.startMinute)+' – '+shiftTime(shift.endMinute):(day.weeklyOff?'Weekly off':'No attendance record');
                     copy.append(date,times);
                     const metrics=document.createElement('div');metrics.className='flex flex-col items-end flex-shrink-0';
                     const worked=document.createElement('p');worked.className='text-body-md font-medium text-on-surface';worked.textContent=duration(record?.payableMinutes);
