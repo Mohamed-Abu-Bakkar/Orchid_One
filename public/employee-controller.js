@@ -292,6 +292,7 @@
       window.__orchidWorkspaceSnapshot = JSON.stringify({ workspace, policies, work });
       window.__orchidWorkspace = workspace;
       window.__orchidWork = work || { assignments: [], history: [] };
+      window.renderHours?.();
       if (!workspace?.linked || !workspace.profile) {
         window.location.replace("/profile-pending");
         return;
