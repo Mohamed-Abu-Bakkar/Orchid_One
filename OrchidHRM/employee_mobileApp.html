@@ -217,7 +217,13 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="orchid-mobile-layout-fix">
+html, body { width:100%; min-height:100%; margin:0; }
+body { display:block !important; min-height:100dvh; overflow-x:hidden; }
+#homeScreen { display:block; width:100%; max-width:430px; min-height:100dvh; margin:0 auto; }
+#homeScreen.hidden { display:none !important; }
+</style>
+</head>
 <body class="antialiased min-h-screen pb-24 flex">
 <!-- Splash Screen -->
 <div class="fixed inset-0 z-[100] bg-surface text-on-surface flex flex-col items-center justify-center overflow-hidden" id="splash">
@@ -1161,52 +1167,47 @@ Submit Request
             if (content) content.textContent = 'Loading your documents…';
         }
         const SCREEN_IDS = ['homeScreen', 'attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'myWorkScreen', 'scheduleScreen', 'polScreen', 'polDetailScreen'];
-        var navStack = [];
+        var navStack = ['home'];
         function getScreen(id) {
-            const screen = document.getElementById(id);
+            const screen = document.getElementById(id === 'home' ? 'homeScreen' : id);
             if (!screen) console.warn(`[Orchid Navigation] Screen element not found: ${id}`);
             return screen;
         }
         function hideAll() {
-            SCREEN_IDS.forEach(id => {
-                const screen = getScreen(id);
-                if (screen) screen.classList.add('hidden');
-            });
+            SCREEN_IDS.forEach(id => getScreen(id)?.classList.add('hidden'));
+        }
+        function showCurrentScreen() {
+            hideAll();
+            getScreen(navStack[navStack.length - 1] || 'home')?.classList.remove('hidden');
+        }
+        function addNavigationEntry() {
+            history.pushState({ orchidEmployee: true, screen: navStack[navStack.length - 1] }, '', location.href);
         }
         function goTo(id) {
-            const targetId = id === 'home' ? 'homeScreen' : id;
-            const target = getScreen(targetId);
-            if (!target) return;
-            hideAll();
-            navStack = [id];
-            target.classList.remove('hidden');
+            if (!getScreen(id)) return;
+            if (navStack[navStack.length - 1] !== id) navStack.push(id);
+            showCurrentScreen();
+            addNavigationEntry();
         }
         function pushScreen(id) {
-            const target = getScreen(id);
-            if (!target) return;
-            hideAll();
+            if (!getScreen(id)) return;
             navStack.push(id);
-            target.classList.remove('hidden');
+            showCurrentScreen();
+            addNavigationEntry();
         }
         function goBack() {
-            if (navStack.length > 1) {
-                const cur = navStack.pop();
-                const currentScreen = getScreen(cur);
-                if (currentScreen) currentScreen.classList.add('hidden');
-                const prev = navStack[navStack.length - 1];
-                if (prev !== 'home') {
-                    const previousScreen = getScreen(prev);
-                    if (previousScreen) previousScreen.classList.remove('hidden');
-                }
-            } else {
-                const cur = navStack[0];
-                if (cur !== 'home' && cur) {
-                    const currentScreen = getScreen(cur);
-                    if (currentScreen) currentScreen.classList.add('hidden');
-                }
-                navStack = [];
-            }
+            if (navStack.length > 1) history.back();
+            else { navStack = ['home']; showCurrentScreen(); }
         }
+        window.addEventListener('popstate', () => {
+            if (navStack.length > 1) navStack.pop();
+            else navStack = ['home'];
+            showCurrentScreen();
+            if (navStack.length === 1) history.pushState({ orchidEmployee: true, screen: 'home' }, '', location.href);
+        });
+        history.replaceState({ orchidEmployee: true, screen: 'home' }, '', location.href);
+        history.pushState({ orchidEmployee: true, screen: 'home' }, '', location.href);
+        showCurrentScreen();
         function openDocs() {
             pushScreen('docsScreen');
             renderDocs('all');
