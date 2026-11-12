@@ -115,7 +115,7 @@ export function EmployeeEditModal({
               <>
                 <div style={{ marginBottom: 22 }}>
                   <h3 className="t-h3" style={{ margin: "0 0 14px" }}>Personal information</h3>
-                  <div className="policy-form-grid">
+                  <div className="policy-form-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
                     <label className="policy-field">First name *<input className="input" required maxLength={80} value={firstName} onChange={event => setFirstName(event.target.value)} /></label>
                     <label className="policy-field">Last name<input className="input" maxLength={80} value={lastName} onChange={event => setLastName(event.target.value)} /></label>
                     <label className="policy-field">Email address<input className="input" type="email" maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /></label>
@@ -125,7 +125,7 @@ export function EmployeeEditModal({
 
                 <div style={{ borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 22, marginBottom: 22 }}>
                   <h3 className="t-h3" style={{ margin: "0 0 14px" }}>Employment details</h3>
-                  <div className="policy-form-grid">
+                  <div className="policy-form-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
                     <label className="policy-field">Designation *<input className="input" required maxLength={100} value={designation} onChange={event => setDesignation(event.target.value)} /></label>
                     <label className="policy-field">Employment type *<select className="input" value={employmentType} onChange={event => setEmploymentType(event.target.value as EmployeeRecord["employmentType"])}>{employmentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                     <label className="policy-field">Joining date *<input className="input" type="date" required value={joiningDate} onChange={event => setJoiningDate(event.target.value)} /></label>
