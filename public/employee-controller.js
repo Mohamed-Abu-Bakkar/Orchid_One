@@ -872,6 +872,10 @@
 
   window.__orchidApplyRealtimePayload = (payload) => {
     if (!payload || !payload.workspace || !Array.isArray(payload.policies) || !payload.work) return;
+    if (window.__orchidHydrating) {
+      window.__orchidPendingRealtimePayload = payload;
+      return;
+    }
     const active = document.activeElement;
     if (active && (active.matches("input, textarea, select") || active.isContentEditable)) {
       window.__orchidPendingRealtimePayload = payload;
