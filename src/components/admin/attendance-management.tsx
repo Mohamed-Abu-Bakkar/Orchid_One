@@ -120,8 +120,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
                   <td>{row.pendingReviews ? <span className="badge badge-warning">{row.pendingReviews} pending</span> : row.rejectedEvents ? <span className="badge badge-warning">{row.rejectedEvents} rejected</span> : <span className="badge badge-neutral">{row.status === "present" ? "Recorded" : "Events only"}</span>}</td>
                   <td><details><summary className="section-link">Event history</summary><div className="attendance-event-history">{row.events.map((event: any) => <div className="attendance-event-row" key={event._id}>
                     <div><strong>{event.eventType.replace("_", " ")}</strong><small>{stamp(event.receivedAt, timezone)}</small></div>
-                    <span className={"badge "+(event.geofencePassed ? "badge-success" : "badge-warning")}>{event.geofencePassed ? "Inside geofence" : event.reviewStatus.replace("_", " ")}</span>
-                    <small>{event.locationName} · GPS ±{Math.round(event.accuracyM)}m</small>
+                    <span className={"badge "+(event.locationType === "remote" || event.geofencePassed === true ? "badge-success" : "badge-warning")}>{event.locationType === "remote" ? "Remote · no geofence" : event.geofencePassed ? "Inside geofence" : event.reviewStatus.replace("_", " ")}</span>
+                    <small>{event.locationName} · {event.accuracyM != null ? `GPS ±${Math.round(event.accuracyM)}m` : "GPS unavailable"}</small>
                   </div>)}</div></details></td>
                 </tr>)}</tbody>
               </table></div>}
