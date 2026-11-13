@@ -20,7 +20,7 @@ export const myWorkspace = query({
     const dayOffset = (value: string, days: number) => { const date = new Date(value + "T00:00:00Z"); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
     const weekStartDate = new Date(today + "T00:00:00Z"), weekday = (weekStartDate.getUTCDay() + 6) % 7;
     weekStartDate.setUTCDate(weekStartDate.getUTCDate() - weekday);
-    const weekStart = dateKey(weekStartDate), weekEnd = dayOffset(weekStart, 6), upcomingEnd = dayOffset(today, 14);
+    const weekStart = dateKey(weekStartDate), weekEnd = dayOffset(weekStart, 6), upcomingEnd = dayOffset(today, 29);
     const monthStartAt = new Date(monthStart + "T00:00:00+05:30");
     const nextMonthDate = new Date(monthStart + "T00:00:00Z");
     nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
@@ -39,7 +39,7 @@ export const myWorkspace = query({
       ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", monthStartAt.getTime()).lt("receivedAt", nextMonthStartAt.getTime())).collect(),
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", today)).collect(),
-      ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gt("workDate", today).lte("workDate", upcomingEnd)).collect(),
+      ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", today).lte("workDate", upcomingEnd)).collect(),
       ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("attendanceDays").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
@@ -111,11 +111,11 @@ export const myWorkspace = query({
     const weeklyWage = wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
       .find(record => record.period?.periodType === "weekly" && (record.status === "approved" || record.status === "locked") && record.period.fromDate <= weekEnd && record.period.toDate >= weekStart) ?? null;
     const upcoming: { type: string; title: string; date: string; endDate?: string; subtitle: string }[] = [];
-    for (const holiday of applicableHolidayRows) if ((holiday.toDate ?? holiday.date) >= today) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date < today ? today : holiday.date, endDate: holiday.toDate ?? holiday.date, subtitle: "Company holiday" });
+    for (const holiday of applicableHolidayRows) { const holidayEnd = holiday.toDate ?? holiday.date; if (holiday.date <= upcomingEnd && holidayEnd >= today) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date < today ? today : holiday.date, endDate: holidayEnd, subtitle: "Company holiday" }); }
     for (const colleague of organizationEmployees) {
       if (colleague.status !== "active" || !colleague.dateOfBirth) continue;
       const birthday = colleague.dateOfBirth.slice(5, 10);
-      for (let offset = 0; offset <= 14; offset++) {
+      for (let offset = 0; offset < 30; offset++) {
         const date = dayOffset(today, offset);
         if (date.slice(5, 10) === birthday) { upcoming.push({ type: "birthday", title: "Birthday · " + [colleague.firstName, colleague.lastName].filter(Boolean).join(" "), date, subtitle: colleague.departmentId === employee.departmentId ? "Your department" : "Orchid Flowers" }); break; }
       }
