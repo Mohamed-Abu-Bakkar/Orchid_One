@@ -60,8 +60,8 @@ export const saveConfiguration = mutation({
       entityId: String(location._id),
       metadata: {
         address,
-        latitude: args.latitude,
-        longitude: args.longitude,
+        latitude: args.latitude ?? null,
+        longitude: args.longitude ?? null,
         locationType,
         geofenceRadiusM,
       },
