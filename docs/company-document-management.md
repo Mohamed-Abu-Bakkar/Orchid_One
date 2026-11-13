@@ -11,7 +11,7 @@ Administrators and supervisors can upload company-wide documents. Published docu
 
 ## Authorization
 - Upload URL generation, creation, admin listing, and archive mutations require `superadmin` or `supervisor`.
-- Employee listing requires an authenticated `employee` (or linked `superadmin` employee view), matching organization, and active employee profile.
+- Employee listing requires an authenticated `employee` account with a linked, active employee profile in the same organization.
 - Employee queries return published records only. Archived records are not listed.
 
 ## Upload validation
