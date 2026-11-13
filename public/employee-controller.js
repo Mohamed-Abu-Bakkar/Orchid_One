@@ -44,7 +44,7 @@
       value === addDays(today, 1) ? "Tomorrow" :
       new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(new Date(value + "T00:00:00Z"));
     const items = (Array.isArray(workspace?.upcoming) ? workspace.upcoming : [])
-      .filter(item => /^\\d{4}-\\d{2}-\\d{2}$/.test(item.date || "") &&
+      .filter(item => /^\d{4}-\d{2}-\d{2}$/.test(item.date || "") &&
         item.date >= today && item.date <= rangeEnd)
       .sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
     if (!items.length) {
