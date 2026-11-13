@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 
@@ -15,6 +15,7 @@ export function PerformanceManagement() {
   const account=useQuery(api.account.getMyAccountStatus,{});
   const configure=useMutation(api.performanceFeedback.configureFeedbackDeadline);
   const reopen=useMutation(api.performanceFeedback.reopenDailyFeedback);
+  useEffect(()=>{if(workspace?.deadline)setDeadline(workspace.deadline);},[workspace?.deadline]);
   if(!workspace||!account)return <section className="sec"><p className="sub">Loading performance feedback…</p></section>;
   const submitted=workspace.employees.filter(x=>x.submitted).length;
   const missing=workspace.employees.length-submitted;
