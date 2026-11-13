@@ -761,17 +761,17 @@
       const payScreen = document.getElementById("payScreen");
       const moneyINR = paise => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((Number(paise) || 0) / 100);
       const escapePrintText = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-      const printPayslip = (record, earnings, deductions) => {
+      const printPayslip = (record, earnings, deductions, hasEarningsBreakdown, hasDeductionsBreakdown) => {
         const profile = workspace.profile || {};
         const periodLabel = record.period ? fmtDate(record.period.fromDate) + " – " + fmtDate(record.period.toDate) : "Wage record";
         const rows = (items, isDeduction) => items.map(item => "<tr><td>" + escapePrintText(item.label) + (isDeduction && item.reason ? "<small>" + escapePrintText(item.reason) + "</small>" : "") + "</td><td class='amount'>" + moneyINR(item.amountPaise) + "</td></tr>").join("");
         const gross = Number(record.grossPaise ?? record.calculationSnapshot?.grossPaise ?? 0);
         const net = Number(record.totalPaise ?? record.calculationSnapshot?.netPaise ?? 0);
-        const deductionTotal = deductions.reduce((sum, item) => sum + (Number(item.amountPaise) || 0), 0);
+        const deductionTotal = hasDeductionsBreakdown ? deductions.reduce((sum, item) => sum + (Number(item.amountPaise) || 0), 0) : null;
         const printWindow = window.open("", "_blank");
         if (!printWindow) { window.toast?.("Allow pop-ups to print or save your payslip."); return; }
         printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
-        printWindow.document.write("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Payslip " + escapePrintText(record.payslipNumber || "") + "</title><style>body{font:14px Arial,sans-serif;color:#242124;margin:36px}header{border-bottom:2px solid #4a1254;padding-bottom:16px;margin-bottom:24px}h1{color:#4a1254;margin:0 0 6px;font-size:24px}h2{font-size:16px;margin:24px 0 8px;color:#4a1254}.muted{color:#68616a;font-size:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8f4f8;padding:14px;border-radius:8px}.meta strong{display:block;margin-top:4px}table{width:100%;border-collapse:collapse}td{padding:10px 6px;border-bottom:1px solid #e6e0e6}td.amount{text-align:right;white-space:nowrap}small{display:block;color:#777;margin-top:3px}.totals{margin:20px 0 0 auto;max-width:320px}.totals p{display:flex;justify-content:space-between;margin:8px 0}.net{font-size:19px;font-weight:bold;color:#4a1254;border-top:2px solid #4a1254;padding-top:12px}.foot{margin-top:36px;border-top:1px solid #ddd;padding-top:12px;color:#777;font-size:11px}@media print{body{margin:18mm}}</style></head><body><header><h1>Orchid Flowers</h1><div class='muted'>Employee salary statement</div></header><div class='meta'><div>Employee<strong>" + escapePrintText([profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Employee") + "</strong></div><div>Employee ID<strong>" + escapePrintText(profile.employeeCode || "—") + "</strong></div><div>Pay period<strong>" + escapePrintText(periodLabel) + "</strong></div><div>Payslip reference<strong>" + escapePrintText(record.payslipNumber || "—") + "</strong></div></div><h2>Earnings</h2><table>" + (earnings.length ? rows(earnings, false) : "<tr><td colspan='2'>Historical earnings breakdown unavailable</td></tr>") + "</table><h2>Deductions</h2><table>" + (deductions.length ? rows(deductions, true) : "<tr><td colspan='2'>No itemized deductions</td></tr>") + "</table><div class='totals'><p><span>Gross earnings</span><strong>" + moneyINR(gross) + "</strong></p><p><span>Total deductions</span><strong>" + moneyINR(deductionTotal) + "</strong></p><p class='net'><span>Net payable</span><strong>" + moneyINR(net) + "</strong></p></div><div class='foot'>Generated from Orchid One. This payslip reflects the approved payroll record and is not proof of bank transfer.</div></body></html>");
+        printWindow.document.write("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Payslip " + escapePrintText(record.payslipNumber || "") + "</title><style>body{font:14px Arial,sans-serif;color:#242124;margin:36px}header{border-bottom:2px solid #4a1254;padding-bottom:16px;margin-bottom:24px}h1{color:#4a1254;margin:0 0 6px;font-size:24px}h2{font-size:16px;margin:24px 0 8px;color:#4a1254}.muted{color:#68616a;font-size:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8f4f8;padding:14px;border-radius:8px}.meta strong{display:block;margin-top:4px}table{width:100%;border-collapse:collapse}td{padding:10px 6px;border-bottom:1px solid #e6e0e6}td.amount{text-align:right;white-space:nowrap}small{display:block;color:#777;margin-top:3px}.totals{margin:20px 0 0 auto;max-width:320px}.totals p{display:flex;justify-content:space-between;margin:8px 0}.net{font-size:19px;font-weight:bold;color:#4a1254;border-top:2px solid #4a1254;padding-top:12px}.foot{margin-top:36px;border-top:1px solid #ddd;padding-top:12px;color:#777;font-size:11px}@media print{body{margin:18mm}}</style></head><body><header><h1>Orchid Flowers</h1><div class='muted'>Employee salary statement</div></header><div class='meta'><div>Employee<strong>" + escapePrintText([profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Employee") + "</strong></div><div>Employee ID<strong>" + escapePrintText(profile.employeeCode || "—") + "</strong></div><div>Pay period<strong>" + escapePrintText(periodLabel) + "</strong></div><div>Payslip reference<strong>" + escapePrintText(record.payslipNumber || "—") + "</strong></div></div><h2>Earnings</h2><table>" + (hasEarningsBreakdown ? (earnings.length ? rows(earnings, false) : "<tr><td colspan='2'>No earnings line items</td></tr>") : "<tr><td colspan='2'>Historical earnings breakdown unavailable</td></tr>") + "</table><h2>Deductions</h2><table>" + (hasDeductionsBreakdown ? (deductions.length ? rows(deductions, true) : "<tr><td colspan='2'>No deductions for this period</td></tr>") : "<tr><td colspan='2'>Historical deductions breakdown unavailable</td></tr>") + "</table><div class='totals'><p><span>Gross earnings</span><strong>" + moneyINR(gross) + "</strong></p><p><span>Total deductions</span><strong>" + moneyINR(deductionTotal) + "</strong></p><p class='net'><span>Net payable</span><strong>" + moneyINR(net) + "</strong></p></div><div class='foot'>Generated from Orchid One. This payslip reflects the approved payroll record and is not proof of bank transfer.</div></body></html>");
         printWindow.document.close();
       };
       if (payScreen) {
@@ -782,6 +782,8 @@
           wageRecords.forEach(record => {
             const card = document.createElement("article");
             card.className = "bento-card";
+            const hasEarningsBreakdown = Array.isArray(record.earnings) || Array.isArray(record.calculationSnapshot?.earnings);
+            const hasDeductionsBreakdown = Array.isArray(record.deductions) || Array.isArray(record.calculationSnapshot?.deductions);
             const earnings = Array.isArray(record.earnings) ? record.earnings : Array.isArray(record.calculationSnapshot?.earnings) ? record.calculationSnapshot.earnings : [];
             const deductions = Array.isArray(record.deductions) ? record.deductions : Array.isArray(record.calculationSnapshot?.deductions) ? record.calculationSnapshot.deductions : [];
             const title = document.createElement("p");
@@ -818,7 +820,7 @@
               details.append(heading);
               earnings.forEach(item => addLine(item.label, moneyINR(item.amountPaise)));
             } else {
-              addLine("Earnings breakdown", "Unavailable for this historical record");
+              addLine("Earnings breakdown", hasEarningsBreakdown ? "No earnings line items" : "Unavailable for this historical record");
             }
             if (deductions.length) {
               const heading = document.createElement("p");
@@ -829,7 +831,7 @@
                 addLine(item.label + (item.reason ? " · " + item.reason : ""), moneyINR(item.amountPaise));
               });
             } else {
-              addLine("Deductions", "None itemized");
+              addLine("Deductions", hasDeductionsBreakdown ? "None for this period" : "Unavailable for this historical record");
             }
             if (Number(record.payableDays) > 0) addLine("Payable days", String(record.payableDays));
             if (Number(record.payableMinutes) > 0) addLine("Payable hours", (record.payableMinutes / 60).toFixed(2));
@@ -851,7 +853,7 @@
             printButton.type = "button";
             printButton.className = "rounded-lg bg-primary px-4 py-2 text-white text-label-sm font-semibold";
             printButton.textContent = "Print / Save PDF";
-            printButton.addEventListener("click", () => printPayslip(record, earnings, deductions));
+            printButton.addEventListener("click", () => printPayslip(record, earnings, deductions, hasEarningsBreakdown, hasDeductionsBreakdown));
             actions.append(viewButton, printButton);
             card.append(title, reference, amount, status, actions, details);
             body.append(card);
