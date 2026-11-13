@@ -73,6 +73,24 @@ export const setSalaryComponentActive = mutation({
   },
 });
 
+export const updateSalaryComponent = mutation({
+  args: { componentId: v.id("salaryComponents"), name: v.string(), code: v.string(), category: componentCategory },
+  handler: async (ctx, args) => {
+    const user = await requireSuperadmin(ctx);
+    const component = await ctx.db.get(args.componentId);
+    if (!component || component.organizationId !== user.organizationId) throw new Error("COMPONENT_NOT_FOUND");
+    const name = args.name.trim();
+    const code = args.code.trim().toUpperCase().replace(/\\s+/g, "_");
+    if (!name || name.length > 80) throw new Error("INVALID_COMPONENT_NAME");
+    if (!/^[A-Z0-9_]{2,24}$/.test(code)) throw new Error("INVALID_COMPONENT_CODE");
+    const all = await ctx.db.query("salaryComponents").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect();
+    if (all.some(item => item._id !== component._id && (item.code === code || item.name.toLowerCase() === name.toLowerCase()))) throw new Error("DUPLICATE_COMPONENT");
+    await ctx.db.patch(component._id, { name, code, category: args.category, updatedAt: Date.now() });
+    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "salary_component.updated", entityType: "salaryComponent", entityId: component._id, metadata: { previousName: component.name, previousCode: component.code, previousCategory: component.category, name, code, category: args.category }, createdAt: Date.now() });
+    return component._id;
+  },
+});
+
 export const saveEmployeeCompensation = mutation({
   args: {
     employeeId: v.id("employees"),
@@ -115,6 +133,33 @@ export const saveEmployeeCompensation = mutation({
   },
 });
 
+
+export const updateEmployeeCompensation = mutation({
+  args: { compensationId: v.id("employeeCompensation"), effectiveFrom: v.string(), fixedMonthlyAmountPaise: v.optional(v.number()), components: v.array(compensationLine) },
+  handler: async (ctx, args) => {
+    const user = await requireSuperadmin(ctx);
+    if (!validDate(args.effectiveFrom)) throw new Error("INVALID_EFFECTIVE_DATE");
+    const record = await ctx.db.get(args.compensationId);
+    if (!record || record.organizationId !== user.organizationId) throw new Error("COMPENSATION_NOT_FOUND");
+    const employee = await ctx.db.get(record.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.employmentType !== "permanent") throw new Error("PERMANENT_EMPLOYEE_REQUIRED");
+    if (args.fixedMonthlyAmountPaise !== undefined && (!Number.isSafeInteger(args.fixedMonthlyAmountPaise) || args.fixedMonthlyAmountPaise < 0)) throw new Error("INVALID_FIXED_AMOUNT");
+    if (args.fixedMonthlyAmountPaise === undefined && args.components.length === 0) throw new Error("COMPENSATION_REQUIRED");
+    const duplicateDate = await ctx.db.query("employeeCompensation").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).eq("effectiveFrom", args.effectiveFrom)).first();
+    if (duplicateDate && duplicateDate._id !== record._id) throw new Error("COMPENSATION_EFFECTIVE_DATE_EXISTS");
+    const seen = new Set<string>();
+    for (const line of args.components) {
+      if (!Number.isSafeInteger(line.amountPaise) || line.amountPaise < 0 || seen.has(line.componentId)) throw new Error("INVALID_COMPONENT_AMOUNT");
+      seen.add(line.componentId);
+      const component = await ctx.db.get(line.componentId);
+      if (!component || component.organizationId !== user.organizationId) throw new Error("INVALID_SALARY_COMPONENT");
+      if (component.category === "deduction" && !line.reason?.trim()) throw new Error("DEDUCTION_REASON_REQUIRED");
+    }
+    await ctx.db.patch(record._id, { effectiveFrom: args.effectiveFrom, fixedMonthlyAmountPaise: args.fixedMonthlyAmountPaise, components: args.components });
+    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "employee_compensation.updated", entityType: "employeeCompensation", entityId: record._id, metadata: { employeeCode: employee.employeeCode, previousEffectiveFrom: record.effectiveFrom, effectiveFrom: args.effectiveFrom, previousFixedMonthlyAmountPaise: record.fixedMonthlyAmountPaise ?? null, fixedMonthlyAmountPaise: args.fixedMonthlyAmountPaise ?? null }, createdAt: Date.now() });
+    return record._id;
+  },
+});
 
 // Hourly wage configuration and daily payable-hours review.
 function validDate(value: string) {
@@ -244,6 +289,23 @@ export const saveHourlyRate = mutation({
     const id = await ctx.db.insert("wageRates", { organizationId: user.organizationId, employeeId: employee._id, employmentType: "hourly", amountPaise: args.amountPaise, overtimeMultiplier: args.overtimeMultiplier, effectiveFrom: args.effectiveFrom, approvedBy: user._id, createdAt: now });
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "hourly_wage_rate.created", entityType: "wageRate", entityId: String(id), metadata: { employeeCode: employee.employeeCode, amountPaise: args.amountPaise, overtimeMultiplier: args.overtimeMultiplier, effectiveFrom: args.effectiveFrom }, createdAt: now });
     return id;
+  },
+});
+
+export const updateHourlyRate = mutation({
+  args: { rateId: v.id("wageRates"), amountPaise: v.number(), overtimeMultiplier: v.number(), effectiveFrom: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireRole(ctx, ["superadmin"]);
+    if (!validDate(args.effectiveFrom) || !Number.isSafeInteger(args.amountPaise) || args.amountPaise <= 0 || !Number.isFinite(args.overtimeMultiplier) || args.overtimeMultiplier < 1 || args.overtimeMultiplier > 10) throw new Error("INVALID_HOURLY_RATE");
+    const rate = await ctx.db.get(args.rateId);
+    if (!rate || rate.organizationId !== user.organizationId || rate.employmentType !== "hourly" || !rate.employeeId) throw new Error("HOURLY_RATE_NOT_FOUND");
+    const employee = await ctx.db.get(rate.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.employmentType !== "hourly") throw new Error("ACTIVE_HOURLY_EMPLOYEE_REQUIRED");
+    const duplicate = await ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).eq("effectiveFrom", args.effectiveFrom)).first();
+    if (duplicate && duplicate._id !== rate._id) throw new Error("WAGE_RATE_EFFECTIVE_DATE_EXISTS");
+    await ctx.db.patch(rate._id, { amountPaise: args.amountPaise, overtimeMultiplier: args.overtimeMultiplier, effectiveFrom: args.effectiveFrom });
+    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "hourly_wage_rate.updated", entityType: "wageRate", entityId: rate._id, metadata: { employeeCode: employee.employeeCode, previousAmountPaise: rate.amountPaise, amountPaise: args.amountPaise, previousOvertimeMultiplier: rate.overtimeMultiplier ?? null, overtimeMultiplier: args.overtimeMultiplier, previousEffectiveFrom: rate.effectiveFrom, effectiveFrom: args.effectiveFrom }, createdAt: Date.now() });
+    return rate._id;
   },
 });
 
