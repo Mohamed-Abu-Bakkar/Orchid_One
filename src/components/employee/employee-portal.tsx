@@ -34,7 +34,7 @@ export function EmployeePortal() {
  const saveDocument=useMutation(api.employee.saveMyDocument);
  const [screen,setScreen]=useState<Screen>("home"),[tab,setTab]=useState<Tab>("home");
  const [clock,setClock]=useState(()=>new Date()),[notice,setNotice]=useState("");
- const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
+ const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:workspace?.timeZone??"Asia/Kolkata"}).format(clock);
  const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
  const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
 
