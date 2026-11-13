@@ -1,12 +1,46 @@
 import type { Metadata, Viewport } from "next";
+import { ConvexClientProvider } from "@/components/convex-client-provider";
+import { PwaServiceWorker } from "@/components/pwa-service-worker";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
+import { getToken } from "@/lib/auth-server";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Orchid One | HR Management",
-  description: "Orchid Flowers workforce and human resource management"
+  description: "Orchid Flowers workforce and human resource management",
+  applicationName: "Orchid One",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Orchid One"
+  },
+  icons: {
+    icon: [{ url: "/icons/icon-512.png", type: "image/png" }],
+    apple: [{ url: "/icons/icon-180.png", type: "image/png" }]
+  }
 };
-export const viewport: Viewport = { themeColor: "#5a285f", width: "device-width", initialScale: 1 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+export const viewport: Viewport = {
+  themeColor: "#5a285f",
+  width: "device-width",
+  initialScale: 1
+};
+
+export default async function RootLayout({
+  children
+}: Readonly<{ children: React.ReactNode }>) {
+  const initialToken = await getToken();
+
+  return (
+    <html lang="en">
+      <body>
+        <PwaServiceWorker />
+        <PwaInstallBanner />
+        <ConvexClientProvider initialToken={initialToken}>
+          {children}
+        </ConvexClientProvider>
+      </body>
+    </html>
+  );
 }

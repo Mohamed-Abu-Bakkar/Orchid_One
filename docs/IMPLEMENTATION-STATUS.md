@@ -20,3 +20,21 @@ Capture GPS on punch events, not continuous tracking. Persist accuracy, client t
 
 ## Security and release
 Configure identity provider, Convex deployment, private document storage, secrets and notification services before production. Do not deploy with placeholder environment variables. This branch currently contains the application foundation, schema and initial attendance mutation; it is not a completed release.
+
+
+## UI migration progress
+- The existing `OrchidHRM/` prototype is the visual source of truth; no redesign is authorized.
+- Original design-system, web and mobile stylesheets are copied into `src/styles/` and loaded by the Next.js application.
+- The admin navigation shell and dashboard composition are migrated to `src/components/admin/admin-shell.tsx`.
+- Original module navigation labels and groupings are retained.
+- The current dashboard intentionally shows empty/live-data-pending states. Original prototype sample figures are not represented as production data.
+- Remaining UI work: migrate each original module screen, dialogs/drawers/forms, tables, filters, charts and employee mobile screens; then connect each to authenticated Convex operations.
+- Visual parity and runtime verification have not yet been completed. No build, typecheck or browser test result is claimed in this status.
+
+
+## Employee interface preview
+- Added `/employee` route to display the original employee mobile prototype without redesigning it.
+- The preview is intentionally isolated in an iframe so the legacy inline interactions do not leak into the Next.js application shell.
+- The preview remains a static prototype: attendance, requests, wage figures, documents and notifications are sample/local interactions only; they are not authenticated or persisted to Convex.
+- Prototype image assets are currently loaded from the feature branch's raw GitHub URLs. Before production, move these assets into the app's own `public/` directory and migrate interactions to React components and authenticated backend operations.
+- The original employee HTML in `OrchidHRM/` remains unchanged.

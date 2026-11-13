@@ -1,0 +1,129 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/../convex/_generated/api";
+import type { Id } from "@/../convex/_generated/dataModel";
+import { authClient } from "@/lib/auth-client";
+import { EmployeePolicies } from "@/components/employee/employee-policies";
+import { ChangePassword } from "@/components/auth/change-password";
+
+type Screen = "home" | "attendance" | "hours" | "payslips" | "requests" | "documents" | "performance" | "tasks" | "notifications" | "helpdesk" | "more" | "policies" | "profile";
+type Tab = "home" | "attendance" | "performance" | "requests" | "more";
+const dateLabel = (v: number | string) => new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric"}).format(typeof v==="number"?new Date(v):new Date(v+"T00:00:00"));
+const timeLabel = (v:number) => new Intl.DateTimeFormat("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}).format(new Date(v));
+const money = (v:number) => new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v/100);
+const shiftTime = (v?:number) => v==null?"—":`${String(Math.floor(v/60)%24).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`;
+
+const DefaultProfileIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
+export function EmployeePortal() {
+ const router=useRouter(), session=authClient.useSession();
+ const account=useQuery(api.account.getMyAccountStatus,session.data?{}:"skip");
+ const allowed=!!session.data&&account?.status==="active"&&(account.role==="employee"||account.role==="superadmin");
+ const workspace=useQuery(api.employee.myWorkspace,allowed?{}:"skip");
+ const companyDocuments=useQuery(api.companyDocuments.listPublishedForEmployee,allowed?{}:"skip");
+ const punch=useMutation(api.attendance.recordPunch);
+ const uploadUrl=useMutation(api.employee.generateDocumentUploadUrl);
+ const saveDocument=useMutation(api.employee.saveMyDocument);
+ const [screen,setScreen]=useState<Screen>("home"),[tab,setTab]=useState<Tab>("home");
+ const [clock,setClock]=useState(()=>new Date()),[notice,setNotice]=useState("");
+ const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);
+ const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
+ const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
+
+ const [busy,setBusy]=useState(false),[uploadBusy,setUploadBusy]=useState(false),[docType,setDocType]=useState("Identity"),[uploadNotice,setUploadNotice]=useState("");
+ useEffect(()=>{const t=window.setInterval(()=>setClock(new Date()),1000);return()=>window.clearInterval(t)},[]);
+ const linked=workspace?.linked===true, profile=linked?workspace.profile:null, shifts=linked?(workspace.shifts??[]):[], shift=shifts[0]??null;
+ const fullName=profile?[profile.firstName,profile.lastName].filter(Boolean).join(" "):"";
+ const events=useMemo(()=>{if(!linked)return[];const day=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(clock);return workspace.attendance.filter(e=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(new Date(e.receivedAt))===day).sort((a,b)=>a.receivedAt-b.receivedAt)},[workspace,linked,clock]);
+ const pendingPunch=events.some(e=>e.reviewStatus==="pending"),acceptedEvents=events.filter(e=>e.geofencePassed||e.reviewStatus==="approved");
+ const last=acceptedEvents.at(-1),working=last?.eventType==="check_in"||last?.eventType==="break_end",nextPunch=working?"check_out":"check_in";
+ const hours=useMemo(()=>{let start:number|null=null,total=0;for(const e of acceptedEvents){if(e.eventType==="check_in"||e.eventType==="break_end")start=e.receivedAt;if((e.eventType==="check_out"||e.eventType==="break_start")&&start!==null){total+=Math.max(0,e.receivedAt-start);start=null}}if(start!==null)total+=Math.max(0,clock.getTime()-start);return total/3600000},[acceptedEvents,clock]);
+ function navigate(next:Screen){setScreen(next);setTab(["home","attendance","performance","requests","more"].includes(next)?next as Tab:"more");setNotice("")}
+ async function signOut(){await authClient.signOut();router.replace("/login");router.refresh()}
+ async function attendance(){if(!linked){setNotice("Your employee profile is not linked. Please contact HR.");return}if(!navigator.geolocation){setNotice("Location services are not supported.");return}setBusy(true);setNotice("");navigator.geolocation.getCurrentPosition(async p=>{try{const r=await punch({eventType:nextPunch,latitude:p.coords.latitude,longitude:p.coords.longitude,accuracyM:p.coords.accuracy,clientTimestamp:Date.now(),idempotencyKey:crypto.randomUUID()});setNotice(r.geofencePassed?"Attendance recorded successfully.":"Punch recorded outside the attendance area and flagged for review.")}catch(e){setNotice(e instanceof Error?e.message:"Unable to record attendance.")}finally{setBusy(false)}},e=>{setBusy(false);setNotice(e.code===e.PERMISSION_DENIED?"Location permission is required.":"Unable to obtain your location.")},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
+ async function upload(file:File){if(!["application/pdf","image/jpeg","image/png"].includes(file.type)){setUploadNotice("Choose a PDF, JPG or PNG document.");return}setUploadBusy(true);setUploadNotice("");try{const url=await uploadUrl({});const response=await fetch(url,{method:"POST",headers:{"Content-Type":file.type},body:file});if(!response.ok)throw new Error("Upload failed. Please try again.");const result=await response.json() as {storageId:Id<"_storage">};await saveDocument({storageId:result.storageId,documentType:docType,originalFileName:file.name,mimeType:file.type});setUploadNotice("Document uploaded · awaiting HR verification.")}catch(e){setUploadNotice(e instanceof Error?e.message:"Unable to upload document.")}finally{setUploadBusy(false)}}
+ if(session.isPending||(session.data&&(account===undefined||(allowed&&workspace===undefined))))return <main className="oe-loading"><img src="https://raw.githubusercontent.com/Mohamed-Abu-Bakkar/Orchid_One/feature/orchid-one-production/OrchidHRM/assets/android/launchericon-192x192.png" alt=""/><p>Preparing your Orchid workspace…</p></main>;
+ if(!session.data)return <main className="auth-page"><section className="auth-card"><div className="auth-brand"><img src="https://raw.githubusercontent.com/Mohamed-Abu-Bakkar/Orchid_One/feature/orchid-one-production/OrchidHRM/assets/android/launchericon-192x192.png" alt="Orchid One"/> ORCHID ONE</div><p className="auth-eyebrow">ORCHID FLOWERS</p><h1>People. Workforce. Performance.</h1><p className="auth-subtitle">Your employee workspace for attendance, documents and requests.</p><a className="auth-submit auth-link-button" href="/login">Sign in</a><p className="auth-switch">New employee? <a href="/register">Register here</a></p></section></main>;
+ if(!account||account.status!=="active")return <main className="oe-loading"><h1>Account unavailable</h1><p>Contact your Orchid Flowers administrator.</p><button onClick={signOut}>Sign out</button></main>;
+ if(!allowed)return <main className="oe-loading"><h1>Employee access only</h1><button onClick={()=>router.replace("/admin")}>Open administration</button></main>;
+ const heading:Record<Screen,string>={home:"Orchid One",attendance:"Attendance",hours:"Working Hours",payslips:"Payslips",requests:"My Requests",documents:"My Documents",performance:"Performance",tasks:"My Tasks",notifications:"Notifications",helpdesk:"Helpdesk",more:"More",policies:"Policies",profile:"My Profile"};
+ return <main className="oe-app"><div className="oe-shell">
+ <header className="oe-topbar">{screen!=="home"&&<button className="oe-icon-button" onClick={()=>navigate("home")} aria-label="Back">‹</button>}<div className="oe-brand"><strong>Orchid One</strong><span>Employee{profile?.employeeCode?` · ${profile.employeeCode}`:""}</span></div><div className="oe-top-actions"><button className="oe-icon-button" onClick={()=>navigate("notifications")} aria-label="Notifications">♧</button><button className="oe-avatar" onClick={()=>navigate("profile")} aria-label="Profile"><DefaultProfileIcon size={18} /></button></div></header>
+ {screen==="home"&&<section className="oe-screen"><div className="oe-home-heading"><h1>{profile?`Good ${clock.getHours()<12?"morning":clock.getHours()<17?"afternoon":"evening"}, ${profile.firstName}`:"Welcome to Orchid One"}</h1><p>Here is your daily summary for today.</p></div>
+ {!linked?<Empty title="Employee profile not linked" detail="Your account is active, but HR has not linked an employee record yet. Attendance and employee records will become available after linking."/>:<>
+ <article className="oe-hero-card"><div className="oe-shift-pill">{shift?`${shift.name} · ${shiftTime(shift.startMinute)} – ${shiftTime(shift.endMinute)}`:"Shift not assigned"}</div><time>{clock.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</time><p>{working?"You are checked in · working":"You are not checked in yet"}</p><small>{shift?"Assigned shift":"No active shift information available"}</small><button disabled={busy||!shift||pendingPunch} onClick={attendance}>{busy?"Verifying location…":nextPunch==="check_in"?"Check In":"Check Out"}</button></article>
+ <div className="oe-stat-grid"><Stat label="Today's hours" value={hours.toFixed(1)} note={working?"Currently working":"Recorded today"}/><Stat label="Month attendance" value="—" note="Summary not available"/><Stat label="Leave balance" value={workspace.leaveBalances.length?String(workspace.leaveBalances.reduce((n,x)=>n+Math.max(0,x.allocated-x.used-x.pending),0)):"—"} note="Configured balances"/><Stat label="Latest wage" value={workspace.wageRecords[0]?money(workspace.wageRecords[0].totalPaise):"—"} note={workspace.wageRecords[0]?.status.replace("_"," ")??"No wage record"}/></div>
+ <p className="oe-section-label">Quick actions</p><div className="oe-quick-grid"><Quick icon="▤" label="Payslips" onClick={()=>navigate("payslips")}/><Quick icon="▧" label="Documents" onClick={()=>navigate("documents")}/><Quick icon="✓" label="Policies" onClick={()=>navigate("policies")}/><Quick icon="◉" label="Helpdesk" onClick={()=>navigate("helpdesk")}/><Quick icon="✓" label="My Tasks" onClick={()=>navigate("tasks")}/></div>
+ <p className="oe-section-label">Recent attendance</p><div className="oe-list-card">{events.length?events.slice(-3).reverse().map(e=><div className="oe-list-row" key={e._id}><span className="oe-list-icon">◷</span><span className="oe-list-copy"><strong>{e.eventType.replace("_"," ")}</strong><small>{timeLabel(e.receivedAt)} · GPS ±{Math.round(e.accuracyM)}m</small></span><span className={e.geofencePassed?"oe-status oe-status-success":"oe-status oe-status-warning"}>{e.reviewStatus==="pending"?"Pending review":e.reviewStatus==="rejected"?"Rejected":e.geofencePassed?"Verified":"Approved"}</span></div>):<Empty title="No attendance recorded today" detail="Attendance events will appear here after a successful punch."/>}</div>
+ </>}</section>}
+ {screen==="attendance"&&<section className="oe-screen"><PageHeading title="Attendance" eyebrow="WORKFORCE" subtitle={dateLabel(clock.getTime())}/>{!linked?<Empty title="Employee profile not linked" detail="Attendance is unavailable until HR links your account to an active employee record."/>:<><article className="oe-hero-card oe-attendance-hero"><div className="oe-location-mark">⌖</div><p className="oe-section-label">Working time today</p><time>{hours.toFixed(2)} hrs</time><p>{working?"Checked in · working":"Not checked in"}</p>{pendingPunch&&<p className="oe-attendance-pending">A punch is awaiting supervisor review. Further punches are temporarily disabled.</p>}<button disabled={busy||!shift||pendingPunch} onClick={attendance}>{busy?"Verifying location…":nextPunch==="check_in"?"Check In":"Check Out"}</button></article><div className="oe-list-card">{shifts.length?shifts.map((item:any,index:number)=><div className="oe-list-row" key={item.name+index}><span className="oe-list-copy"><strong>{shifts.length>1?`Shift ${index+1}`:"Your shift"}</strong><small>{item.name} · Break {item.breakMinutes} min</small></span><strong>{shiftTime(item.startMinute)} – {shiftTime(item.endMinute)}</strong></div>):<div className="oe-list-row"><span className="oe-list-copy"><strong>Your shift</strong><small>No shift assigned</small></span><strong>—</strong></div>}</div><p className="oe-section-label">Team by shifts</p><div className="oe-list-card"><Empty title="Team details are not available" detail="Team visibility and shift-based access rules are not configured. No coworker information is displayed."/></div><p className="oe-section-label">Attendance history</p><div className="oe-list-card">{workspace.attendance.length?workspace.attendance.slice(0,15).map(e=><div className="oe-list-row" key={e._id}><span className="oe-list-icon">◷</span><span className="oe-list-copy"><strong>{e.eventType.replace("_"," ")}</strong><small>{dateLabel(e.receivedAt)} · {timeLabel(e.receivedAt)}</small></span><span className={e.geofencePassed?"oe-status oe-status-success":"oe-status oe-status-warning"}>{e.reviewStatus==="pending"?"Pending review":e.reviewStatus==="rejected"?"Rejected":e.geofencePassed?"Verified":"Approved"}</span></div>):<Empty title="No attendance records" detail="Your attendance history will appear here."/>}</div></>}</section>}
+ {screen==="hours"&&<section className="oe-screen"><PageHeading title="Working Hours" eyebrow="MY TIME" subtitle="Recorded attendance hours"/>{linked&&workspace.attendance.length? <div className="oe-list-card">{workspace.attendance.map(e=><div className="oe-list-row" key={e._id}><span className="oe-list-icon">◷</span><span className="oe-list-copy"><strong>{e.eventType.replace("_"," ")}</strong><small>{dateLabel(e.receivedAt)} · {timeLabel(e.receivedAt)}</small></span><span className="oe-status oe-status-neutral">{e.geofencePassed?"Verified":"Review"}</span></div>)}</div>:<Empty title={linked?"No working-hour records":"Employee profile not linked"} detail="Weekly totals, overtime and payable hours require approved calculation records."/>}</section>}
+ {screen==="payslips"&&<section className="oe-screen"><PageHeading title="Payslips" eyebrow="MY PAY" subtitle="Wage records published for your employee profile"/><div className="oe-list-card">{linked&&workspace.wageRecords.length?workspace.wageRecords.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">₹</span><span className="oe-list-copy"><strong>{x.period?`${dateLabel(x.period.fromDate)} – ${dateLabel(x.period.toDate)}`:"Wage period"}</strong><small>{x.payableUnits} payable units · {x.status.replace("_"," ")}</small></span><strong>{money(x.totalPaise)}</strong></div>):<Empty title="No payslips available" detail="Wage records will appear after HR publishes an approved wage period."/>}</div></section>}
+ {screen==="requests"&&<section className="oe-screen"><PageHeading title="My Requests" eyebrow="MY WORK" subtitle="Track your leave requests and balances"/><div className="oe-list-card">{linked&&workspace.leaveRequests.length?workspace.leaveRequests.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">▤</span><span className="oe-list-copy"><strong>{dateLabel(x.fromDate)} – {dateLabel(x.toDate)}</strong><small>{x.requestedDays} day(s) · {x.reason}</small></span><span className="oe-status oe-status-neutral">{x.status}</span></div>):<Empty title="No requests submitted" detail="Request submission will be enabled when leave types, date counting and approval rules are finalized."/>}</div><p className="oe-section-label">Leave balances</p><div className="oe-list-card">{linked&&workspace.leaveBalances.length?workspace.leaveBalances.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-copy"><strong>{x.leaveTypeName}</strong><small>{x.periodYear} · {x.used} used · {x.pending} pending</small></span><strong>{Math.max(0,x.allocated-x.used-x.pending)} left</strong></div>):<Empty title="No leave balance configured" detail="HR has not assigned leave balances to your profile."/>}</div></section>}
+ {screen==="documents"&&<section className="oe-screen"><PageHeading title="My Documents" eyebrow="MY RECORDS" subtitle="Your employee documents and verification status"/>{linked&&<div className="oe-upload-card"><strong>Upload document</strong><p>Add a document to your employee records.</p><select value={docType} onChange={e=>setDocType(e.target.value)}><option>Identity</option><option>Education</option><option>Employment</option><option>Address proof</option><option>Other</option></select><label className="oe-upload-button">{uploadBusy?"Uploading…":"Choose file"}<input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" disabled={uploadBusy} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);e.currentTarget.value=""}}/></label>{uploadNotice&&<p role="status">{uploadNotice}</p>}</div>}<div className="oe-list-card">{linked&&workspace.documents.length?workspace.documents.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">▧</span><span className="oe-list-copy"><strong>{x.documentType}</strong><small>{x.originalFileName} · {dateLabel(x.uploadedAt)}</small></span><span className="oe-status oe-status-neutral">{x.reviewStatus}</span>{x.url&&<a href={x.url} target="_blank" rel="noreferrer">Open</a>}</div>):<Empty title={linked?"No documents available":"Employee profile not linked"} detail="Employee documents will appear after they are uploaded or assigned."/>}</div><p className="oe-section-label">Company documents</p><div className="oe-list-card">{companyDocuments?.length?companyDocuments.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-copy"><strong>{x.title}</strong><small>{x.category} · {x.originalFileName}</small></span>{x.url&&<a href={x.url} target="_blank" rel="noreferrer">Open</a>}</div>):<Empty title="No company documents published" detail="Documents shared by Orchid Flowers will appear here."/>}</div></section>}
+ {screen==="tasks"&&(
+  <section className="oe-screen">
+   <PageHeading title="My Tasks" eyebrow="WORK ASSIGNMENTS" subtitle="Work assigned to you by Orchid Flowers"/>
+   {!linked ? (
+    <Empty title="Employee profile not linked" detail="Your account must be linked to an active employee record to view assigned work."/>
+   ) : !myWork ? (
+    <p className="oe-muted">Loading your assignments…</p>
+   ) : (
+    <>
+     <p className="oe-section-label">Upcoming and due work</p>
+     <div className="oe-list-card">
+      {myWork.assignments?.length ? myWork.assignments.map((task:any)=>(
+       <article className="oe-list-row" key={task.progressId}>
+        <span className="oe-list-copy">
+         <strong>{task.title}</strong>
+         <small>{task.category} · {dateLabel(task.workDate)} · {task.priority} priority</small>
+         {task.description && <small>{task.description}</small>}
+         {task.reviewNote && <small>Reviewer note: {task.reviewNote}</small>}
+        </span>
+        <span className="oe-status oe-status-neutral">{task.status.replaceAll("_"," ")}</span>
+        <span className="oe-task-actions">
+         {task.status==="not_started" && <button className="oe-secondary-button" onClick={()=>void updateWork({progressId:task.progressId,status:"in_progress"}).catch(e=>setNotice(e instanceof Error?e.message:"Unable to update task."))}>Start</button>}
+         {task.status==="in_progress" && <button className="oe-secondary-button" onClick={()=>void updateWork({progressId:task.progressId,status:"submitted_for_review"}).catch(e=>setNotice(e instanceof Error?e.message:"Unable to submit task."))}>Submit for review</button>}
+        </span>
+       </article>
+      )) : <Empty title="No assigned tasks" detail="New work assignments will appear here when your supervisor assigns them."/>}
+     </div>
+     <p className="oe-section-label">Completed and past work</p>
+     <div className="oe-list-card">
+      {myWork.history?.length ? myWork.history.map((task:any)=>(
+       <div className="oe-list-row" key={task.progressId}>
+        <span className="oe-list-copy">
+         <strong>{task.title}</strong>
+         <small>{task.category} · {dateLabel(task.workDate)}</small>
+        </span>
+        <span className="oe-status oe-status-neutral">{task.status.replaceAll("_"," ")}</span>
+       </div>
+      )) : <Empty title="No work history yet" detail="Past assignments will appear here."/>}
+     </div>
+    </>
+   )}
+  </section>
+ )}
+
+ {screen==="performance"&&<section className="oe-screen"><PageHeading title="Performance" eyebrow="MY WORK" subtitle="Your performance information"/><Empty title="Performance metrics are not configured" detail="Scores and rankings will remain unavailable until Orchid Flowers defines its performance metrics and review process."/></section>}
+ {screen==="notifications"&&<section className="oe-screen"><PageHeading title="Notifications" eyebrow="UPDATES" subtitle="Updates related to your employee account"/><div className="oe-list-card">{linked&&workspace.notifications.length?workspace.notifications.map(x=><div className="oe-list-row" key={x._id}><span className="oe-list-icon">♧</span><span className="oe-list-copy"><strong>{x.title}</strong><small>{x.body} · {dateLabel(x.createdAt)}</small></span><span className="oe-status oe-status-neutral">{x.readAt?"Read":"New"}</span></div>):<Empty title="You're all caught up" detail="New notifications will appear here."/>}</div></section>}
+ {screen==="policies"&&<section className="oe-screen"><PageHeading title="Policies" eyebrow="ORCHID FLOWERS" subtitle="Review company policies and acknowledgements"/><EmployeePolicies/></section>}
+ {screen==="helpdesk"&&<section className="oe-screen"><PageHeading title="Helpdesk" eyebrow="SUPPORT" subtitle="Get assistance with your Orchid One account"/><Empty title="Helpdesk requests are not configured yet" detail="Ticket routing and service-level rules have not been defined. Contact your supervisor or HR team for assistance."/></section>}
+ {screen==="profile"&&profile&&<section className="oe-screen"><PageHeading title="My Profile" eyebrow="MY ACCOUNT" subtitle="Your employee information"/><div className="oe-list-card"><div className="oe-profile-heading"><div><strong>{fullName}</strong><small>{profile.designation||"Employee"}</small></div></div>{[["Employee ID",profile.employeeCode],["Email",profile.email],["Phone",profile.phone],["Department",workspace?.department?.name],["Location",workspace?.location?.name],["Employment type",profile.employmentType],["Joining date",profile.joiningDate?dateLabel(profile.joiningDate):undefined],["Account status",profile.status]].map(([k,v])=><div className="oe-profile-field" key={String(k)}><span>{k}</span><strong>{v||"Not available"}</strong></div>)}</div><ChangePassword className="oe-secondary-button" /><button className="oe-secondary-button" onClick={signOut}>Sign out</button></section>}{screen==="profile"&&!profile&&<section className="oe-screen"><PageHeading title="My Profile" eyebrow="MY ACCOUNT" subtitle="Your employee information"/><Empty title="Employee profile not linked" detail="HR has not linked an employee record to this account."/><ChangePassword className="oe-secondary-button" /><button className="oe-secondary-button" onClick={signOut}>Sign out</button></section>}
+ {screen==="more"&&<section className="oe-screen"><PageHeading title="More" eyebrow="ORCHID ONE" subtitle="Your account and company resources"/><div className="oe-list-card">{[["profile","My Profile","Account details"],["hours","Working Hours","Attendance history"],["payslips","Payslips","Wage records"],["notifications","Notifications","Account updates"],["policies","Policies","Company policies"],["helpdesk","Helpdesk","Get assistance"]].map(([id,label,detail])=><button className="oe-more-row" key={id} onClick={()=>navigate(id as Screen)}><span className="oe-list-icon">›</span><span className="oe-list-copy"><strong>{label}</strong><small>{detail}</small></span><span>›</span></button>)}</div><button className="oe-secondary-button" onClick={signOut}>Sign out</button></section>}
+ {notice&&<p className="oe-notice" role="status">{notice}<button onClick={()=>setNotice("")}>×</button></p>}
+ <nav className="oe-bottom-nav" aria-label="Employee navigation">{([["home","⌂","Home"],["attendance","◉","Attendance"],["performance","▥","Performance"],["requests","▤","Requests"],["more","⋯","More"]] as const).map(([id,icon,label])=><button key={id} className={tab===id?"active":""} onClick={()=>navigate(id)}><span>{icon}</span>{label}</button>)}</nav>
+ </div></main>;
+}
+function Empty({title,detail}:{title:string;detail:string}){return <div className="oe-empty"><span>◌</span><strong>{title}</strong><p>{detail}</p></div>}
+function PageHeading({eyebrow,title,subtitle}:{eyebrow:string;title:string;subtitle:string}){return <div className="oe-page-heading"><p className="oe-eyebrow">{eyebrow}</p><h1>{title}</h1><p>{subtitle}</p></div>}
+function Stat({label,value,note}:{label:string;value:string;note:string}){return <div className="oe-stat-card"><span>{label}</span><strong>{value}</strong><small>{note}</small></div>}
+function Quick({icon,label,onClick}:{icon:string;label:string;onClick:()=>void}){return <button className="oe-quick-action" onClick={onClick}><span>{icon}</span><small>{label}</small></button>}

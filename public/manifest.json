@@ -1,1 +1,24 @@
-{"id":"/","name":"Orchid One – HR Management","short_name":"Orchid One","description":"Orchid Flowers workforce management","start_url":"/","scope":"/","display":"standalone","background_color":"#faf8fa","theme_color":"#5a285f","icons":[{"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png"}]}
+{
+  "id": "/",
+  "name": "Orchid One",
+  "short_name": "Orchid",
+  "description": "Orchid Flowers workforce and human resource management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fcf9f8",
+  "theme_color": "#5a285f",
+  "icons": [
+    {
+      "src": "assets/android/launchericon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/android/launchericon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

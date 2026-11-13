@@ -217,7 +217,13 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="orchid-mobile-layout-fix">
+html, body { width:100%; min-height:100%; margin:0; }
+body { display:block !important; min-height:100dvh; overflow-x:hidden; }
+#homeScreen { display:block; width:100%; max-width:430px; min-height:100dvh; margin:0 auto; }
+#homeScreen.hidden { display:none !important; }
+</style>
+</head>
 <body class="antialiased min-h-screen pb-24 flex">
 <!-- Splash Screen -->
 <div class="fixed inset-0 z-[100] bg-surface text-on-surface flex flex-col items-center justify-center overflow-hidden" id="splash">
@@ -245,19 +251,19 @@
 </main>
 </div>
 <!-- Main Content Area -->
-<main class="flex-1 w-full max-w-[430px] mx-auto">
+<main id="homeScreen" class="flex-1 w-full max-w-[430px] mx-auto">
 <!-- TopAppBar -->
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm sticky top-0 z-30">
 <div class="flex flex-col">
 <span class="text-title-md font-title-md font-bold text-primary leading-tight">Orchid One</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Employee · OH-2041</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Employee · —</span>
 </div>
 <div class="flex items-center gap-2">
 <button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2 relative" onclick="openNotifications()">
 <span class="material-symbols-outlined">notifications</span>
 <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E4572E] border border-surface"></span>
 </button>
-<img class="w-9 h-10 rounded-full object-cover border border-outline-variant/40" alt="Arun Kumar Profile Picture" onclick="window.location='/code.html'" data-alt="A highly detailed professional portrait of an Indian male software developer in his early 30s. He is wearing a clean, modern button-down shirt. The background is a bright, softly blurred tech office environment with high-key lighting. The overall mood is confident, approachable, and corporate. Modern enterprise aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXNPrDoUMs9RbNq_QWsCKuqHdut5wgiSN5WsG9rr4HeQVv6dbfo0v0GSGhS8gRf0nTJl3t_bDRsOL97IJ4eM7-_9Orl9JFxfPr1r4JqcYArptD_dlWmW_KmI7gNZJJILF-vKRxKu_ywMV5kxpo-aym3w3DSJ4nBbcEmjmVtlLlytiHPy1btyFbaJx1Lrgs2YepibWmfk0rMNSpf6nEahUpMFsixXCkpRG_U6ylFYjinUzMJQE75ctZ"/>
+<button type="button" class="w-9 h-9 rounded-full border border-outline-variant/40 bg-surface-container-low text-primary flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined">account_circle</span></button>
 </div>
 </header>
 <div class="p-4 flex flex-col gap-3">
@@ -271,39 +277,42 @@
 <div class="absolute inset-0 bg-gradient-to-br from-primary-fixed to-surface opacity-30"></div>
 <div class="w-full z-10 flex items-center justify-between">
 <span class="flex items-center gap-1.5 px-2.5 py-1 bg-secondary-fixed text-on-secondary-fixed rounded-full text-label-sm font-label-sm font-medium">
-<span class="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span>Morning Shift · 06:00 – 14:00
+<span class="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span><span id="employeeShiftLabel">Shift not assigned</span>
 </span>
 </div>
-<p class="z-10 text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold tracking-tight mt-5 font-tabular-nums" id="heroClock">06:00:00</p>
-<p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1" id="heroDate">Thursday, 14 Aug 2026</p>
+<p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1" id="heroDate"></p>
 <div class="z-10 my-7 flex items-center justify-center" id="heroRingWrap">
 <div class="hero-ring" id="heroRing"><span class="material-symbols-outlined text-primary text-[40px] relative z-10" style="font-variation-settings: 'FILL' 0;">fingerprint</span></div>
 </div>
 <p class="z-10 text-body-lg font-body-lg font-semibold text-on-surface" id="heroStateLabel">You are not checked in yet</p>
 <p class="z-10 text-body-md font-body-md text-on-surface-variant mt-1 text-center" id="heroStateSub">Location verified · inside the attendance area</p>
 <button class="z-10 mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg px-7 py-3 shadow-sm hover:bg-primary-container transition-colors" id="heroBtn" onclick="toggleCheckIn()">Check In</button>
+<div id="homeBreakPanel" class="z-10 w-full mt-4 rounded-xl bg-surface/90 border border-outline-variant/50 p-4 hidden">
+  <div class="flex items-center justify-between gap-3"><div><p id="homeBreakTitle" class="text-body-md font-semibold text-on-surface">Break timer</p><p id="homeBreakSub" class="text-label-sm text-on-surface-variant mt-1">Use this when you start your shift break.</p></div><span id="homeBreakCountdown" class="text-title-lg font-bold tabular-nums text-primary">—</span></div>
+  <button id="homeBreakBtn" type="button" class="w-full mt-3 rounded-lg bg-primary text-white font-semibold py-3" onclick="toggleEmployeeBreak()">Start Break</button>
+</div>
 </div>
 <!-- Quick Stats -->
 <div class="grid grid-cols-2 gap-3">
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Today's hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">0.0</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Not checked in</p>
+<p id="statTodayHrs" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statTodaySub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No attendance summary</p>
 </div>
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Month attendance</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">18 / 22</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">82% attendance</p>
+<p id="statMonthAttendance" class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statMonthAttendanceSub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No monthly summary</p>
 </div>
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Leave balance</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">8</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Casual leave</p>
+<p id="statLeaveBalance" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statLeaveBalanceSub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No leave balance</p>
 </div>
 <div class="bento-card flex flex-col">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">This week's wage</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">₹4,800</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">40 hrs · submitted</p>
+<p id="statWeeklyWage" class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">—</p>
+<p id="statWeeklyWageSub" class="text-label-sm font-label-sm text-on-surface-variant mt-1">No approved wage for this week</p>
 </div>
 </div>
 <!-- Quick Actions -->
@@ -314,11 +323,11 @@
 <span class="text-label-sm font-label-sm text-on-surface-variant">Payslips</span>
 </button>
 <button class="bg-surface hover:bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-colors" onclick="openDocs()">
-<span class="material-symbols-outlined text-secondary">edit_document</span>
+<span class="material-symbols-outlined text-secondary">description</span>
 <span class="text-label-sm font-label-sm text-on-surface-variant">Documents</span>
 </button>
 <button class="bg-surface hover:bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-colors" onclick="openPolicies()">
-<span class="material-symbols-outlined text-secondary">approval</span>
+<span class="material-symbols-outlined text-secondary">menu_book</span>
 <span class="text-label-sm font-label-sm text-on-surface-variant">Policies</span>
 </button>
 <button class="bg-surface hover:bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-colors" onclick="openHelpdesk()">
@@ -328,7 +337,7 @@
 </div>
 <!-- Upcoming -->
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-1">Upcoming</p>
-<div class="bento-card p-0 overflow-hidden">
+<div class="bento-card p-0 overflow-hidden" id="upcomingList">
 <div class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer">
 <div class="flex flex-col flex-1 min-w-0">
 <p class="text-body-md font-body-md font-medium text-on-surface">Independence Day</p>
@@ -356,7 +365,7 @@
 </div>
 </main>
 <!-- My Documents Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="docsScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="docsScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closeDocs()">
@@ -385,24 +394,10 @@
 <div class="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-4"></div>
 <p class="text-title-md font-title-md font-semibold text-on-surface">Upload document</p>
 <p class="text-body-md font-body-md text-on-surface-variant mt-1">Add a new document to your records</p>
-<div class="mt-5 border-2 border-dashed border-outline-variant rounded-lg py-8 flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors" onclick="simulateUpload(this)">
-<span class="material-symbols-outlined text-on-surface-variant text-[28px] mb-1.5">upload</span>
-<p class="text-body-md font-body-md text-on-surface">Tap to choose a document</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Aadhaar, PAN, certificates, etc.</p>
-</div>
-<div class="mt-4">
-<p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Category</p>
-<select class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface focus:outline-none focus:border-primary">
-<option>Identity</option>
-<option>Education</option>
-<option>Employment</option>
-</select>
-</div>
-<div class="mt-4">
-<p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Document name</p>
-<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary" placeholder="e.g. Aadhaar Card" />
-</div>
-<button class="w-full mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg py-3 hover:bg-primary-container transition-colors" onclick="toast('Document uploaded for verification');closeUploadSheet()">Upload</button>
+<div class="mt-5 border-2 border-dashed border-outline-variant rounded-lg py-8 flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors" onclick="document.getElementById('employeeDocumentFile').click()"><span class="material-symbols-outlined text-on-surface-variant text-[28px] mb-1.5">upload</span><p class="text-body-md font-body-md text-on-surface" id="employeeDocumentFileLabel">Tap to choose a document</p><p class="text-label-sm font-label-sm text-on-surface-variant mt-1">PDF, JPG or PNG · Max 15 MB</p><input id="employeeDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="hidden" /></div>
+<div class="mt-4"><p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Category</p><select id="employeeDocumentCategory" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface"><option value="Identity">Identity</option><option value="Education">Education</option><option value="Employment">Employment</option></select></div>
+<div class="mt-4"><p class="text-label-sm font-label-sm text-on-surface-variant mb-1.5">Document name</p><input id="employeeDocumentType" maxlength="100" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface" placeholder="e.g. Aadhaar Card" /></div>
+<p id="employeeDocumentMessage" class="text-label-sm font-label-sm text-on-surface-variant mt-3" role="status"></p><button id="employeeDocumentUploadButton" type="button" class="w-full mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg py-3" onclick="uploadEmployeeDocument()">Upload for review</button>
 </div>
 </div>
 <!-- Feedback Sheet -->
@@ -423,43 +418,68 @@
 <button class="w-full mt-5 bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg py-3 hover:bg-primary-container transition-colors" onclick="submitFeedback()">Submit feedback</button>
 </div>
 </div>
+<!-- My Work Screen -->
+<div class="fixed inset-x-0 top-0 bottom-0 z-[91] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="myWorkScreen">
+<div class="flex flex-col h-full">
+<header class="flex items-center gap-3 px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40"><button class="rounded-full p-2" onclick="closeMyWork()" aria-label="Back"><span class="material-symbols-outlined">arrow_back</span></button><div><p class="text-title-md font-semibold text-on-surface">My Work</p><p id="myWorkSummary" class="text-label-sm text-on-surface-variant">Assigned tasks</p></div></header>
+<div class="flex-1 overflow-y-auto p-4">
+<section><h2 class="text-label-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Current & upcoming</h2><div id="myWorkList"><p class="text-body-sm text-on-surface-variant text-center py-6">Loading assignments…</p></div></section>
+<section class="mt-5"><h2 class="text-label-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Previous work</h2><div id="myWorkHistory"><p class="text-body-sm text-on-surface-variant text-center py-6">Loading history…</p></div></section>
+<p class="text-[11px] text-on-surface-variant text-center py-4">Completed work is confirmed by your supervisor after review.</p>
+</div></div></div>
+<!-- My Schedule Screen -->
+<div class="fixed inset-x-0 top-0 bottom-0 z-[91] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="scheduleScreen">
+<div class="flex flex-col h-full">
+<header class="flex items-center gap-3 w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
+<button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closeMySchedule()" aria-label="Back to More"><span class="material-symbols-outlined">arrow_back</span></button>
+<div class="flex flex-col"><span class="text-title-md font-title-md font-bold text-on-surface leading-tight">My Schedule</span><span class="text-label-sm font-label-sm text-on-surface-variant">Your assigned shifts</span></div>
+</header>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<div class="bento-card p-3">
+<div class="flex items-center justify-between mb-3"><p id="scheduleMonthTitle" class="text-title-md font-title-md font-semibold text-on-surface">—</p><span class="text-label-sm font-label-sm text-on-surface-variant">Monthly view</span></div>
+<div class="grid grid-cols-7 gap-1 mb-2 text-center"><span class="text-[10px] font-semibold text-on-surface-variant py-1">S</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">M</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">T</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">W</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">T</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">F</span><span class="text-[10px] font-semibold text-on-surface-variant py-1">S</span></div>
+<div id="scheduleCalendarGrid" class="grid grid-cols-7 gap-1" aria-label="Monthly shift calendar"></div>
+<div class="flex flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-outline-variant/40"><span class="inline-flex items-center gap-1.5 text-[10px] text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span>Shift</span><span class="inline-flex items-center gap-1.5 text-[10px] text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-outline"></span>Weekly off</span><span class="inline-flex items-center gap-1.5 text-[10px] text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-[#D97706]"></span>Holiday</span></div>
+</div>
+<div class="bento-card p-4"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Selected date</p><p id="scheduleSelectedDate" class="text-title-md font-title-md font-semibold text-on-surface mt-1">—</p><div id="scheduleDayDetails" class="mt-3"><p class="text-body-sm text-on-surface-variant">Select a date to view its schedule.</p></div></div>
+<div><div class="flex items-center justify-between mb-2"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Upcoming shifts</p><span id="scheduleUpcomingCount" class="text-label-sm font-label-sm text-on-surface-variant"></span></div><div id="scheduleUpcomingList" class="bento-card p-0 overflow-hidden"><p class="text-body-sm text-on-surface-variant text-center py-6">Loading schedule…</p></div></div>
+<p class="text-[11px] text-on-surface-variant text-center">Your schedule is read-only. Contact your supervisor if an assignment needs to be changed.</p>
+</div></div></div>
 <!-- Attendance Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="attScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="attScreen">
 <div class="flex flex-col h-full">
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex flex-col">
 <span class="text-title-md font-title-md font-bold text-primary leading-tight">Orchid One</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Employee · OH-2041</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Employee · —</span>
 </div>
 <div class="flex items-center gap-2">
 <button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2 relative" onclick="openNotifications()">
 <span class="material-symbols-outlined">notifications</span>
 <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E4572E] border border-surface"></span>
 </button>
-<img class="w-9 h-10 rounded-full object-cover border border-outline-variant/40" alt="Arun Kumar Profile Picture" onclick="window.location='/code.html'" data-alt="A highly detailed professional portrait of an Indian male software developer in his early 30s. He is wearing a clean, modern button-down shirt. The background is a bright, softly blurred tech office environment with high-key lighting. The overall mood is confident, approachable, and corporate. Modern enterprise aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXNPrDoUMs9RbNq_QWsCKuqHdut5wgiSN5WsG9rr4HeQVv6dbfo0v0GSGhS8gRf0nTJl3t_bDRsOL97IJ4eM7-_9Orl9JFxfPr1r4JqcYArptD_dlWmW_KmI7gNZJJILF-vKRxKu_ywMV5kxpo-aym3w3DSJ4nBbcEmjmVtlLlytiHPy1btyFbaJx1Lrgs2YepibWmfk0rMNSpf6nEahUpMFsixXCkpRG_U6ylFYjinUzMJQE75ctZ"/>
+<button type="button" class="w-9 h-9 rounded-full border border-outline-variant/40 bg-surface-container-low text-primary flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined">account_circle</span></button>
 </div>
 </header>
 <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 <div class="flex items-center justify-between">
 <div>
-<p class="text-title-md font-title-md font-semibold text-on-surface">Thursday, 14 Aug</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Morning Shift · 06:00 – 14:00</p>
+<p class="text-title-md font-title-md font-semibold text-on-surface" id="attDateLabel">—</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="attShiftLabel">Loading shift…</p>
 </div>
 <div class="flex flex-col items-end">
-<p class="text-headline-lg-mobile font-headline-lg-mobile font-semibold text-primary font-tabular-nums" id="attClock">06:00</p>
+<p class="text-headline-lg-mobile font-headline-lg-mobile font-semibold text-primary font-tabular-nums" id="attClock">—</p>
 <p class="text-label-sm font-label-sm text-on-surface-variant">Live</p>
 </div>
 </div>
 <!-- GPS status -->
 <div class="bento-card flex items-center gap-3">
-<div class="w-11 h-11 rounded-lg bg-secondary-fixed text-primary flex items-center justify-center flex-shrink-0" id="gpsIcon">
-<span class="material-symbols-outlined text-[22px]">location_on</span>
-</div>
+<div class="w-11 h-11 rounded-lg bg-surface-container-low text-primary flex items-center justify-center flex-shrink-0" id="gpsIcon"><span class="material-symbols-outlined text-[22px]">location_on</span></div>
 <div class="flex flex-col flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Inside the attendance area</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">120 m from office · accuracy ±8 m</p>
+<p class="text-body-md font-body-md font-semibold text-on-surface" id="gpsStatusTitle">Location not checked</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="gpsStatusDetail">Your location is verified when you record a punch.</p>
 </div>
-<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#e6f4ea] text-[#1E8E4E] text-[10px] font-semibold flex-shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-[#1E8E4E]"></span>Verified</span>
+<span id="gpsStatusBadge" class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-semibold flex-shrink-0">Not checked</span>
 </div>
 <!-- Circular control -->
 <div class="bento-card flex flex-col items-center">
@@ -474,137 +494,40 @@
 <button class="bg-primary text-white text-body-lg font-body-lg font-bold rounded-lg px-7 py-3 shadow-sm hover:bg-primary-container transition-colors" id="attCheckBtn" onclick="toggleCheckIn()">Check In</button>
 </div>
 </div>
+<div class="bento-card" id="todayAttendanceEvents"><p class="text-body-md text-on-surface-variant text-center py-3">Loading today’s attendance…</p></div>
 <!-- Shift info -->
 <div class="bento-card">
 <div class="flex items-center justify-between mb-2">
 <span class="text-body-lg font-body-lg font-semibold text-on-surface">Your shift</span>
 <span class="text-label-sm font-label-sm text-primary font-semibold cursor-pointer" onclick="toast('Shift schedule')">View schedule</span>
 </div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Shift</span><span class="text-body-md font-body-md font-medium text-on-surface">Morning</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Working hours</span><span class="text-body-md font-body-md font-medium text-on-surface">06:00 – 14:00</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Break</span><span class="text-body-md font-body-md font-medium text-on-surface">30 min</span></div>
-<div class="flex justify-between py-2"><span class="text-body-md font-body-md text-on-surface-variant">Expected check-out</span><span class="text-body-md font-body-md font-medium text-on-surface">14:00</span></div>
+<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Shift</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftName">—</span></div>
+<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Working hours</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftHours">—</span></div>
+<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Scheduled break</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftBreak">—</span></div>
+<div class="flex justify-between py-2"><span class="text-body-md font-body-md text-on-surface-variant">Expected check-out</span><span class="text-body-md font-body-md font-medium text-on-surface" id="employeeShiftCheckout">—</span></div>
 </div>
 <!-- Team by shifts -->
-<div class="bento-card">
-<div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">Team by shifts</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Today · 03 Nov</span>
-</div>
-<!-- Morning shift group -->
-<div class="mb-4">
-<div class="flex items-center gap-2 mb-2">
-<span class="w-2 h-2 rounded-full bg-[#34A853]"></span>
-<span class="text-body-md font-body-md font-semibold text-on-surface">Morning shift · 06:00 – 14:00</span>
-<span class="ml-auto text-label-sm font-label-sm text-on-surface-variant">3 members</span>
-</div>
-<div class="flex flex-col gap-3">
-<!-- member -->
-<div class="flex items-start gap-3 p-2 rounded-lg bg-surface-container-low">
-<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-label-md flex-shrink-0">AK</div>
-<div class="flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Arun Kumar <span class="text-label-sm text-primary font-semibold">(You)</span></p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Oversees: Bulk procurement · Quality grading</p>
-<p class="text-label-sm font-label-sm text-on-surface mt-1"><span class="font-semibold">Tasks:</span> Inspect incoming lot, Grade flowers, Update stock sheet</p>
-</div>
-<span class="text-label-sm font-label-sm text-[#34A853] font-semibold flex-shrink-0">On shift</span>
-</div>
-<div class="flex items-start gap-3 p-2 rounded-lg bg-surface-container-low">
-<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-label-md flex-shrink-0">RK</div>
-<div class="flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Ravi Kumar</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Oversees: Cold storage · Sorting</p>
-<p class="text-label-sm font-label-sm text-on-surface mt-1"><span class="font-semibold">Tasks:</span> Sort roses, Log wastage, Handover to dispatch</p>
-</div>
-<span class="text-label-sm font-label-sm text-[#34A853] font-semibold flex-shrink-0">On shift</span>
-</div>
-<div class="flex items-start gap-3 p-2 rounded-lg bg-surface-container-low">
-<div class="w-10 h-10 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-semibold text-label-md flex-shrink-0">AP</div>
-<div class="flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Anita Patel</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Oversees: Packing · Dispatch</p>
-<p class="text-label-sm font-label-sm text-on-surface mt-1"><span class="font-semibold">Tasks:</span> Pack bouquets, Update dispatch sheet, Seal crates</p>
-</div>
-<span class="text-label-sm font-label-sm text-[#34A853] font-semibold flex-shrink-0">On shift</span>
-</div>
-<div class="flex items-start gap-3 p-2 rounded-lg bg-surface-container-low">
-<div class="w-10 h-10 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center font-semibold text-label-md flex-shrink-0">SM</div>
-<div class="flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Suresh Menon</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Oversees: Cold room · Equipment</p>
-<p class="text-label-sm font-label-sm text-on-surface mt-1"><span class="font-semibold">Tasks:</span> Service cooler, Log downtime, Safety check</p>
-</div>
-<span class="text-label-sm font-label-sm text-on-surface-variant font-semibold flex-shrink-0">On break</span>
-</div>
-</div>
-</div>
-<!-- Evening shift group -->
-<div>
-<div class="flex items-center gap-2 mb-2">
-<span class="w-2 h-2 rounded-full bg-[#F9AB00]"></span>
-<span class="text-body-md font-body-md font-semibold text-on-surface">Evening shift · 15:00 – 23:00</span>
-<span class="ml-auto text-label-sm font-label-sm text-on-surface-variant">2 members</span>
-</div>
-<div class="flex flex-col gap-3">
-<div class="flex items-start gap-3 p-2 rounded-lg bg-surface-container-low opacity-70">
-<div class="w-10 h-10 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-semibold text-label-md flex-shrink-0">NP</div>
-<div class="flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Neha Patel</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Oversees: Finishing · District dispatch</p>
-<p class="text-label-sm font-label-sm text-on-surface mt-1"><span class="font-semibold">Tasks:</span> Final QC, Label crates, Handover to night</p>
-</div>
-<span class="text-label-sm font-label-sm text-on-surface-variant font-semibold flex-shrink-0">Upcoming</span>
-</div>
-<div class="flex items-start gap-3 p-2 rounded-lg bg-surface-container-low opacity-70">
-<div class="w-10 h-10 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-semibold text-label-md flex-shrink-0">VK</div>
-<div class="flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Vikram Khanna</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Oversees: Warehouse · Inventory</p>
-<p class="text-label-sm font-label-sm text-on-surface mt-1"><span class="font-semibold">Tasks:</span> Stock audit, Reorder alerts, Zone cleanup</p>
-</div>
-<span class="text-label-sm font-label-sm text-on-surface-variant font-semibold flex-shrink-0">Upcoming</span>
-</div>
-</div>
-</div>
+<div class="bento-card" id="employeeTeamByShift">
+  <div class="flex items-center justify-between mb-3">
+    <span class="text-body-lg font-body-lg font-semibold text-on-surface">My team</span>
+    <span id="employeeTeamDate" class="text-label-sm font-label-sm text-on-surface-variant">Today</span>
+  </div>
+  <div id="employeeTeamContent">
+    <p class="text-body-md font-body-md text-on-surface-variant text-center py-6">Loading your team…</p>
+  </div>
 </div>
 <button class="w-full bg-surface text-primary border border-primary text-body-md font-body-md font-semibold rounded-lg py-3 hover:bg-secondary-fixed transition-colors flex items-center justify-center gap-1" onclick="openWorkingHours()">View working hours<span class="material-symbols-outlined text-[18px]">chevron_right</span></button>
 <!-- Office location -->
 <div class="bento-card flex items-center gap-3">
-<div class="w-11 h-11 rounded-lg bg-[#e6f4ea] text-[#1E8E4E] flex items-center justify-center flex-shrink-0">
-<span class="material-symbols-outlined text-[22px]">location_city</span>
-</div>
-<div class="flex flex-col flex-1 min-w-0">
-<p class="text-body-md font-body-md font-semibold text-on-surface">Orchid Flowers — Main Campus</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Kovaipudur, Coimbatore · 641042</p>
+<div class="w-11 h-11 rounded-lg bg-[#e6f4ea] text-[#1E8E4E] flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-[22px]">location_city</span></div>
+<div class="flex flex-col flex-1 min-w-0"><p class="text-body-md font-body-md font-semibold text-on-surface" id="employeeOfficeName">—</p><p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="employeeOfficeAddress">Office address not configured</p></div>
 </div>
 </div>
 </div>
-<nav class="w-full flex justify-around items-center px-2 py-3 bg-surface border-t border-outline-variant">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeAtt()">
-<span class="material-symbols-outlined">home</span>
-<span class="text-label-sm font-label-sm mt-1">Home</span>
-</a>
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">fingerprint</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Attendance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
-<span class="material-symbols-outlined">monitoring</span>
-<span class="text-label-sm font-label-sm mt-1">Performance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openRequests()">
-<span class="material-symbols-outlined">pending_actions</span>
-<span class="text-label-sm font-label-sm mt-1">Requests</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
-<span class="material-symbols-outlined">menu</span>
-<span class="text-label-sm font-label-sm mt-1">More</span>
-</a>
-</nav>
 </div>
 </div>
 <!-- Working Hours Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="hoursScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="hoursScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closeHours()">
@@ -621,10 +544,14 @@
 <button class="flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant" data-view="month">Month</button>
 </div>
 <!-- This week -->
-<div class="bento-card mt-4">
+<div class="grid grid-cols-2 gap-3 mt-4">
+<div class="bento-card"><p class="text-label-sm text-on-surface-variant">Hours worked</p><p id="hoursTotal" class="text-headline-lg font-bold text-primary mt-1">—</p></div>
+<div class="bento-card"><p class="text-label-sm text-on-surface-variant">Break time</p><p id="hoursBreakTotal" class="text-headline-lg font-bold text-on-surface mt-1">—</p></div>
+</div>
+<div class="bento-card mt-3">
 <div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">This week</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">10 – 16 Aug</span>
+<span id="hoursRangeTitle" class="text-body-lg font-body-lg font-semibold text-on-surface">This week</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant" id="hoursWeekLabel">—</span>
 </div>
 <div class="flex items-end gap-2 h-32" id="weekBars"></div>
 <div class="flex justify-between mt-2">
@@ -637,29 +564,6 @@
 <span class="text-label-sm font-label-sm text-on-surface-variant">Sun</span>
 </div>
 </div>
-<!-- Stats -->
-<div class="grid grid-cols-2 gap-3 mt-4">
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Regular hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">40.0</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">5 days</p>
-</div>
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Overtime</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#b26a00] font-semibold mt-2 font-tabular-nums">4.5</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">+₹675</p>
-</div>
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Payable hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-2 font-tabular-nums">44.5</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">incl. breaks</p>
-</div>
-<div class="bento-card flex flex-col">
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Estimated wage</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-[#1E8E4E] font-semibold mt-2 font-tabular-nums">₹5,475</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-1">Week 33</p>
-</div>
-</div>
 <!-- Daily breakdown -->
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-4">Daily breakdown</p>
 <div class="bento-card p-0 overflow-hidden mt-2" id="dailyHours"></div>
@@ -667,7 +571,7 @@
 </div>
 </div>
 <!-- Payslips Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="payScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="payScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <button class="text-on-surface hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="closePayslips()">
@@ -747,98 +651,76 @@
 </div>
 </div>
 <!-- Requests Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="reqScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="reqScreen">
 <div class="flex flex-col h-full">
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex flex-col">
 <span class="text-title-md font-title-md font-bold text-primary leading-tight">Orchid One</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Employee · OH-2041</span>
+<span id="requestEmployeeIdentity" class="text-label-sm font-label-sm text-on-surface-variant">Employee · —</span>
 </div>
 <div class="flex items-center gap-2">
 <button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2 relative" onclick="openNotifications()">
 <span class="material-symbols-outlined">notifications</span>
 <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E4572E] border border-surface"></span>
 </button>
-<img class="w-9 h-10 rounded-full object-cover border border-outline-variant/40" alt="Arun Kumar Profile Picture" onclick="window.location='/code.html'" data-alt="A highly detailed professional portrait of an Indian male software developer in his early 30s. He is wearing a clean, modern button-down shirt. The background is a bright, softly blurred tech office environment with high-key lighting. The overall mood is confident, approachable, and corporate. Modern enterprise aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXNPrDoUMs9RbNq_QWsCKuqHdut5wgiSN5WsG9rr4HeQVv6dbfo0v0GSGhS8gRf0nTJl3t_bDRsOL97IJ4eM7-_9Orl9JFxfPr1r4JqcYArptD_dlWmW_KmI7gNZJJILF-vKRxKu_ywMV5kxpo-aym3w3DSJ4nBbcEmjmVtlLlytiHPy1btyFbaJx1Lrgs2YepibWmfk0rMNSpf6nEahUpMFsixXCkpRG_U6ylFYjinUzMJQE75ctZ"/>
+<button type="button" class="w-9 h-9 rounded-full border border-outline-variant/40 bg-surface-container-low text-primary flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined">account_circle</span></button>
 </div>
 </header>
 <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 <div class="flex items-center justify-between">
 <div>
 <h2 class="text-headline-lg-mobile font-headline-lg-mobile text-primary">My Requests</h2>
-<p class="text-body-md font-body-md text-on-surface-variant mt-1">Track your leaves, overtime and wage requests.</p>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Track your leave and overtime requests.</p>
 </div>
-<button class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-2.5 shadow-sm hover:bg-primary-container transition-colors flex items-center gap-1" onclick="openNewRequest()">
+<button type="button" onclick="openNewRequest()" class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-2.5 flex items-center gap-1">
 <span class="material-symbols-outlined text-[18px]">add</span>Request
 </button>
 </div>
 <div class="flex bg-surface-container-low rounded-lg p-1" id="reqTabs">
-<button class="flex-1 py-2 rounded-md text-body-md font-body-md font-semibold text-primary bg-surface shadow-sm" data-rt="pending">Pending (2)</button>
-<button class="flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant" data-rt="history">History</button>
+<button class="flex-1 py-2 rounded-md text-body-md font-body-md font-semibold text-primary bg-surface shadow-sm" data-rt="pending">Pending (0)</button>
+<button class="flex-1 py-2 rounded-md text-body-md font-body-md text-on-surface-variant" data-rt="history">History (0)</button>
 </div>
 <div class="flex flex-col gap-3" id="reqContent"></div>
 </div>
-<nav class="w-full flex justify-around items-center px-2 py-3 bg-surface border-t border-outline-variant">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeRequests()">
-<span class="material-symbols-outlined">home</span>
-<span class="text-label-sm font-label-sm mt-1">Home</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closeRequests();openAtt()">
-<span class="material-symbols-outlined">fingerprint</span>
-<span class="text-label-sm font-label-sm mt-1">Attendance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
-<span class="material-symbols-outlined">monitoring</span>
-<span class="text-label-sm font-label-sm mt-1">Performance</span>
-</a>
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">pending_actions</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Requests</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
-<span class="material-symbols-outlined">menu</span>
-<span class="text-label-sm font-label-sm mt-1">More</span>
-</a>
-</nav>
 </div>
 </div>
 <!-- BottomNavBar (Mobile Only) -->
-<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface dark:bg-surface-container border-t border-outline-variant shadow-lg pb-safe">
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">home</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Home</span>
+<nav class="fixed bottom-0 w-full z-[95] flex justify-around items-center px-2 py-3 bg-surface dark:bg-surface-container border-t border-outline-variant shadow-lg pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="goTo('home'); return false;">
+<span class="material-symbols-outlined">home</span>
+<span class="text-label-sm font-label-sm mt-1">Home</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openAtt()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openAtt(); return false;">
 <span class="material-symbols-outlined">fingerprint</span>
 <span class="text-label-sm font-label-sm mt-1">Attendance</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openPerformance(); return false;">
 <span class="material-symbols-outlined">monitoring</span>
 <span class="text-label-sm font-label-sm mt-1">Performance</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openRequests()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openRequests(); return false;">
 <span class="material-symbols-outlined">pending_actions</span>
 <span class="text-label-sm font-label-sm mt-1">Requests</span>
 </a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore(); return false;">
 <span class="material-symbols-outlined">menu</span>
 <span class="text-label-sm font-label-sm mt-1">More</span>
 </a>
 </nav>
 <!-- Performance Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="analyticsScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="analyticsScreen">
 <div class="flex flex-col h-full">
 <header class="flex justify-between items-center w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex flex-col">
 <span class="text-title-md font-title-md font-bold text-primary leading-tight">Orchid One</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Employee · OH-2041</span>
+<span id="performanceEmployeeIdentity" class="text-label-sm font-label-sm text-on-surface-variant">Employee · —</span>
 </div>
 <div class="flex items-center gap-2">
 <button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2 relative" onclick="openNotifications()">
 <span class="material-symbols-outlined">notifications</span>
 <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E4572E] border border-surface"></span>
 </button>
-<img class="w-9 h-10 rounded-full object-cover border border-outline-variant/40" alt="Arun Kumar Profile Picture" onclick="window.location='/code.html'" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXNPrDoUMs9RbNq_QWsCKuqHdut5wgiSN5WsG9rr4HeQVv6dbfo0v0GSGhS8gRf0nTJl3t_bDRsOL97IJ4eM7-_9Orl9JFxfPr1r4JqcYArptD_dlWmW_KmI7gNZJJILF-vKRxKu_ywMV5kxpo-aym3w3DSJ4nBbcEmjmVtlLlytiHPy1btyFbaJx1Lrgs2YepibWmfk0rMNSpf6nEahUpMFsixXCkpRG_U6ylFYjinUzMJQE75ctZ"/>
+<button type="button" class="w-9 h-9 rounded-full border border-outline-variant/40 bg-surface-container-low text-primary flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined">account_circle</span></button>
 </div>
 </header>
 <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
@@ -847,43 +729,41 @@
 <h2 class="text-headline-lg-mobile font-headline-lg-mobile text-primary">Performance</h2>
 <p class="text-body-md font-body-md text-on-surface-variant mt-1">Your performance at a glance.</p>
 </div>
-<button class="bg-surface text-primary border border-primary text-body-md font-body-md font-semibold rounded-lg px-4 py-2 hover:bg-secondary-fixed transition-colors flex items-center gap-1" onclick="toast('Report generated')">
-<span class="material-symbols-outlined text-[18px]">download</span>Report
-</button>
+
 </div>
 <!-- Summary cards -->
 <div class="grid grid-cols-2 gap-3">
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">schedule</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#1E8E4E] bg-[#e6f4ea] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">arrow_upward</span>5%</span>
+<span class="text-[10px] text-on-surface-variant">This month</span>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Total Hours</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">44.5<span class="text-title-md font-title-md text-on-surface-variant">h</span></p>
+<p id="performanceTotalHours" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">h</span></p>
 </div>
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">how_to_reg</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#1E8E4E] bg-[#e6f4ea] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">arrow_upward</span>2%</span>
+<span class="text-[10px] text-on-surface-variant">This month</span>
 </div>
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Avg. Attendance</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">94<span class="text-title-md font-title-md text-on-surface-variant">%</span></p>
+<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Attendance Rate</p>
+<p id="performanceAttendance" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">%</span></p>
 </div>
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">payments</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#b26a00] bg-[#fff4e0] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">trending_up</span>8%</span>
+<span class="text-[10px] text-on-surface-variant">Approved weeks</span>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Avg. Wage</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">₹5,100<span class="text-title-md font-title-md text-on-surface-variant">/wk</span></p>
+<p id="performanceAverageWage" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">/wk</span></p>
 </div>
 <div class="bento-card flex flex-col">
 <div class="flex items-center justify-between">
 <span class="material-symbols-outlined text-secondary">local_florist</span>
-<span class="flex items-center gap-0.5 text-[10px] font-semibold text-[#1E8E4E] bg-[#e6f4ea] px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">arrow_upward</span>3%</span>
+<span class="text-[10px] text-on-surface-variant">This month</span>
 </div>
-<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Shifts Completed</p>
-<p class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">22<span class="text-title-md font-title-md text-on-surface-variant">/mo</span></p>
+<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Shifts Attended</p>
+<p id="performanceShiftsAttended" class="text-headline-lg-mobile font-headline-lg-mobile text-primary font-semibold mt-1 font-tabular-nums">—<span class="text-title-md font-title-md text-on-surface-variant">/mo</span></p>
 </div>
 </div>
 <!-- Trends chart -->
@@ -891,96 +771,24 @@
 <div class="flex items-center justify-between mb-3">
 <span class="text-body-lg font-body-lg font-semibold text-on-surface">Trends</span>
 <div class="flex bg-surface-container-low rounded-lg p-1">
-<button class="px-3 py-1 text-label-sm font-label-sm rounded-md bg-primary text-white shadow-sm transition-all">Weekly</button>
-<button class="px-3 py-1 text-label-sm font-label-sm rounded-md text-on-surface-variant transition-all" onclick="toast('Monthly view')">Monthly</button>
+<button id="performanceWeeklyTab" type="button" class="px-3 py-1 text-label-sm font-label-sm rounded-md bg-primary text-white shadow-sm transition-all" onclick="setPerformanceRange('weekly')">Weekly</button>
+<button id="performanceMonthlyTab" type="button" class="px-3 py-1 text-label-sm font-label-sm rounded-md text-on-surface-variant transition-all" onclick="setPerformanceRange('monthly')">Monthly</button>
 </div>
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant">Daily working hours</p>
-<div class="h-40 w-full flex items-end justify-between gap-2 pt-4 relative mt-2">
-<div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-6">
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-<div class="border-b border-outline-variant/40 w-full h-0"></div>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[88%]"></div>
-<span class="text-[10px] text-on-surface-variant">Mon</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[88%]"></div>
-<span class="text-[10px] text-on-surface-variant">Tue</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-primary rounded-t-sm h-[92%]"></div>
-<span class="text-[10px] text-on-surface-variant">Wed</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[82%]"></div>
-<span class="text-[10px] text-on-surface-variant">Thu</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-secondary-container rounded-t-sm h-[80%]"></div>
-<span class="text-[10px] text-on-surface-variant">Fri</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-outline-variant/40 rounded-t-sm h-[6%]"></div>
-<span class="text-[10px] text-on-surface-variant">Sat</span>
-</div>
-<div class="flex flex-col items-center flex-1 gap-2 z-10">
-<div class="w-full bg-outline-variant/40 rounded-t-sm h-[6%]"></div>
-<span class="text-[10px] text-on-surface-variant">Sun</span>
-</div>
-</div>
-</div>
-<!-- Attendance insights -->
+<div id="performanceTrendBars" class="h-40 w-full flex items-end justify-between gap-2 pt-4 relative mt-2" aria-live="polite"><p class="w-full text-center text-label-sm text-on-surface-variant py-8">Loading working hours…</p></div></div>
+<!-- Performance data notes -->
 <div class="bento-card">
-<div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">Attendance insights</span>
-<span class="text-label-sm font-label-sm text-primary font-semibold cursor-pointer" onclick="toast('Full insights')">View all</span>
-</div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">On-time check-ins</span><span class="text-body-md font-body-md font-medium text-on-surface">17 / 18</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Late arrivals</span><span class="text-body-md font-body-md font-medium text-on-surface">1 day</span></div>
-<div class="flex justify-between py-2 border-b border-outline-variant/30"><span class="text-body-md font-body-md text-on-surface-variant">Overtime earned</span><span class="text-body-md font-body-md font-medium text-[#1E8E4E]">4.5 hrs · ₹675</span></div>
-<div class="flex justify-between py-2"><span class="text-body-md font-body-md text-on-surface-variant">Streak</span><span class="text-body-md font-body-md font-medium text-on-surface">14 days</span></div>
-</div>
-
-<!-- Self feedback -->
-<div class="bento-card">
-<div class="flex items-center justify-between mb-3">
-<span class="text-body-lg font-body-lg font-semibold text-on-surface">Self feedback</span>
-<span class="text-label-sm font-label-sm text-primary font-semibold cursor-pointer" onclick="openFeedbackSheet()">Add</span>
-</div>
-<p class="text-body-md font-body-md text-on-surface-variant" id="fbStatus">No feedback submitted yet for this month.</p>
-<p class="text-label-sm font-label-sm text-[#EA4335] font-semibold mt-2">Deadline: 2 days remaining</p>
+<span class="text-body-lg font-body-lg font-semibold text-on-surface">Performance summary</span>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-2" id="performanceDataNote">Metrics are calculated from recorded attendance days and approved or locked wage records. Unverified punches are excluded.</p>
+<div class="flex justify-between py-2 mt-2 border-t border-outline-variant/30"><span class="text-body-md text-on-surface-variant">Scheduled shifts</span><span id="performanceScheduledShifts" class="text-body-md font-medium text-on-surface">—</span></div>
+<div class="flex justify-between py-2 border-t border-outline-variant/30"><span class="text-body-md text-on-surface-variant">Recorded attendance days</span><span id="performanceRecordedDays" class="text-body-md font-medium text-on-surface">—</span></div>
 </div>
 </div>
-<nav class="w-full flex justify-around items-center px-2 py-3 bg-surface border-t border-outline-variant">
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closePerformance()">
-<span class="material-symbols-outlined">home</span>
-<span class="text-label-sm font-label-sm mt-1">Home</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closePerformance();openAtt()">
-<span class="material-symbols-outlined">fingerprint</span>
-<span class="text-label-sm font-label-sm mt-1">Attendance</span>
-</a>
-<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-variant active:scale-90 duration-200 transition-all" href="#">
-<span class="material-symbols-outlined icon-filled">monitoring</span>
-<span class="text-label-sm font-label-sm text-primary font-bold">Performance</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="closePerformance();openRequests()">
-<span class="material-symbols-outlined">pending_actions</span>
-<span class="text-label-sm font-label-sm mt-1">Requests</span>
-</a>
-<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant active:scale-90 duration-200 transition-all px-2 py-1 rounded-lg" href="#" onclick="openMore()">
-<span class="material-symbols-outlined">menu</span>
-<span class="text-label-sm font-label-sm mt-1">More</span>
-</a>
-</nav>
 </div>
 </div>
 <!-- Notifications Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="notifScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="notifScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1009,7 +817,7 @@
 </div>
 </div>
 <!-- New Request Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="newReqScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="newReqScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1034,52 +842,28 @@
 <span class="material-symbols-outlined text-secondary">schedule</span>
 <span class="text-label-sm font-label-sm text-on-surface-variant">Overtime</span>
 </button>
-<button class="req-type-card" data-type="wage">
-<span class="material-symbols-outlined text-secondary">payments</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Wage</span>
-</button>
-<button class="req-type-card" data-type="other">
-<span class="material-symbols-outlined text-secondary">more_horiz</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">Other</span>
-</button>
+
 </div>
 </div>
 <div class="bento-card" id="reqFields">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Details</p>
 <div class="flex flex-col gap-3">
-<div>
-<label class="text-label-sm font-label-sm text-on-surface-variant block mb-1">Leave type</label>
-<select id="reqLeaveType" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30">
-<option>Casual Leave</option>
-<option>Sick Leave</option>
-<option>Privilege Leave</option>
-<option>Unpaid Leave</option>
-</select>
+<div id="leaveRequestFields">
+<div class="mb-3"><label class="text-label-sm font-label-sm text-on-surface-variant block mb-1" for="reqLeaveType">Leave type</label><select id="reqLeaveType" required class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30"><option value="">Select leave type</option></select></div>
+<div class="grid grid-cols-2 gap-2"><div><label class="text-label-sm font-label-sm text-on-surface-variant block mb-1" for="reqFrom">From</label><input type="date" id="reqFrom" required class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30"></div><div><label class="text-label-sm font-label-sm text-on-surface-variant block mb-1" for="reqTo">To</label><input type="date" id="reqTo" required class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30"></div></div><div class="mt-3"><p class="text-label-sm font-label-sm text-on-surface-variant mb-2">Select leave for each working date</p><div id="leaveDaySelections" class="flex flex-col gap-2"></div><p id="leaveSelectionTotal" class="text-label-sm font-label-sm text-primary mt-2">0 days selected</p></div>
 </div>
-<div class="grid grid-cols-2 gap-2">
-<div>
-<label class="text-label-sm font-label-sm text-on-surface-variant block mb-1">From</label>
-<input type="date" value="2026-08-19" id="reqFrom" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30">
-</div>
-<div>
-<label class="text-label-sm font-label-sm text-on-surface-variant block mb-1">To</label>
-<input type="date" value="2026-08-19" id="reqTo" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30">
-</div>
-</div>
-<div>
-<label class="text-label-sm font-label-sm text-on-surface-variant block mb-1">Reason</label>
-<textarea id="reqReason" rows="3" placeholder="Briefly describe the reason" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea>
-</div>
-</div>
-</div>
-<button class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-3 shadow-sm hover:bg-primary-container transition-colors w-full" onclick="submitNewRequest()">
+<div id="overtimeRequestFields" class="hidden"><div><label class="text-label-sm font-label-sm text-on-surface-variant block mb-1" for="reqOvertimeDate">Work date</label><input type="date" id="reqOvertimeDate" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30"></div><div class="mt-3"><label class="text-label-sm font-label-sm text-on-surface-variant block mb-1" for="reqOvertimeHours">Overtime hours</label><input type="number" id="reqOvertimeHours" min="0.25" step="0.25" inputmode="decimal" placeholder="e.g. 2" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30"></div></div>
+<div><label class="text-label-sm font-label-sm text-on-surface-variant block mb-1" for="reqReason">Reason</label><textarea id="reqReason" rows="3" placeholder="Briefly describe the reason" class="w-full bg-surface-container-low rounded-lg px-3 py-2.5 text-body-md font-body-md text-on-surface border border-outline-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"></textarea></div>
+<p id="requestFormMessage" class="text-label-sm font-label-sm text-on-surface-variant" role="status"></p>
+</div></div>
+<button id="submitEmployeeRequest" class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-3 shadow-sm hover:bg-primary-container transition-colors w-full" onclick="submitNewRequest()">
 Submit Request
 </button>
 </div>
 </div>
 </div>
 <!-- Helpdesk Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="helpScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="helpScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1156,7 +940,7 @@ Submit Request
 </div>
 </div>
 <!-- More Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="moreScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="moreScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1172,10 +956,10 @@ Submit Request
 <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
 <div class="bento-card bg-primary text-white border-0 p-4">
 <div class="flex items-center gap-3">
-<img class="w-12 h-13 rounded-full object-cover border-2 border-white/30 flex-shrink-0" alt="Arun Kumar Profile Picture" onclick="window.location='/code.html'" data-alt="A highly detailed professional portrait of an Indian male software developer in his early 30s. He is wearing a clean, modern button-down shirt. The background is a bright, softly blurred tech office environment with high-key lighting. The overall mood is confident, approachable, and corporate. Modern enterprise aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXNPrDoUMs9RbNq_QWsCKuqHdut5wgiSN5WsG9rr4HeQVv6dbfo0v0GSGhS8gRf0nTJl3t_bDRsOL97IJ4eM7-_9Orl9JFxfPr1r4JqcYArptD_dlWmW_KmI7gNZJJILF-vKRxKu_ywMV5kxpo-aym3w3DSJ4nBbcEmjmVtlLlytiHPy1btyFbaJx1Lrgs2YepibWmfk0rMNSpf6nEahUpMFsixXCkpRG_U6ylFYjinUzMJQE75ctZ"/>
+<div class="w-12 h-12 rounded-full border-2 border-white/30 bg-white/15 text-white flex-shrink-0 flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined text-3xl">account_circle</span></div>
 <div class="flex flex-col flex-1 min-w-0">
-<p class="text-body-lg font-body-lg font-semibold">Arun Kumar</p>
-<p class="text-label-sm font-label-sm opacity-80 mt-0.5">OH-2041 · Software Engineer · IT</p>
+<p id="moreProfileName" class="text-body-lg font-body-lg font-semibold">Employee</p>
+<p id="moreProfileIdentity" class="text-label-sm font-label-sm opacity-80 mt-0.5">Employee · —</p>
 </div>
 <button class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 transition-colors flex items-center justify-center flex-shrink-0" onclick="toast('Profile opens')">
 <span class="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -1183,16 +967,16 @@ Submit Request
 </div>
 <div class="grid grid-cols-3 gap-2 mt-4">
 <div class="rounded-lg bg-white/10 p-2.5 text-center">
-<p class="text-body-md font-body-md font-bold font-tabular-nums">2</p>
+<p id="moreYearsAtOrchid" class="text-body-md font-body-md font-bold font-tabular-nums">—</p>
 <p class="text-[10px] opacity-75 mt-0.5">Years at Orchid</p>
 </div>
 <div class="rounded-lg bg-white/10 p-2.5 text-center">
-<p class="text-body-md font-body-md font-bold font-tabular-nums">12</p>
+<p id="moreLeaveBalance" class="text-body-md font-body-md font-bold font-tabular-nums">—</p>
 <p class="text-[10px] opacity-75 mt-0.5">Leave balance</p>
 </div>
 <div class="rounded-lg bg-white/10 p-2.5 text-center">
-<p class="text-body-md font-body-md font-bold font-tabular-nums">94%</p>
-<p class="text-[10px] opacity-75 mt-0.5">Attendance</p>
+<p id="moreAttendance" class="text-body-md font-body-md font-bold font-tabular-nums">—</p>
+<p class="text-[10px] opacity-75 mt-0.5">Attendance · this month</p>
 </div>
 </div>
 </div>
@@ -1211,7 +995,8 @@ Submit Request
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Shift schedule opens')">
+<div class="more-item" onclick="openMyWork()"><span class="material-symbols-outlined">assignment</span><span class="flex-1">My Work</span><span class="material-symbols-outlined">chevron_right</span></div>
+<div class="more-item" onclick="openMySchedule()">
 <span class="more-ic bg-[#fdf1e1] text-[#B26A00]"><span class="material-symbols-outlined">calendar_month</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">My Schedule</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Upcoming shifts and swaps</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
@@ -1278,14 +1063,31 @@ Submit Request
 </div>
 </div>
 </div>
-<button class="flex items-center justify-center gap-2 text-[#B3261E] text-body-md font-body-md font-semibold rounded-lg px-4 py-3 border border-[#B3261E]/30 bg-[#fde8e8] hover:bg-[#fde8e8]/70 transition-colors w-full" onclick="toast('Logged out')">
+<button type="button" class="flex items-center justify-center gap-2 text-[#B3261E] text-body-md font-body-md font-semibold rounded-lg px-4 py-3 border border-[#B3261E]/30 bg-[#fde8e8] hover:bg-[#fde8e8]/70 transition-colors w-full" onclick="signOutEmployee()">
 <span class="material-symbols-outlined text-[18px]">logout</span>Sign Out
 </button>
+<button type="button" class="flex items-center justify-center gap-2 text-primary text-body-md font-body-md font-semibold rounded-lg px-4 py-3 border border-outline-variant bg-surface hover:bg-surface-container-low transition-colors w-full" onclick="toggleChangePassword()">
+<span class="material-symbols-outlined text-[18px]">lock_reset</span>Change Password
+</button>
+<form id="employeeChangePasswordForm" class="bento-card hidden flex flex-col gap-3" onsubmit="changeEmployeePassword(event)">
+<p class="text-body-md font-body-md font-semibold text-on-surface">Update your password</p>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Current password
+<input id="employeeCurrentPassword" type="password" autocomplete="current-password" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface">
+</label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">New password
+<input id="employeeNewPassword" type="password" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface">
+</label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Confirm new password
+<input id="employeeConfirmPassword" type="password" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface">
+</label>
+<p id="employeePasswordMessage" class="text-label-sm text-on-surface-variant" role="status"></p>
+<button id="employeePasswordSubmit" type="submit" class="w-full rounded-lg bg-primary px-4 py-3 text-white font-semibold">Update password</button>
+</form>
 </div>
 </div>
 </div>
 <!-- Policies Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="polScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="polScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1303,13 +1105,13 @@ Submit Request
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0">search</span>
 <input id="polSearch" oninput="renderPolicies(this.value)" placeholder="Search policies..." class="w-full bg-transparent text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none">
 </div>
-<p class="text-label-sm font-label-sm text-on-surface-variant">6 policies · updated 01 Apr 2026</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Published company policies</p>
 <div class="flex flex-col gap-2" id="polList"></div>
 </div>
 </div>
 </div>
 <!-- Policy Detail Screen -->
-<div class="fixed inset-0 z-[90] bg-surface hidden" id="polDetailScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="polDetailScreen">
 <div class="flex flex-col h-full">
 <header class="flex items-center justify-between w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
 <div class="flex items-center gap-3">
@@ -1341,18 +1143,16 @@ Submit Request
 </div>
 <div class="flex flex-col flex-1 min-w-0">
 <p class="text-body-md font-body-md font-medium text-on-surface" id="pdFile">Attendance_Policy_v3.1.pdf</p>
-<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">1.2 MB</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5" id="pdFileMeta">PDF document</p>
 </div>
-<button class="text-primary hover:bg-secondary-fixed transition-colors rounded-full p-2 flex-shrink-0" onclick="toast('Downloading ' + document.getElementById('pdFile').textContent)">
-<span class="material-symbols-outlined">download</span>
-</button>
+<button id="pdFileButton" type="button" class="text-primary hover:bg-secondary-fixed transition-colors rounded-full px-3 py-2 flex-shrink-0 text-label-sm font-semibold">View PDF</button>
 </div>
 </div>
 <div class="bento-card">
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Key points</p>
 <div class="flex flex-col" id="pdPoints"></div>
 </div>
-<button class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-3 shadow-sm hover:bg-primary-container transition-colors w-full flex items-center justify-center gap-2" onclick="confirmPolicyRead()">
+<button id="pdAcknowledgeButton" class="bg-primary text-white text-body-md font-body-md font-bold rounded-lg px-4 py-3 shadow-sm hover:bg-primary-container transition-colors w-full flex items-center justify-center gap-2" onclick="confirmPolicyRead()">
 <span class="material-symbols-outlined text-[18px]" id="pdCheckIcon">check_circle</span>I have read this policy
 </button>
 </div>
@@ -1366,75 +1166,56 @@ Submit Request
             s.style.pointerEvents = 'none';
             setTimeout(() => s.remove(), 550);
         }, 1500);
-        const heroClock = document.getElementById('heroClock');
-        if (heroClock) {
-            const pad = n => String(n).padStart(2, '0');
-            setInterval(() => {
-                const d = new Date();
-                heroClock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-            }, 1000);
+        function renderDocs() {
+            const content = document.getElementById('docContent');
+            if (content) content.textContent = 'Loading your documents…';
         }
-        const DOCS = {
-            all: [
-                { n: "Aadhaar Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "PAN Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "SSLC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-                { n: "HSC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-                { n: "Bank Account Proof", cat: "emp", t: "Employment", d: "20 Aug 2024", s: "success" },
-                { n: "Driving License", cat: "id", t: "Identity", d: "02 Jan 2026", s: "warning" },
-            ],
-            identity: [
-                { n: "Aadhaar Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "PAN Card", cat: "id", t: "Identity", d: "12 Aug 2024", s: "success" },
-                { n: "Driving License", cat: "id", t: "Identity", d: "02 Jan 2026", s: "warning" },
-            ],
-            education: [
-                { n: "SSLC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-                { n: "HSC Certificate", cat: "edu", t: "Education", d: "15 Aug 2024", s: "success" },
-            ],
-            employment: [
-                { n: "Bank Account Proof", cat: "emp", t: "Employment", d: "20 Aug 2024", s: "success" },
-            ],
-            
-        };
-        const DOC_ICON = { id: "fingerprint", edu: "school", emp: "work", other: "folder" };
-        function renderDocs(cat) {
-            const list = DOCS[cat];
-            document.getElementById('docContent').innerHTML = list.map(d => `
-                <div class="doc-card" onclick="toast('Open ${d.n}')">
-                    <div class="doc-icon"><span class="material-symbols-outlined text-[20px]">${DOC_ICON[d.cat]}</span></div>
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-semibold text-on-surface">${d.n}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">${d.t} · uploaded ${d.d}</p>
-                    </div>
-                    <span class="doc-badge ${d.s}">${d.s === 'success' ? 'Verified' : 'Pending'}</span>
-                </div>`).join('');
+        const SCREEN_IDS = ['homeScreen', 'attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'myWorkScreen', 'scheduleScreen', 'polScreen', 'polDetailScreen'];
+        const SCREEN_ALIASES = { home: 'homeScreen' };
+        let navStack = ['home'];
+        let navigationReady = false;
+        function getScreen(id) {
+            const screenId = SCREEN_ALIASES[id] || id;
+            const screen = document.getElementById(screenId);
+            if (!screen) console.warn('[Orchid Navigation] Screen element not found: ' + screenId);
+            return screen;
         }
-        const SCREEN_IDS = ['attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'polScreen', 'polDetailScreen'];
-        var navStack = [];
-        function hideAll() { SCREEN_IDS.forEach(id => document.getElementById(id).classList.add('hidden')); }
-        function goTo(id) {
+        function hideAll() { SCREEN_IDS.forEach(id => document.getElementById(id)?.classList.add('hidden')); }
+        function showCurrentScreen() {
             hideAll();
-            navStack = [id];
-            if (id !== 'home') document.getElementById(id).classList.remove('hidden');
+            const current = navStack[navStack.length - 1] || 'home';
+            getScreen(current)?.classList.remove('hidden');
+            document.body.dataset.activeScreen = current;
         }
-        function pushScreen(id) {
-            hideAll();
-            navStack.push(id);
-            document.getElementById(id).classList.remove('hidden');
-        }
-        function goBack() {
-            if (navStack.length > 1) {
-                const cur = navStack.pop();
-                document.getElementById(cur).classList.add('hidden');
-                const prev = navStack[navStack.length - 1];
-                if (prev !== 'home') document.getElementById(prev).classList.remove('hidden');
-            } else {
-                const cur = navStack[0];
-                if (cur !== 'home') document.getElementById(cur).classList.add('hidden');
-                navStack = [];
+        function navigateTo(id, options = {}) {
+            if (!getScreen(id)) return;
+            if (navStack[navStack.length - 1] !== id) navStack.push(id);
+            showCurrentScreen();
+            if (navigationReady) {
+                const state = { orchidEmployee: true, navStack: [...navStack], homeGuard: false };
+                if (options.replace) history.replaceState(state, '', location.pathname + location.search);
+                else history.pushState(state, '', location.pathname + location.search);
             }
         }
+        function goTo(id) { navigateTo(id); }
+        function pushScreen(id) { navigateTo(id); }
+        function goBack() {
+            if (navStack.length > 1) { history.back(); return; }
+            navStack = ['home']; showCurrentScreen();
+        }
+        window.addEventListener('popstate', event => {
+            const restored = event.state?.orchidEmployee && Array.isArray(event.state.navStack)
+                ? event.state.navStack.filter(id => id === 'home' || SCREEN_IDS.includes(id)) : null;
+            if (restored?.length) navStack = restored;
+            else if (navStack.length > 1) navStack = navStack.slice(0, -1);
+            else navStack = ['home'];
+            showCurrentScreen();
+            if (navStack.length === 1 && !event.state?.homeGuard) history.pushState({ orchidEmployee: true, navStack: ['home'], homeGuard: true }, '', location.pathname + location.search);
+        });
+        history.replaceState({ orchidEmployee: true, navStack: ['home'], homeGuard: false }, '', location.pathname + location.search);
+        history.pushState({ orchidEmployee: true, navStack: ['home'], homeGuard: true }, '', location.pathname + location.search);
+        navigationReady = true;
+        showCurrentScreen();
         function openDocs() {
             pushScreen('docsScreen');
             renderDocs('all');
@@ -1450,7 +1231,7 @@ Submit Request
         }
         function closeDocs() { goBack(); }
         function openAtt() { goTo('attScreen'); }
-        function closeAtt() { goTo('home'); }
+        function closeAtt() { goBack(); }
         function openWorkingHours() {
             pushScreen('hoursScreen');
             renderHours();
@@ -1459,17 +1240,70 @@ Submit Request
         function openPayslips() { pushScreen('payScreen'); }
         function closePayslips() { goBack(); }
         function openRequests() { goTo('reqScreen'); renderRequests(); }
-        function closeRequests() { goTo('home'); }
+        function closeRequests() { goBack(); }
         function openPerformance() { goTo('analyticsScreen'); }
-        function closePerformance() { goTo('home'); }
+        function closePerformance() { goBack(); }
         function openNotifications() { pushScreen('notifScreen'); renderNotifications('all'); }
         function closeNotifications() { goBack(); }
-        function openNewRequest() { pushScreen('newReqScreen'); const cards = document.querySelectorAll('#reqTypeGrid .req-type-card'); cards.forEach(c => c.onclick = () => { cards.forEach(x => x.classList.remove('active')); c.classList.add('active'); }); }
+        function openNewRequest() { pushScreen('newReqScreen'); window.prepareNewRequest?.(); }
         function closeNewRequest() { goBack(); }
         function openHelpdesk() { pushScreen('helpScreen'); }
         function closeHelpdesk() { goBack(); }
         function openMore() { pushScreen('moreScreen'); }
         function closeMore() { goBack(); }
+        function openMySchedule() { pushScreen('scheduleScreen'); window.renderMySchedule?.(); }
+        function closeMySchedule() { goBack(); }
+        function openMyWork() { pushScreen('myWorkScreen'); window.renderMyWork?.(); }
+        function closeMyWork() { goBack(); }
+        async function signOutEmployee() {
+            const button = document.querySelector('#moreScreen button[onclick="signOutEmployee()"]');
+            if (button) { button.disabled = true; button.textContent = 'Signing out…'; }
+            try {
+                const response = await fetch('/api/auth/sign-out', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+                if (!response.ok) throw new Error('Sign out failed. Please try again.');
+                window.location.replace('/login');
+            } catch (error) {
+                if (button) { button.disabled = false; button.innerHTML = '<span class="material-symbols-outlined text-[18px]">logout</span>Sign Out'; }
+                toast(error instanceof Error ? error.message : 'Unable to sign out.');
+            }
+        }
+        function toggleChangePassword() {
+            const form = document.getElementById('employeeChangePasswordForm');
+            if (!form) return;
+            form.classList.toggle('hidden');
+            if (!form.classList.contains('hidden')) document.getElementById('employeeCurrentPassword')?.focus();
+        }
+        async function changeEmployeePassword(event) {
+            event.preventDefault();
+            const currentPassword = document.getElementById('employeeCurrentPassword')?.value || '';
+            const newPassword = document.getElementById('employeeNewPassword')?.value || '';
+            const confirmPassword = document.getElementById('employeeConfirmPassword')?.value || '';
+            const message = document.getElementById('employeePasswordMessage');
+            const button = document.getElementById('employeePasswordSubmit');
+            const say = value => { if (message) message.textContent = value; };
+            if (newPassword.length < 8) { say('New password must be at least 8 characters.'); return; }
+            if (newPassword !== confirmPassword) { say('New password and confirmation do not match.'); return; }
+            if (newPassword === currentPassword) { say('Choose a password different from your current password.'); return; }
+            if (button) { button.disabled = true; button.textContent = 'Updating…'; }
+            say('');
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword, newPassword, revokeOtherSessions: true })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || result.error || 'Unable to update password. Check your current password and try again.');
+                document.getElementById('employeeChangePasswordForm')?.reset();
+                say('Password updated successfully. Other sessions have been signed out.');
+                toast('Password changed successfully.');
+            } catch (error) {
+                say(error instanceof Error ? error.message : 'Unable to update password.');
+            } finally {
+                if (button) { button.disabled = false; button.textContent = 'Update password'; }
+            }
+        }
         const POLICIES = [
             { id: 'attendance', name: 'Attendance Policy', version: 'v3.1', eff: '01 Apr 2026', summary: 'Working hours, check-in window, late marking for all employment types.', file: 'Attendance_Policy_v3.1.pdf', size: '1.2 MB', points: [['Check-in window', '06:00 – 09:30'], ['Grace period', '10 minutes'], ['Late marking', 'After grace'], ['Half day', '< 4 hrs'], ['GPS requirement', 'Within geofence']] },
             { id: 'leave', name: 'Leave Policy', version: 'v2.4', eff: '01 Jan 2026', summary: 'Eligibility, accrual, approval flow and documentation for every leave category.', file: 'Leave_Policy_v2.4.pdf', size: '980 KB', points: [['Casual leave', '12 days / year'], ['Sick leave', '10 days / year'], ['Approval flow', 'Manager → HR'], ['Carry forward', 'Up to 5 days'], ['Documentation', 'Certificate if 3+ days']] },
@@ -1549,35 +1383,43 @@ Submit Request
                 </div>`).join('') || '<p class="text-body-md font-body-md text-on-surface-variant text-center py-8">No notifications in this category.</p>';
         }
         function submitNewRequest() {
-            const type = document.querySelector('#reqTypeGrid .req-type-card.active')?.dataset.type || 'leave';
-            toast(type === 'leave' ? 'Leave request submitted for approval' : type === 'overtime' ? 'Overtime request submitted' : type === 'wage' ? 'Wage request submitted' : 'Request submitted for approval');
-            closeNewRequest();
-            setTimeout(() => renderRequests(), 250);
+            toast('Employee request submission is not available yet.');
         }
         function renderRequests() {
-            const reqRow = (t, icon, bg, sub, badge, bc, cls) => `
-                <div class="bento-card flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg ${bg} ${icon ? 'text-[#4a1254]' : ''} flex items-center justify-center flex-shrink-0">
-                        <span class="text-body-md font-body-md font-bold ${icon === 'OT' ? 'text-[#b26a00]' : icon === '₹' ? 'text-[#4a1254]' : ''}">${icon}</span>
-                    </div>
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-medium text-on-surface">${t}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">${sub}</p>
-                    </div>
-                    <span class="flex-shrink-0 px-2 py-0.5 rounded-full ${bc} text-[10px] font-semibold">${badge}</span>
-                </div>`;
-            const pending = [
-                { t: "Overtime request · 13 Aug", icon: "OT", bg: "bg-[#fff4e0]", sub: "2.0 hrs · estimated ₹300", badge: "Pending", bc: "bg-[#fff4e0] text-[#b26a00]" },
-                { t: "Weekly wage · Week 33", icon: "₹", bg: "bg-secondary-fixed", sub: "₹5,475 · 44.5 hrs", badge: "Submitted", bc: "bg-secondary-fixed text-[#4a1254]" },
-            ];
-            const history = [
-                { t: "Casual Leave · 09 Aug", icon: "LV", bg: "bg-[#e6f4ea]", sub: "1 day · reason: family function", badge: "Approved", bc: "bg-[#e6f4ea] text-[#1E8E4E]" },
-                { t: "Sick Leave · 02 Aug", icon: "LV", bg: "bg-[#e6f4ea]", sub: "1 day · reason: fever", badge: "Approved", bc: "bg-[#e6f4ea] text-[#1E8E4E]" },
-                { t: "Overtime · 02 Aug", icon: "OT", bg: "bg-[#fdecea]", sub: "1.5 hrs · requested late", badge: "Rejected", bc: "bg-[#fdecea] text-[#ba1a1a]" },
-            ];
-            document.getElementById('reqContent').innerHTML = (pending.map(r => reqRow(r.t, r.icon, r.bg, r.sub, r.badge, r.bc)).join(''));
+            const formatRequestDate = value => {
+                if (!value) return '—';
+                const date = new Date(value + 'T00:00:00');
+                return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+            };
+            const workspace = window.__orchidWorkspace;
+            const content = document.getElementById('reqContent');
             const tabs = document.querySelectorAll('#reqTabs button');
+            if (!content) return;
+            if (!workspace?.linked) {
+                content.replaceChildren();
+                const message = document.createElement('p');
+                message.className = 'text-body-md font-body-md text-on-surface-variant text-center py-8';
+                message.textContent = 'Employee profile is not linked. Request records are unavailable.';
+                content.append(message);
+                return;
+            }
+            const leave = (workspace.leaveRequests || []).map(request => ({
+                id: String(request._id), type: 'leave', title: (request.leaveTypeName || 'Leave') + ' request',
+                date: request.fromDate, endDate: request.toDate, detail: (request.requestedDays ?? 0) + ' day(s) · ' + (request.reason || 'No reason provided'),
+                status: request.status, createdAt: request.createdAt
+            }));
+            const overtime = (workspace.overtimeRequests || []).map(request => ({
+                id: String(request._id), type: 'overtime', title: 'Overtime request',
+                date: request.workDate, detail: (request.requestedMinutes / 60).toFixed(2) + ' hrs requested · ' + (request.reason || 'No reason provided'),
+                status: request.status, approvedMinutes: request.approvedMinutes, reviewerNote: request.reviewerNote, createdAt: request.createdAt
+            }));
+            const records = [...leave, ...overtime].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            const pending = records.filter(item => item.status === 'pending');
+            const history = records.filter(item => item.status !== 'pending');
+            const counts = { pending: pending.length, history: history.length };
             tabs.forEach(tab => {
+                const key = tab.dataset.rt;
+                tab.textContent = (key === 'pending' ? 'Pending' : 'History') + ' (' + (counts[key] ?? 0) + ')';
                 tab.onclick = () => {
                     tabs.forEach(x => {
                         x.classList.remove('bg-surface', 'shadow-sm', 'text-primary');
@@ -1585,46 +1427,117 @@ Submit Request
                     });
                     tab.classList.add('bg-surface', 'shadow-sm', 'text-primary');
                     tab.classList.remove('text-on-surface-variant');
-                    const list = tab.dataset.rt === 'history' ? history : pending;
-                    document.getElementById('reqContent').innerHTML = list.map(r => reqRow(r.t, r.icon, r.bg, r.sub, r.badge, r.bc)).join('');
+                    renderRequestRows(key === 'history' ? history : pending);
                 };
             });
+            renderRequestRows(pending);
+            function renderRequestRows(items) {
+                content.replaceChildren();
+                if (!items.length) {
+                    const message = document.createElement('p');
+                    message.className = 'text-body-md font-body-md text-on-surface-variant text-center py-8';
+                    message.textContent = records.length ? 'No requests in this section.' : 'No leave or overtime requests have been submitted.';
+                    content.append(message);
+                    return;
+                }
+                items.forEach(item => {
+                    const card = document.createElement('article');
+                    card.className = 'bento-card flex items-center gap-3';
+                    const iconWrap = document.createElement('div');
+                    iconWrap.className = 'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ' + (item.type === 'overtime' ? 'bg-[#fff4e0]' : 'bg-secondary-fixed');
+                    const icon = document.createElement('span');
+                    icon.className = 'text-body-md font-body-md font-bold ' + (item.type === 'overtime' ? 'text-[#b26a00]' : 'text-primary');
+                    icon.textContent = item.type === 'overtime' ? 'OT' : 'LV';
+                    iconWrap.append(icon);
+                    const copy = document.createElement('div');
+                    copy.className = 'flex flex-col flex-1 min-w-0';
+                    const title = document.createElement('p');
+                    title.className = 'text-body-md font-body-md font-medium text-on-surface';
+                    title.textContent = item.title;
+                    const detail = document.createElement('p');
+                    detail.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
+                    detail.textContent = item.type === 'leave'
+                        ? formatRequestDate(item.date) + ' – ' + formatRequestDate(item.endDate) + ' · ' + item.detail
+                        : formatRequestDate(item.date) + ' · ' + item.detail;
+                    copy.append(title, detail);
+                    if (item.type === 'overtime' && item.status === 'approved' && Number.isFinite(item.approvedMinutes)) {
+                        const approved = document.createElement('p');
+                        approved.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
+                        approved.textContent = 'Approved: ' + (item.approvedMinutes / 60).toFixed(2) + ' hrs';
+                        copy.append(approved);
+                    }
+                    if (item.reviewerNote) {
+                        const note = document.createElement('p');
+                        note.className = 'text-label-sm font-label-sm text-on-surface-variant mt-0.5';
+                        note.textContent = 'Review note: ' + item.reviewerNote;
+                        copy.append(note);
+                    }
+                    const badge = document.createElement('span');
+                    badge.className = 'flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ' +
+                        (item.status === 'approved' ? 'bg-[#e6f4ea] text-[#1E8E4E]' :
+                         item.status === 'rejected' ? 'bg-[#fde8e8] text-[#B3261E]' :
+                         item.status === 'cancelled' ? 'bg-surface-container-highest text-on-surface-variant' :
+                         'bg-secondary-fixed text-secondary');
+                    badge.textContent = item.status;
+                    card.append(iconWrap, copy, badge);
+                    content.append(card);
+                });
+            }
         }
+        let employeeHoursView = 'week';
         function renderHours() {
-            const bars = [8.1, 8.1, 8.3, 7.6, 7.4, 0, 0];
-            const max = 8.3;
-            document.getElementById('weekBars').innerHTML = bars.map((b, i) =>
-                `<div class="bar ${b === 0 ? '' : 'main'}" style="height:${(b / max) * 100}%" title="${b} hrs"></div>`).join('');
-            const daily = [
-                { d: "Mon · 10 Aug", in: "05:58", out: "14:02", hrs: "8.1", wage: "₹977" },
-                { d: "Tue · 11 Aug", in: "05:54", out: "14:00", hrs: "8.1", wage: "₹977" },
-                { d: "Wed · 12 Aug", in: "05:50", out: "14:05", hrs: "8.3", wage: "₹1005" },
-                { d: "Thu · 13 Aug", in: "06:20", out: "14:00", hrs: "7.6", wage: "₹912" },
-                { d: "Fri · 14 Aug", in: "—", out: "—", hrs: "—", wage: "—" },
-            ];
-            document.getElementById('dailyHours').innerHTML = daily.map(d => `
-                <div class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors cursor-pointer" onclick="toast('Day detail opens here')">
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-medium text-on-surface">${d.d}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">In ${d.in} · Out ${d.out}</p>
-                    </div>
-                    <div class="flex flex-col items-end flex-shrink-0">
-                        <p class="text-body-md font-body-md font-medium text-on-surface">${d.hrs} hrs</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant">${d.wage}</p>
-                    </div>
-                </div>`).join('');
-            const segs = document.querySelectorAll('#hoursSeg button');
-            segs.forEach(s => {
-                s.onclick = () => {
-                    segs.forEach(x => {
-                        x.classList.remove('bg-surface', 'shadow-sm', 'text-primary');
-                        x.classList.add('text-on-surface-variant');
-                    });
-                    s.classList.add('bg-surface', 'shadow-sm', 'text-primary');
-                    s.classList.remove('text-on-surface-variant');
-                    if (s.dataset.view === 'month') toast('Monthly view');
-                };
-            });
+            const workspace = window.__orchidWorkspace;
+            const scheduleDays = workspace?.schedule?.days || [];
+            const attendance = workspace?.performance?.attendanceDays || [];
+            const attendanceByDate = new Map(attendance.map(day => [day.workDate, day]));
+            const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const parseDate = value => new Date(value + 'T00:00:00Z');
+            const duration = value => { const minutes = Math.max(0, Number(value) || 0); return Math.floor(minutes / 60) + 'h ' + String(minutes % 60).padStart(2, '0') + 'm'; };
+            const clock = value => value ? new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(value)) : '—';
+            const dateLabel = (value, options = { day: '2-digit', month: 'short' }) => {
+                const date = parseDate(value);
+                return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { ...options, timeZone: 'UTC' }).format(date);
+            };
+            const shiftTime = minute => {
+                const value = Number(minute);
+                if (!Number.isFinite(value)) return '—';
+                const normalized = ((value % 1440) + 1440) % 1440;
+                return String(Math.floor(normalized / 60)).padStart(2, '0') + ':' + String(normalized % 60).padStart(2, '0');
+            };
+            const weekStart = parseDate(today); weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7));
+            const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+            const selected = scheduleDays.filter(day => employeeHoursView === 'week' ? parseDate(day.date) >= weekStart && parseDate(day.date) <= weekEnd : day.date.slice(0, 7) === workspace?.schedule?.month);
+            const rows = selected.filter(day => day.shifts?.length || attendanceByDate.has(day.date)).sort((a,b) => b.date.localeCompare(a.date));
+            const totals = rows.reduce((sum, day) => { const record = attendanceByDate.get(day.date); sum.work += Number(record?.payableMinutes) || 0; sum.break += Number(record?.breakMinutes) || 0; return sum; }, { work: 0, break: 0 });
+            const title = document.getElementById('hoursRangeTitle'); const label = document.getElementById('hoursWeekLabel');
+            if (title) title.textContent = employeeHoursView === 'week' ? 'This week' : 'This month';
+            if (label) label.textContent = employeeHoursView === 'week' ? dateLabel(weekStart.toISOString().slice(0,10), { day:'2-digit', month:'short' }) + ' – ' + dateLabel(weekEnd.toISOString().slice(0,10), { day:'2-digit', month:'short' }) : (workspace?.schedule?.month || 'Current month');
+            const total = document.getElementById('hoursTotal'); if (total) total.textContent = duration(totals.work);
+            const breaks = document.getElementById('hoursBreakTotal'); if (breaks) breaks.textContent = duration(totals.break);
+            const bars = document.getElementById('weekBars');
+            if (bars) {
+                const chartDates = employeeHoursView === 'week' ? Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);}) : selected.map(day=>day.date).sort();
+                const values = chartDates.map(date => Number(attendanceByDate.get(date)?.payableMinutes) || 0); const max = Math.max(480, ...values);
+                bars.replaceChildren(); chartDates.forEach((date,i) => { const bar=document.createElement('div');bar.className='bar'+(values[i]?' main':'');bar.style.height=(values[i]?Math.max(4,values[i]/max*100):0)+'%';bar.style.flex='1';bar.title=dateLabel(date,{weekday:'short',day:'2-digit',month:'short'})+' · '+duration(values[i]);bars.append(bar); });
+            }
+            const daily = document.getElementById('dailyHours');
+            if (daily) {
+                daily.replaceChildren();
+                if (!rows.length) { const message=document.createElement('p');message.className='text-body-md text-on-surface-variant text-center py-8';message.textContent='No scheduled shifts or recorded working hours in this period.';daily.append(message); }
+                rows.forEach(day => {
+                    const record=attendanceByDate.get(day.date); const shift=day.shifts?.[0];
+                    const row=document.createElement('div');row.className='flex items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant/30';
+                    const copy=document.createElement('div');copy.className='flex flex-col flex-1 min-w-0';
+                    const date=document.createElement('p');date.className='text-body-md font-medium text-on-surface';date.textContent=dateLabel(day.date,{weekday:'short',day:'2-digit',month:'short'});
+                    const times=document.createElement('p');times.className='text-label-sm text-on-surface-variant mt-0.5';times.textContent=record?'In '+clock(record.firstCheckInAt)+' · Out '+clock(record.lastCheckOutAt):shift?shift.name+' · '+shiftTime(shift.startMinute)+' – '+shiftTime(shift.endMinute):(day.weeklyOff?'Weekly off':'No attendance record');
+                    copy.append(date,times);
+                    const metrics=document.createElement('div');metrics.className='flex flex-col items-end flex-shrink-0';
+                    const worked=document.createElement('p');worked.className='text-body-md font-medium text-on-surface';worked.textContent=duration(record?.payableMinutes);
+                    const breakLine=document.createElement('p');breakLine.className='text-label-sm text-on-surface-variant';breakLine.textContent='Break '+duration(record?.breakMinutes);
+                    metrics.append(worked,breakLine);row.append(copy,metrics);daily.append(row);
+                });
+            }
+            document.querySelectorAll('#hoursSeg button').forEach(button => { const active=button.dataset.view===employeeHoursView;button.classList.toggle('bg-surface',active);button.classList.toggle('shadow-sm',active);button.classList.toggle('text-primary',active);button.classList.toggle('font-semibold',active);button.classList.toggle('text-on-surface-variant',!active);button.onclick=()=>{employeeHoursView=button.dataset.view==='month'?'month':'week';renderHours();}; });
         }
         function openUploadSheet() { document.getElementById('uploadSheet').classList.remove('hidden'); }
         function openFeedbackSheet() { document.getElementById('feedbackSheet').classList.remove('hidden'); }
