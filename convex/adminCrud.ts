@@ -41,7 +41,24 @@ export const updateEmployee = mutation({
     const phone = args.phone.trim();
     const designation = args.designation.trim();
     const email = args.email?.trim().toLowerCase();
-    if (!firstName || !phone || !designation || !/^\d{4}-\d{2}-\d{2}$/.test(args.joiningDate)) throw new Error("INVALID_EMPLOYEE_DETAILS");
+    if (!firstName) throw new Error("INVALID_FIRST_NAME");
+    if (!phone) throw new Error("INVALID_PHONE");
+    if (!designation) throw new Error("INVALID_DESIGNATION");
+
+    const joiningDate = args.joiningDate.trim();
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(joiningDate);
+    if (!dateMatch) throw new Error("INVALID_JOINING_DATE_FORMAT");
+
+    const [, year, month, day] = dateMatch;
+    const parsedDate = new Date(`${joiningDate}T00:00:00.000Z`);
+    if (
+      !Number.isFinite(parsedDate.getTime()) ||
+      parsedDate.getUTCFullYear() !== Number(year) ||
+      parsedDate.getUTCMonth() + 1 !== Number(month) ||
+      parsedDate.getUTCDate() !== Number(day)
+    ) {
+      throw new Error("INVALID_JOINING_DATE");
+    }
     const [department, location, shift] = await Promise.all([
       ctx.db.get(args.departmentId), ctx.db.get(args.locationId),
       args.defaultShiftId ? ctx.db.get(args.defaultShiftId) : null,
@@ -52,7 +69,7 @@ export const updateEmployee = mutation({
     await ctx.db.patch(employee._id, {
       firstName, lastName: args.lastName?.trim() || undefined, email: email || undefined,
       phone, designation, employmentType: args.employmentType, status: args.status,
-      joiningDate: args.joiningDate, departmentId: args.departmentId, locationId: args.locationId,
+      joiningDate, departmentId: args.departmentId, locationId: args.locationId,
       defaultShiftId: args.defaultShiftId ?? undefined, updatedAt: Date.now(),
     });
     await audit(ctx, admin, "employee.updated", "employee", String(employee._id), { status: args.status });
