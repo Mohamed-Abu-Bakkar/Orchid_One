@@ -125,9 +125,9 @@ export const myWorkspace = query({
       linked: true as const,
       profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate },
       department: department ? { name: department.name } : null,
-      location: location ? { name: location.name, address: location.address } : null,
+      location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
-      attendance: attendance.map(event => ({ _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, accuracyM: event.accuracyM, geofencePassed: event.geofencePassed, reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, performance: { attendanceDays: monthAttendanceDays.map(day => ({ workDate: day.workDate, payableMinutes: day.payableMinutes, breakMinutes: day.breakMinutes, firstCheckInAt: day.firstCheckInAt ?? null, lastCheckOutAt: day.lastCheckOutAt ?? null, status: day.status })), scheduledShifts: scheduledDays, scheduledWorkDates: [...scheduledDateKeys] }, todayAttendance, upcoming,
+      attendance: attendance.map(event => ({ _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, accuracyM: event.accuracyM, geofencePassed: event.geofencePassed, locationType: event.locationType ?? "physical", reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, performance: { attendanceDays: monthAttendanceDays.map(day => ({ workDate: day.workDate, payableMinutes: day.payableMinutes, breakMinutes: day.breakMinutes, firstCheckInAt: day.firstCheckInAt ?? null, lastCheckOutAt: day.lastCheckOutAt ?? null, status: day.status })), scheduledShifts: scheduledDays, scheduledWorkDates: [...scheduledDateKeys] }, todayAttendance, upcoming,
       leaveBalances: leaveBalancesWithTypes, leaveTypes: leaveTypes.filter(type => type.isActive).map(type => ({ id: type._id, name: type.name, code: type.code })), leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt })), documents: docsWithUrls,
       wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
       weeklyWage: weeklyWage ? { totalPaise: weeklyWage.totalPaise, payableUnits: weeklyWage.payableUnits, employmentType: weeklyWage.employmentType, status: weeklyWage.status, period: weeklyWage.period ? { fromDate: weeklyWage.period.fromDate, toDate: weeklyWage.period.toDate } : null } : null,
@@ -380,7 +380,7 @@ export const listOnboardingOptions = query({
     ]);
     return {
       departments: departments.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
-      locations: locations.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
+      locations: locations.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name, locationType: item.locationType ?? "physical" })),
       shifts: shifts.filter(item => item.isActive).map(item => ({ _id: item._id, name: item.name })),
     };
   },
