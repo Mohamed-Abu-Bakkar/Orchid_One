@@ -27,7 +27,7 @@ export const generatePeriod = mutation({
     const user = await requireSuperadmin(ctx);
     if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_PAYROLL_PERIOD");
     const overlap = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).collect();
-    if (overlap.some(p => p.fromDate <= args.toDate && p.toDate >= args.fromDate && p.status !== "draft")) throw new Error("PAYROLL_PERIOD_OVERLAPS_FINALIZED_PERIOD");
+    if (overlap.some(p => p.fromDate <= args.toDate && p.toDate >= args.fromDate)) throw new Error("PAYROLL_PERIOD_OVERLAPS_FINALIZED_PERIOD");
     if (overlap.some(p => p.fromDate === args.fromDate && p.toDate === args.toDate)) throw new Error("PAYROLL_PERIOD_ALREADY_EXISTS");
     const [employees, days, reviews, overtime, components] = await Promise.all([
       ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active")).collect(),
