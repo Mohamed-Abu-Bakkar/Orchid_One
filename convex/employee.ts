@@ -11,8 +11,10 @@ export const myWorkspace = query({
     if (!user.employeeId) return emptyWorkspace;
     const employee = await ctx.db.get(user.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") return emptyWorkspace;
+    const organization = await ctx.db.get(user.organizationId);
+    const timeZone = organization?.timezone ?? "Asia/Kolkata";
     const now = new Date();
-    const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(date);
+    const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone }).format(date);
     const today = dateKey(now), monthStart = today.slice(0, 7) + "-01";
     const dayOffset = (value: string, days: number) => { const date = new Date(value + "T00:00:00Z"); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); };
     const weekStartDate = new Date(today + "T00:00:00Z"), weekday = (weekStartDate.getUTCDay() + 6) % 7;
@@ -123,6 +125,7 @@ export const myWorkspace = query({
     upcoming.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
     return {
       linked: true as const,
+      timeZone,
       profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
