@@ -116,7 +116,7 @@ export const reopenDailyFeedback = mutation({
       if (prior) await ctx.db.patch(prior._id, { reopenedAt: now, reopenedBy: admin._id });
       else await ctx.db.insert("dailyFeedbackReopens", { organizationId: admin.organizationId, employeeId: employee._id, workDate: args.workDate, reopenedAt: now, reopenedBy: admin._id });
     }
-    await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: "performance.daily_feedback.reopened", entityType: "dailyEmployeeFeedback", entityId: String(record._id), metadata: { employeeId: String(employee._id), workDate: args.workDate }, createdAt: now });
+    await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: "performance.daily_feedback.reopened", entityType: "dailyEmployeeFeedback", entityId: record ? String(record._id) : String(employee._id) + ":" + args.workDate, metadata: { employeeId: String(employee._id), workDate: args.workDate }, createdAt: now });
     return { reopened: true };
   },
 });
