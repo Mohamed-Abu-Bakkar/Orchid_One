@@ -34,7 +34,7 @@ export const saveConfiguration = mutation({
     let longitude = 0;
     let geofenceRadiusM = 0;
     if (locationType === "physical") {
-      address = (args.address ?? "").trim().replace(/\\s+/g, " ");
+      address = (args.address ?? "").trim().replace(/\s+/g, " ");
       latitude = args.latitude ?? Number.NaN;
       longitude = args.longitude ?? Number.NaN;
       geofenceRadiusM = args.geofenceRadiusM ?? Number.NaN;
