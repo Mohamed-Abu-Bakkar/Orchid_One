@@ -228,44 +228,9 @@ export const submitMyLeaveRequest = mutation({
 });
 
 export const submitMyOvertimeRequest = mutation({
-  args: {
-    workDate: v.string(),
-    requestedMinutes: v.number(),
-    reason: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { user, employee } = await getActiveEmployeeForRequest(ctx);
-    if (!isValidRequestDate(args.workDate) || !Number.isSafeInteger(args.requestedMinutes) || args.requestedMinutes <= 0) {
-      throw new Error("INVALID_OVERTIME_REQUEST");
-    }
-    const reason = args.reason.trim();
-    if (!reason || reason.length > 1000) throw new Error("INVALID_OVERTIME_REASON");
-    const prior = await ctx.db.query("overtimeRequests")
-      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate))
-      .collect();
-    if (prior.some(request => request.status === "pending")) throw new Error("PENDING_OVERTIME_REQUEST_EXISTS");
-
-    const now = Date.now();
-    const requestId = await ctx.db.insert("overtimeRequests", {
-      organizationId: user.organizationId,
-      employeeId: employee._id,
-      workDate: args.workDate,
-      requestedMinutes: args.requestedMinutes,
-      reason,
-      status: "pending",
-      createdAt: now,
-      submittedBy: user._id,
-    });
-    await ctx.db.insert("auditLogs", {
-      organizationId: user.organizationId,
-      actorUserId: user._id,
-      action: "overtime.submitted",
-      entityType: "overtimeRequest",
-      entityId: String(requestId),
-      metadata: { employeeCode: employee.employeeCode, workDate: args.workDate, requestedMinutes: args.requestedMinutes },
-      createdAt: now,
-    });
-    return requestId;
+  args: { workDate: v.string(), requestedMinutes: v.number(), reason: v.string() },
+  handler: async () => {
+    throw new Error("OVERTIME_AUTOMATICALLY_DETECTED");
   },
 });
 
