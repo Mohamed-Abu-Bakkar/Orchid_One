@@ -133,7 +133,7 @@ export const myWorkspace = query({
       location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
       attendance: attendance.map(event => ({ _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, accuracyM: event.accuracyM, geofencePassed: event.geofencePassed, locationType: event.locationType ?? "physical", reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, performance: { attendanceDays: monthAttendanceDays.map(day => ({ workDate: day.workDate, payableMinutes: day.payableMinutes, breakMinutes: day.breakMinutes, firstCheckInAt: day.firstCheckInAt ?? null, lastCheckOutAt: day.lastCheckOutAt ?? null, status: day.status })), scheduledShifts: scheduledDays, scheduledWorkDates: [...scheduledDateKeys] }, todayAttendance, upcoming,
-      leaveBalances: leaveBalancesWithTypes, leaveTypes: leaveTypes.filter(type => type.isActive).map(type => ({ id: type._id, name: type.name, code: type.code })), leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt })), documents: docsWithUrls,
+      leaveBalances: leaveBalancesWithTypes, leaveTypes: leaveTypes.filter(type => type.isActive).map(type => ({ id: type._id, name: type.name, code: type.code })), leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, detectedMinutes: request.detectedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt, employeeConfirmedAt: request.employeeConfirmedAt, appliedMultiplier: request.appliedMultiplier })), documents: docsWithUrls,
       wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
       weeklyWage: weeklyWage ? { totalPaise: weeklyWage.totalPaise, payableUnits: weeklyWage.payableUnits, employmentType: weeklyWage.employmentType, status: weeklyWage.status, period: weeklyWage.period ? { fromDate: weeklyWage.period.fromDate, toDate: weeklyWage.period.toDate } : null } : null,
       notifications,
@@ -266,6 +266,25 @@ export const submitMyOvertimeRequest = mutation({
       createdAt: now,
     });
     return requestId;
+  },
+});
+
+export const confirmMyOvertimeRequest = mutation({
+  args: { requestId: v.id("overtimeRequests"), confirmed: v.boolean() },
+  handler: async (ctx, args) => {
+    const { user, employee } = await getActiveEmployeeForRequest(ctx);
+    const request = await ctx.db.get(args.requestId);
+    if (!request || request.organizationId !== user.organizationId || request.employeeId !== employee._id) throw new Error("OVERTIME_REQUEST_NOT_FOUND");
+    if (request.status !== "awaiting_employee_confirmation") throw new Error("OVERTIME_REQUEST_NOT_AWAITING_CONFIRMATION");
+    const now = Date.now();
+    if (!args.confirmed) {
+      await ctx.db.patch(request._id, { status: "rejected", reviewerNote: "Employee declined the automatically detected overtime.", reviewedAt: now, reviewedBy: user._id });
+      await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "overtime.employee_declined", entityType: "overtimeRequest", entityId: String(request._id), metadata: { workDate: request.workDate, detectedMinutes: request.detectedMinutes ?? request.requestedMinutes }, createdAt: now });
+      return { confirmed: false };
+    }
+    await ctx.db.patch(request._id, { status: "pending", employeeConfirmedAt: now, employeeConfirmedBy: user._id, submittedBy: user._id });
+    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "overtime.employee_confirmed", entityType: "overtimeRequest", entityId: String(request._id), metadata: { workDate: request.workDate, requestedMinutes: request.requestedMinutes }, createdAt: now });
+    return { confirmed: true };
   },
 });
 
