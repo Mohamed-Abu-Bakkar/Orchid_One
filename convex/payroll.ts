@@ -120,6 +120,8 @@ export const addDraftAdjustment = mutation({
     const user = await requireSuperadmin(ctx);
     const record = await ctx.db.get(args.recordId);
     if (!record || record.organizationId !== user.organizationId || record.status !== "draft") throw new Error("DRAFT_PAYROLL_RECORD_REQUIRED");
+    const period = await ctx.db.get(record.wagePeriodId);
+    if (!period || period.organizationId !== user.organizationId || period.status !== "draft") throw new Error("DRAFT_PAYROLL_PERIOD_REQUIRED");
     const label = args.label.trim(), reason = args.reason.trim();
     if (!label || label.length > 80 || !Number.isSafeInteger(args.amountPaise) || args.amountPaise <= 0 || !reason || reason.length > 500) throw new Error("INVALID_PAYROLL_ADJUSTMENT");
     const earnings = [...(record.earnings ?? [])], deductions = [...(record.deductions ?? [])];
@@ -131,6 +133,7 @@ export const addDraftAdjustment = mutation({
     if (totalPaise < 0) throw new Error("PAYROLL_DEDUCTIONS_EXCEED_GROSS");
     const adjustmentPaise = (record.adjustmentPaise ?? 0) + (args.category === "earning" ? args.amountPaise : -args.amountPaise);
     await ctx.db.patch(record._id, { earnings, deductions, grossPaise, totalPaise, adjustmentPaise, calculationSnapshot: { ...(record.calculationSnapshot ?? {}), earnings, deductions, grossPaise, netPaise: totalPaise, adjustmentPaise } });
+    await ctx.db.patch(period._id, { totalGrossPaise: (period.totalGrossPaise ?? 0) + (args.category === "earning" ? args.amountPaise : 0), totalDeductionsPaise: (period.totalDeductionsPaise ?? 0) + (args.category === "deduction" ? args.amountPaise : 0), totalNetPaise: (period.totalNetPaise ?? 0) + (args.category === "earning" ? args.amountPaise : -args.amountPaise) });
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "payroll.adjustment_added", entityType: "wageRecord", entityId: String(record._id), metadata: { category: args.category, label, amountPaise: args.amountPaise, reason }, createdAt: Date.now() });
     return { totalPaise };
   },
