@@ -32,7 +32,8 @@ export const myDailyFeedback = query({
     const deadline = organization.feedbackDeadlineTime ?? "20:00";
     const record = await ctx.db.query("dailyEmployeeFeedback").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", workDate)).unique();
     const workingDay = await isWorkingDay(ctx, user.organizationId, employee, workDate);
-    return { workDate, deadline, workingDay, locked: afterDeadline(now, timeZone, deadline) && !record?.reopenedAt, record };
+    const reopen = await ctx.db.query("dailyFeedbackReopens").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", workDate)).unique();
+    return { workDate, deadline, workingDay, locked: afterDeadline(now, timeZone, deadline) && !record?.reopenedAt && !reopen, record };
   },
 });
 
@@ -54,12 +55,14 @@ export const submitDailyFeedback = mutation({
     if (args.workDate !== today) throw new Error("FEEDBACK_DATE_MUST_BE_TODAY");
     if (!await isWorkingDay(ctx, user.organizationId, employee, today)) throw new Error("FEEDBACK_NOT_REQUIRED_NON_WORKING_DAY");
     const existing = await ctx.db.query("dailyEmployeeFeedback").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", today)).unique();
-    if (existing && !existing.reopenedAt) throw new Error("FEEDBACK_ALREADY_SUBMITTED_OR_LOCKED");
+    const reopen = await ctx.db.query("dailyFeedbackReopens").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", today)).unique();
+    if (existing && !existing.reopenedAt && !reopen) throw new Error("FEEDBACK_ALREADY_SUBMITTED_OR_LOCKED");
     const now = Date.now();
-    if (afterDeadline(now, timeZone, organization.feedbackDeadlineTime ?? "20:00") && !existing?.reopenedAt) throw new Error("FEEDBACK_DEADLINE_PASSED");
+    if (afterDeadline(now, timeZone, organization.feedbackDeadlineTime ?? "20:00") && !existing?.reopenedAt && !reopen) throw new Error("FEEDBACK_DEADLINE_PASSED");
     const values = { completedWork: args.completedWork.trim(), achievements: args.achievements.trim(), challenges: args.challenges.trim(), selfRating: args.selfRating, nextDayPlan: args.nextDayPlan.trim(), additionalFeedback: args.additionalFeedback?.trim() || undefined, submittedAt: now, reopenedAt: undefined, reopenedBy: undefined, updatedAt: now };
     if (existing) await ctx.db.patch(existing._id, values);
     else await ctx.db.insert("dailyEmployeeFeedback", { organizationId: user.organizationId, employeeId: employee._id, workDate: today, ...values });
+    if (reopen) await ctx.db.delete(reopen._id);
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: existing ? "performance.daily_feedback.resubmitted" : "performance.daily_feedback.submitted", entityType: "dailyEmployeeFeedback", entityId: existing ? String(existing._id) : String(employee._id) + ":" + today, metadata: { workDate: today, selfRating: args.selfRating }, createdAt: now });
     return { submitted: true };
   },
@@ -75,11 +78,13 @@ export const adminFeedbackWorkspace = query({
     const visible = viewer.role === "superadmin" ? employees : employees.filter(employee => employee.reportingEmployeeId === viewer.employeeId || employee.approverEmployeeId === viewer.employeeId);
     const feedback = await ctx.db.query("dailyEmployeeFeedback").withIndex("by_org_date", q => q.eq("organizationId", viewer.organizationId).eq("workDate", args.workDate)).collect();
     const byEmployee = new Map(feedback.map(item => [String(item.employeeId), item]));
+    const reopened = await ctx.db.query("dailyFeedbackReopens").withIndex("by_org_date", q => q.eq("organizationId", viewer.organizationId).eq("workDate", args.workDate)).collect();
+    const reopenedEmployees = new Set(reopened.map(item => String(item.employeeId)));
     const deadline = organization.feedbackDeadlineTime ?? "20:00";
     const now = Date.now();
     return { deadline, employees: visible.map(employee => {
       const record = byEmployee.get(String(employee._id));
-      return { employeeId: employee._id, employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "), employeeCode: employee.employeeCode, departmentId: employee.departmentId, submitted: !!record, record: record ?? null, locked: afterDeadline(now, organization.timezone || "Asia/Kolkata", deadline) };
+      return { employeeId: employee._id, employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "), employeeCode: employee.employeeCode, departmentId: employee.departmentId, submitted: !!record, record: record ?? null, locked: afterDeadline(now, organization.timezone || "Asia/Kolkata", deadline) && !record?.reopenedAt && !reopenedEmployees.has(String(employee._id)) };
     }) };
   },
 });
@@ -102,9 +107,14 @@ export const reopenDailyFeedback = mutation({
     const employee = await ctx.db.get(args.employeeId);
     if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
     const record = await ctx.db.query("dailyEmployeeFeedback").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate)).unique();
-    if (!record) throw new Error("FEEDBACK_NOT_FOUND");
     const now = Date.now();
-    await ctx.db.patch(record._id, { reopenedAt: now, reopenedBy: admin._id, updatedAt: now });
+    if (record) {
+      await ctx.db.patch(record._id, { reopenedAt: now, reopenedBy: admin._id, updatedAt: now });
+    } else {
+      const prior = await ctx.db.query("dailyFeedbackReopens").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate)).unique();
+      if (prior) await ctx.db.patch(prior._id, { reopenedAt: now, reopenedBy: admin._id });
+      else await ctx.db.insert("dailyFeedbackReopens", { organizationId: admin.organizationId, employeeId: employee._id, workDate: args.workDate, reopenedAt: now, reopenedBy: admin._id });
+    }
     await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: "performance.daily_feedback.reopened", entityType: "dailyEmployeeFeedback", entityId: String(record._id), metadata: { employeeId: String(employee._id), workDate: args.workDate }, createdAt: now });
     return { reopened: true };
   },
