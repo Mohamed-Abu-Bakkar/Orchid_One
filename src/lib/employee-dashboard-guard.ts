@@ -4,8 +4,8 @@ import { api } from "@/../convex/_generated/api";
 
 /**
  * Server-side gate for the employee dashboard.
- * Employees must have a linked employee record. Superadmins may enter
- * the employee experience as a preview without linking themselves as staff.
+ * Only active employee accounts with a linked employee record may enter
+ * the employee experience. Administrative roles are redirected to /admin.
  */
 export async function employeeDashboardGuard(
   request: NextRequest,
@@ -23,11 +23,10 @@ export async function employeeDashboardGuard(
     if (account.status !== "active") {
       return NextResponse.redirect(new URL("/suspended", request.url));
     }
-    if (account.role !== "employee" && account.role !== "superadmin") {
+    if (account.role !== "employee") {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
-    // Preview mode for Superadmin does not require an employee profile link.
-    if (account.role === "employee" && !account.employeeId) {
+    if (!account.employeeId) {
       return NextResponse.redirect(new URL("/profile-pending", request.url));
     }
   } catch {
