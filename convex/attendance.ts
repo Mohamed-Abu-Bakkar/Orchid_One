@@ -71,6 +71,7 @@ async function createDetectedOvertime(ctx: any, employee: any, organization: any
   const prior = await ctx.db.query("overtimeRequests").withIndex("by_employee_date", (q: any) => q.eq("employeeId", employee._id).eq("workDate", workDate)).collect();
   if (prior.length) return null;
   const assignments = await ctx.db.query("shiftAssignments").withIndex("by_employee_date", (q: any) => q.eq("employeeId", employee._id).eq("workDate", workDate)).collect();
+  if (assignments.length > 1) return null;
   const shiftId = assignments[0]?.shiftId ?? employee.defaultShiftId;
   if (!shiftId) return null;
   const shift = await ctx.db.get(shiftId);
@@ -250,7 +251,11 @@ export const finalizeGeofenceException = mutation({
     const organization = await ctx.db.get(admin.organizationId);
     if (employee && organization) {
       const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt));
-      await refreshAttendanceDay(ctx, employee, organization, workDate);
+      const refreshed = await refreshAttendanceDay(ctx, employee, organization, workDate);
+      if (args.decision === "approved" && event.eventType === "check_out" && !refreshed.pending && !refreshed.incomplete) {
+        const overtimeRequestId = await createDetectedOvertime(ctx, employee, organization, workDate, refreshed.events);
+        if (overtimeRequestId) await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: "overtime.auto_detected", entityType: "overtimeRequest", entityId: String(overtimeRequestId), metadata: { workDate, employeeCode: employee.employeeCode, source: "geofence_review" }, createdAt: Date.now() });
+      }
     }
     await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: args.decision === "approved" ? "attendance.geofence_exception.approved" : "attendance.geofence_exception.rejected", entityType: "attendanceEvent", entityId: String(event._id), metadata: { supervisorRecommendation: event.supervisorRecommendation, supervisorNote: event.supervisorNote || null, note: note || null }, createdAt: Date.now() });
     return { finalized: true, decision: args.decision };
