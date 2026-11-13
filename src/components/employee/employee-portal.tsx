@@ -26,7 +26,7 @@ const DefaultProfileIcon = ({ size = 20 }: { size?: number }) => (
 export function EmployeePortal() {
  const router=useRouter(), session=authClient.useSession();
  const account=useQuery(api.account.getMyAccountStatus,session.data?{}:"skip");
- const allowed=!!session.data&&account?.status==="active"&&(account.role==="employee"||account.role==="superadmin");
+ const allowed=!!session.data&&account?.status==="active"&&account.role==="employee"&&!!account.employeeId;
  const workspace=useQuery(api.employee.myWorkspace,allowed?{}:"skip");
  const companyDocuments=useQuery(api.companyDocuments.listPublishedForEmployee,allowed?{}:"skip");
  const punch=useMutation(api.attendance.recordPunch);
