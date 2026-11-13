@@ -98,7 +98,8 @@ export const myWorkspace = query({
     const scheduledDays = scheduledDateKeys.size;
     const todayAttendance = attendedDateKeys.has(today) ? { workDate: today } : null;
     const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
-    const visibleWageRecords = wageRecords.filter(record => record.status === "approved" || record.status === "locked");\n    const wagePeriods = await Promise.all(visibleWageRecords.map(record => ctx.db.get(record.wagePeriodId)));
+    const visibleWageRecords = wageRecords.filter(record => record.status === "approved" || record.status === "locked");
+    const wagePeriods = await Promise.all(visibleWageRecords.map(record => ctx.db.get(record.wagePeriodId)));
     const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(today.slice(0, 4)))).collect();
     const effectiveLeaveBalances = [...leaveBalances];
     for (const entitlement of leaveDefaults) {
