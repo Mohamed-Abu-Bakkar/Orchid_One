@@ -31,9 +31,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const result = await fetchAuthMutation(api.attendance.recordPunch, {
       eventType: body.eventType,
-      latitude: body.latitude,
-      longitude: body.longitude,
-      accuracyM: body.accuracyM,
+      ...(body.latitude !== undefined && body.longitude !== undefined && body.accuracyM !== undefined ? { latitude: body.latitude, longitude: body.longitude, accuracyM: body.accuracyM } : {}),
       clientTimestamp: body.clientTimestamp,
       idempotencyKey: body.idempotencyKey,
     });
