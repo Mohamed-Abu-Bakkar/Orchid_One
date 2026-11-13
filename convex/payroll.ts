@@ -81,14 +81,18 @@ export const generatePeriod = mutation({
           if (!rate) continue;
           const mins = review.approvedRegularMinutes ?? 0;
           payableMinutes += mins;
-          const dailyRegular = money(mins * rate.amountPaise / 60);\n          gross += dailyRegular;\n          if (dailyRegular > 0) earnings.push({ label: "Regular hours · " + review.workDate, amountPaise: dailyRegular });
+          const dailyRegular = money(mins * rate.amountPaise / 60);
+          gross += dailyRegular;
+          if (dailyRegular > 0) earnings.push({ label: "Regular hours · " + review.workDate, amountPaise: dailyRegular });
           ratePaise = rate.amountPaise;
         }
         const approvedOvertime = overtime.filter(r => String(r.employeeId) === String(employee._id) && r.status === "approved");
         for (const request of approvedOvertime) {
           const mins = request.approvedMinutes ?? 0;
-          const overtimeRate = request.rateSnapshotPaise ?? rates.find(r => r.organizationId === user.organizationId && r.employmentType === "hourly" && r.effectiveFrom <= request.workDate && (!r.effectiveTo || r.effectiveTo >= request.workDate))?.amountPaise ?? 0;\n          const amount = money(mins * overtimeRate / 60 * (request.appliedMultiplier ?? 1));
-          overtimePaise += amount;\n          if (amount > 0) earnings.push({ label: "Approved overtime · " + request.workDate, amountPaise: amount });
+          const overtimeRate = request.rateSnapshotPaise ?? rates.find(r => r.organizationId === user.organizationId && r.employmentType === "hourly" && r.effectiveFrom <= request.workDate && (!r.effectiveTo || r.effectiveTo >= request.workDate))?.amountPaise ?? 0;
+          const amount = money(mins * overtimeRate / 60 * (request.appliedMultiplier ?? 1));
+          overtimePaise += amount;
+          if (amount > 0) earnings.push({ label: "Approved overtime · " + request.workDate, amountPaise: amount });
           payableMinutes += mins;
         }
         payableUnits = payableMinutes / 60;
@@ -97,7 +101,8 @@ export const generatePeriod = mutation({
         gross += overtimePaise;
       }
       const deductionTotal = deductions.reduce((s,x)=>s+x.amountPaise,0);
-      const net = gross - deductionTotal;\n      if (net < 0) throw new Error("PAYROLL_DEDUCTIONS_EXCEED_GROSS:" + employee.employeeCode);
+      const net = gross - deductionTotal;
+      if (net < 0) throw new Error("PAYROLL_DEDUCTIONS_EXCEED_GROSS:" + employee.employeeCode);
       if (gross === 0 && deductionTotal === 0) continue;
       const payslipNumber = "ORC-" + args.toDate.replaceAll("-","") + "-" + employee.employeeCode;
       const snapshot = { employeeCode: employee.employeeCode, employeeName: [employee.firstName,employee.lastName].filter(Boolean).join(" "), departmentId: employee.departmentId, employmentType: employee.employmentType, period: { fromDate: args.fromDate, toDate: args.toDate }, earnings, deductions, grossPaise: gross, overtimePaise, deductionTotalPaise: deductionTotal, netPaise: net, payableUnits, payableMinutes, payableDays, generatedAt: Date.now(), ruleVersion: "orchid-payroll-v1", notes: employee.employmentType === "daily" ? "Each completed verified attendance day with payable minutes is counted as one daily unit. Partial-day proration is not applied." : employee.employmentType === "permanent" ? "Monthly salary is not prorated for joining, exit, unpaid leave or absence in this release." : "Only approved regular-hour reviews and approved overtime requests are included." };
@@ -124,14 +129,16 @@ export const addDraftAdjustment = mutation({
     else deductions.push({ label, amountPaise: args.amountPaise, reason });
     const grossPaise = record.grossPaise + (args.category === "earning" ? args.amountPaise : 0);
     const deductionTotal = deductions.reduce((sum, item) => sum + item.amountPaise, 0);
-    const totalPaise = grossPaise - deductionTotal;\n    if (totalPaise < 0) throw new Error("PAYROLL_DEDUCTIONS_EXCEED_GROSS");
+    const totalPaise = grossPaise - deductionTotal;
+    if (totalPaise < 0) throw new Error("PAYROLL_DEDUCTIONS_EXCEED_GROSS");
     const adjustmentPaise = (record.adjustmentPaise ?? 0) + (args.category === "earning" ? args.amountPaise : -args.amountPaise);
     await ctx.db.patch(record._id, { earnings, deductions, grossPaise, totalPaise, adjustmentPaise, calculationSnapshot: { ...(record.calculationSnapshot ?? {}), earnings, deductions, grossPaise, netPaise: totalPaise, adjustmentPaise } });
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "payroll.adjustment_added", entityType: "wageRecord", entityId: String(record._id), metadata: { category: args.category, label, amountPaise: args.amountPaise, reason }, createdAt: Date.now() });
     return { totalPaise };
   },
 });
-\nexport const approvePeriod = mutation({
+
+export const approvePeriod = mutation({
   args: { periodId: v.id("wagePeriods") },
   handler: async (ctx, args) => {
     const user = await requireSuperadmin(ctx);
