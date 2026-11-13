@@ -7,6 +7,7 @@ export const myWorkspace = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
+    if (user.role !== "employee" || !user.employeeId) throw new Error("EMPLOYEE_ACCESS_REQUIRED");
     const emptyWorkspace = { linked: false as const, profile: null, department: null, location: null, shift: null, shifts: [], attendance: [], attendanceSummary: null, todayAttendance: null, upcoming: [], leaveBalances: [], leaveRequests: [], overtimeRequests: [], documents: [], wageRecords: [], weeklyWage: null, notifications: [] };
     if (!user.employeeId) return emptyWorkspace;
     const employee = await ctx.db.get(user.employeeId);
