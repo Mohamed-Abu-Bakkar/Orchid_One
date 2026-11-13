@@ -41,7 +41,7 @@ export const updateEmployee = mutation({
     const phone = args.phone.trim();
     const designation = args.designation.trim();
     const email = args.email?.trim().toLowerCase();
-    if (!firstName || !phone || !designation || !/^\\d{4}-\\d{2}-\\d{2}$/.test(args.joiningDate)) throw new Error("INVALID_EMPLOYEE_DETAILS");
+    if (!firstName || !phone || !designation || !/^\d{4}-\d{2}-\d{2}$/.test(args.joiningDate)) throw new Error("INVALID_EMPLOYEE_DETAILS");
     const [department, location, shift] = await Promise.all([
       ctx.db.get(args.departmentId), ctx.db.get(args.locationId),
       args.defaultShiftId ? ctx.db.get(args.defaultShiftId) : null,
