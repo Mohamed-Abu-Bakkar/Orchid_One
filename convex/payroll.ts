@@ -132,7 +132,7 @@ export const addDraftAdjustment = mutation({
     const totalPaise = grossPaise - deductionTotal;
     if (totalPaise < 0) throw new Error("PAYROLL_DEDUCTIONS_EXCEED_GROSS");
     const adjustmentPaise = (record.adjustmentPaise ?? 0) + (args.category === "earning" ? args.amountPaise : -args.amountPaise);
-    await ctx.db.patch(record._id, { earnings, deductions, grossPaise, totalPaise, adjustmentPaise, calculationSnapshot: { ...(record.calculationSnapshot ?? {}), earnings, deductions, grossPaise, netPaise: totalPaise, adjustmentPaise } });
+    await ctx.db.patch(record._id, { earnings, deductions, grossPaise, totalPaise, adjustmentPaise, calculationSnapshot: { ...(record.calculationSnapshot ?? {}), earnings, deductions, grossPaise, deductionTotalPaise: deductionTotal, netPaise: totalPaise, adjustmentPaise } });
     await ctx.db.patch(period._id, { totalGrossPaise: (period.totalGrossPaise ?? 0) + (args.category === "earning" ? args.amountPaise : 0), totalDeductionsPaise: (period.totalDeductionsPaise ?? 0) + (args.category === "deduction" ? args.amountPaise : 0), totalNetPaise: (period.totalNetPaise ?? 0) + (args.category === "earning" ? args.amountPaise : -args.amountPaise) });
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "payroll.adjustment_added", entityType: "wageRecord", entityId: String(record._id), metadata: { category: args.category, label, amountPaise: args.amountPaise, reason }, createdAt: Date.now() });
     return { totalPaise };
