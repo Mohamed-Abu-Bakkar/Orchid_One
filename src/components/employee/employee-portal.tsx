@@ -33,7 +33,9 @@ export function EmployeePortal() {
  const punch=useMutation(api.attendance.recordPunch);
  const uploadUrl=useMutation(api.employee.generateDocumentUploadUrl);
  const saveDocument=useMutation(api.employee.saveMyDocument);
- const confirmOvertime=useMutation(api.employee.confirmMyOvertimeRequest);\n const payslips=useQuery(api.payroll.myPayslips,allowed?{}:"skip");\n const [selectedPayslip,setSelectedPayslip]=useState<any>(null);
+ const confirmOvertime=useMutation(api.employee.confirmMyOvertimeRequest);
+ const payslips=useQuery(api.payroll.myPayslips,allowed?{}:"skip");
+ const [selectedPayslip,setSelectedPayslip]=useState<any>(null);
  const [screen,setScreen]=useState<Screen>("home"),[tab,setTab]=useState<Tab>("home");
  const [clock,setClock]=useState(()=>new Date()),[notice,setNotice]=useState("");
  const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:timeZone}).format(clock);
