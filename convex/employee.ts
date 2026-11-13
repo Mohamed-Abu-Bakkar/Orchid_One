@@ -187,7 +187,8 @@ export const submitMyLeaveRequest = mutation({
       ctx.db.query("leaveRequests").withIndex("by_employee", q => q.eq("employeeId", employee._id)).collect(),
     ]);
     if (existing.some(r => r.status === "pending" && r.fromDate <= args.toDate && r.toDate >= args.fromDate)) throw new Error("OVERLAPPING_PENDING_LEAVE_REQUEST");
-    const applicableHolidays = holidays.filter(h => !h.locationId || h.locationId === employee.locationId);\n    const isHoliday = (date: string) => applicableHolidays.some(h => h.date <= date && (h.toDate ?? h.date) >= date);
+    const applicableHolidays = holidays.filter(h => !h.locationId || h.locationId === employee.locationId);
+    const isHoliday = (date: string) => applicableHolidays.some(h => h.date <= date && (h.toDate ?? h.date) >= date);
     const scheduledDates = new Set(assignments.map(assignment => assignment.workDate));
     const defaultShift = employee.defaultShiftId ? await ctx.db.get(employee.defaultShiftId) : null;
     const hasValidDefaultShift = Boolean(defaultShift && defaultShift.organizationId === user.organizationId && defaultShift.isActive);
