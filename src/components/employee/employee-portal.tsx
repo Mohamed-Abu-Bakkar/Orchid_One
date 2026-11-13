@@ -28,13 +28,14 @@ export function EmployeePortal() {
  const account=useQuery(api.account.getMyAccountStatus,session.data?{}:"skip");
  const allowed=!!session.data&&account?.status==="active"&&account.role==="employee"&&!!account.employeeId;
  const workspace=useQuery(api.employee.myWorkspace,allowed?{}:"skip");
+ const timeZone=workspace?.linked?workspace.timeZone:"Asia/Kolkata";
  const companyDocuments=useQuery(api.companyDocuments.listPublishedForEmployee,allowed?{}:"skip");
  const punch=useMutation(api.attendance.recordPunch);
  const uploadUrl=useMutation(api.employee.generateDocumentUploadUrl);
  const saveDocument=useMutation(api.employee.saveMyDocument);
  const [screen,setScreen]=useState<Screen>("home"),[tab,setTab]=useState<Tab>("home");
  const [clock,setClock]=useState(()=>new Date()),[notice,setNotice]=useState("");
- const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:workspace?.timeZone??"Asia/Kolkata"}).format(clock);
+ const workDate=new Intl.DateTimeFormat("en-CA",{timeZone:timeZone}).format(clock);
  const myWork=useQuery(api.teamsWork.myWorkDashboard,allowed?{workDate}:"skip");
  const updateWork=useMutation(api.teamsWork.updateMyWorkStatus);
 
@@ -42,7 +43,7 @@ export function EmployeePortal() {
  useEffect(()=>{const t=window.setInterval(()=>setClock(new Date()),1000);return()=>window.clearInterval(t)},[]);
  const linked=workspace?.linked===true, profile=linked?workspace.profile:null, shifts=linked?(workspace.shifts??[]):[], shift=shifts[0]??null;
  const fullName=profile?[profile.firstName,profile.lastName].filter(Boolean).join(" "):"";
- const events=useMemo(()=>{if(!linked)return[];const day=new Intl.DateTimeFormat("en-CA",{timeZone:workspace?.timeZone??"Asia/Kolkata"}).format(clock);return workspace.attendance.filter(e=>new Intl.DateTimeFormat("en-CA",{timeZone:workspace?.timeZone??"Asia/Kolkata"}).format(new Date(e.receivedAt))===day).sort((a,b)=>a.receivedAt-b.receivedAt)},[workspace,linked,clock]);
+ const events=useMemo(()=>{if(!linked)return[];const day=new Intl.DateTimeFormat("en-CA",{timeZone:timeZone}).format(clock);return workspace.attendance.filter(e=>new Intl.DateTimeFormat("en-CA",{timeZone:timeZone}).format(new Date(e.receivedAt))===day).sort((a,b)=>a.receivedAt-b.receivedAt)},[workspace,linked,clock]);
  const pendingPunch=events.some(e=>e.reviewStatus==="pending"),acceptedEvents=events.filter(e=>e.locationType==="remote"||e.geofencePassed===true||e.reviewStatus==="approved");
  const last=acceptedEvents.at(-1),working=last?.eventType==="check_in"||last?.eventType==="break_end",nextPunch=working?"check_out":"check_in";
  const hours=useMemo(()=>{let start:number|null=null,total=0;for(const e of acceptedEvents){if(e.eventType==="check_in"||e.eventType==="break_end")start=e.receivedAt;if((e.eventType==="check_out"||e.eventType==="break_start")&&start!==null){total+=Math.max(0,e.receivedAt-start);start=null}}if(start!==null)total+=Math.max(0,clock.getTime()-start);return total/3600000},[acceptedEvents,clock]);
