@@ -5,6 +5,7 @@ Migrate the original employee mobile dashboard into the authenticated Next.js em
 
 ## Non-negotiable rules
 - Keep the employee route authenticated and employee-scoped.
+- Only active accounts with role `employee` and a linked employee profile may access the employee dashboard. Administrative roles must be redirected to `/admin`; no superadmin preview or impersonation mode is supported.
 - Use the existing Better Auth + Convex identity; never trust a client-supplied employee ID.
 - Use `api.employee.myWorkspace` for employee-specific workspace data.
 - Never display the sample employee (Arun Kumar), sample coworkers, sample attendance, sample wages, sample leave, sample notifications, sample policies, sample dates, or sample contact information from the HTML.
