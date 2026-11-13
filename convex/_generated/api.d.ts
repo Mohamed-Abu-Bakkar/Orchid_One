@@ -24,6 +24,7 @@ import type * as locations from "../locations.js";
 import type * as leave from "../leave.js";
 import type * as policies from "../policies.js";
 import type * as overtime from "../overtime.js";
+import type * as performanceFeedback from "../performanceFeedback.js";
 import type * as payroll from "../payroll.js";
 import type * as teamsWork from "../teamsWork.js";
 import type * as wages from "../wages.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   leave: typeof leave;
   policies: typeof policies;
   overtime: typeof overtime;
+  performanceFeedback: typeof performanceFeedback;
   payroll: typeof payroll;
   teamsWork: typeof teamsWork;
   wages: typeof wages;
