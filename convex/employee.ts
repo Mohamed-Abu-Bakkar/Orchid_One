@@ -98,7 +98,7 @@ export const myWorkspace = query({
     const scheduledDays = scheduledDateKeys.size;
     const todayAttendance = attendedDateKeys.has(today) ? { workDate: today } : null;
     const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
-    const wagePeriods = await Promise.all(wageRecords.map(record => ctx.db.get(record.wagePeriodId)));
+    const visibleWageRecords = wageRecords.filter(record => record.status === "approved" || record.status === "locked");\n    const wagePeriods = await Promise.all(visibleWageRecords.map(record => ctx.db.get(record.wagePeriodId)));
     const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(today.slice(0, 4)))).collect();
     const effectiveLeaveBalances = [...leaveBalances];
     for (const entitlement of leaveDefaults) {
@@ -108,7 +108,7 @@ export const myWorkspace = query({
     }
     const leaveBalancesWithTypes = await Promise.all(effectiveLeaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" })));
     const leaveRequestsWithTypes = await Promise.all(leaveRequests.map(async request => ({ ...request, leaveTypeName: (await ctx.db.get(request.leaveTypeId))?.name ?? "Leave" })));
-    const weeklyWage = wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
+    const weeklyWage = visibleWageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
       .find(record => record.period?.periodType === "weekly" && (record.status === "approved" || record.status === "locked") && record.period.fromDate <= weekEnd && record.period.toDate >= weekStart) ?? null;
     const upcoming: { type: string; title: string; date: string; endDate?: string; subtitle: string }[] = [];
     for (const holiday of applicableHolidayRows) { const holidayEnd = holiday.toDate ?? holiday.date; if (holiday.date <= upcomingEnd && holidayEnd >= today) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date < today ? today : holiday.date, endDate: holidayEnd, subtitle: "Company holiday" }); }
@@ -134,7 +134,7 @@ export const myWorkspace = query({
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
       attendance: attendance.map(event => ({ _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt, clientTimestamp: event.clientTimestamp, accuracyM: event.accuracyM, geofencePassed: event.geofencePassed, locationType: event.locationType ?? "physical", reviewStatus: event.reviewStatus })), attendanceSummary: { attendedDays, scheduledDays, percentage: scheduledDays ? Math.round(attendedDays / scheduledDays * 100) : null }, performance: { attendanceDays: monthAttendanceDays.map(day => ({ workDate: day.workDate, payableMinutes: day.payableMinutes, breakMinutes: day.breakMinutes, firstCheckInAt: day.firstCheckInAt ?? null, lastCheckOutAt: day.lastCheckOutAt ?? null, status: day.status })), scheduledShifts: scheduledDays, scheduledWorkDates: [...scheduledDateKeys] }, todayAttendance, upcoming,
       leaveBalances: leaveBalancesWithTypes, leaveTypes: leaveTypes.filter(type => type.isActive).map(type => ({ id: type._id, name: type.name, code: type.code })), leaveRequests: leaveRequestsWithTypes, overtimeRequests: overtimeRequests.map(request => ({ _id: request._id, workDate: request.workDate, requestedMinutes: request.requestedMinutes, detectedMinutes: request.detectedMinutes, approvedMinutes: request.approvedMinutes, reason: request.reason, status: request.status, reviewerNote: request.reviewerNote, createdAt: request.createdAt, reviewedAt: request.reviewedAt, employeeConfirmedAt: request.employeeConfirmedAt, appliedMultiplier: request.appliedMultiplier })), documents: docsWithUrls,
-      wageRecords: wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
+      wageRecords: visibleWageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] ? { fromDate: wagePeriods[index]!.fromDate, toDate: wagePeriods[index]!.toDate, status: wagePeriods[index]!.status, periodType: wagePeriods[index]!.periodType } : null })),
       weeklyWage: weeklyWage ? { totalPaise: weeklyWage.totalPaise, payableUnits: weeklyWage.payableUnits, employmentType: weeklyWage.employmentType, status: weeklyWage.status, period: weeklyWage.period ? { fromDate: weeklyWage.period.fromDate, toDate: weeklyWage.period.toDate } : null } : null,
       notifications,
     };
