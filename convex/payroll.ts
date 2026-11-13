@@ -110,7 +110,28 @@ export const generatePeriod = mutation({
   },
 });
 
-export const approvePeriod = mutation({
+
+export const addDraftAdjustment = mutation({
+  args: { recordId: v.id("wageRecords"), category: v.union(v.literal("earning"),v.literal("deduction")), label: v.string(), amountPaise: v.number(), reason: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireSuperadmin(ctx);
+    const record = await ctx.db.get(args.recordId);
+    if (!record || record.organizationId !== user.organizationId || record.status !== "draft") throw new Error("DRAFT_PAYROLL_RECORD_REQUIRED");
+    const label = args.label.trim(), reason = args.reason.trim();
+    if (!label || label.length > 80 || !Number.isSafeInteger(args.amountPaise) || args.amountPaise <= 0 || !reason || reason.length > 500) throw new Error("INVALID_PAYROLL_ADJUSTMENT");
+    const earnings = [...(record.earnings ?? [])], deductions = [...(record.deductions ?? [])];
+    if (args.category === "earning") earnings.push({ label, amountPaise: args.amountPaise });
+    else deductions.push({ label, amountPaise: args.amountPaise, reason });
+    const grossPaise = record.grossPaise + (args.category === "earning" ? args.amountPaise : 0);
+    const deductionTotal = deductions.reduce((sum, item) => sum + item.amountPaise, 0);
+    const totalPaise = grossPaise - deductionTotal;
+    const adjustmentPaise = (record.adjustmentPaise ?? 0) + (args.category === "earning" ? args.amountPaise : -args.amountPaise);
+    await ctx.db.patch(record._id, { earnings, deductions, grossPaise, totalPaise, adjustmentPaise, calculationSnapshot: { ...(record.calculationSnapshot ?? {}), earnings, deductions, grossPaise, netPaise: totalPaise, adjustmentPaise } });
+    await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "payroll.adjustment_added", entityType: "wageRecord", entityId: String(record._id), metadata: { category: args.category, label, amountPaise: args.amountPaise, reason }, createdAt: Date.now() });
+    return { totalPaise };
+  },
+});
+\nexport const approvePeriod = mutation({
   args: { periodId: v.id("wagePeriods") },
   handler: async (ctx, args) => {
     const user = await requireSuperadmin(ctx);
