@@ -16,7 +16,7 @@ export const listPeriods = query({
     const periods = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).order("desc").take(60);
     return await Promise.all(periods.map(async period => ({
       ...period,
-      records: await ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect(),
+      records: await Promise.all((await ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()).map(async record => { const employee = await ctx.db.get(record.employeeId); return { ...record, employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Former employee", employeeCode: employee?.employeeCode ?? "—" }; })),
     })));
   },
 });
