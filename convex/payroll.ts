@@ -96,8 +96,6 @@ export const generatePeriod = mutation({
           payableMinutes += mins;
         }
         payableUnits = payableMinutes / 60;
-        if (gross > 0) earnings.push({ label: "Approved regular hours", amountPaise: gross });
-        if (overtimePaise > 0) earnings.push({ label: "Approved overtime", amountPaise: overtimePaise });
         gross += overtimePaise;
       }
       const deductionTotal = deductions.reduce((s,x)=>s+x.amountPaise,0);
