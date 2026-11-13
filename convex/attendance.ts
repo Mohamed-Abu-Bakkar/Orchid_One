@@ -57,7 +57,7 @@ async function refreshAttendanceDay(ctx: any, employee: any, organization: any, 
   const values = {
     organizationId: employee.organizationId, employeeId: employee._id, workDate,
     firstCheckInAt, lastCheckOutAt,
-    payableMinutes: incomplete || pending ? 0 : Math.max(0, Math.floor(workMs / 60000) - Math.floor(breakMs / 60000)),
+    payableMinutes: incomplete || pending ? 0 : Math.max(0, Math.floor((workMs - breakMs) / 60000)),
     breakMinutes: Math.floor(breakMs / 60000),
     status: pending ? "pending_review" : events.some((event: any) => event.reviewStatus === "rejected") ? "exception" : "present",
     updatedAt: Date.now(),
@@ -246,6 +246,12 @@ export const finalizeGeofenceException = mutation({
     const note = args.note?.trim();
     if (args.decision === "rejected" && !note) throw new Error("REJECTION_REASON_REQUIRED");
     await ctx.db.patch(event._id, { reviewStatus: args.decision, reviewedBy: admin._id, reviewedAt: Date.now(), reviewNote: note || undefined });
+    const employee = await ctx.db.get(event.employeeId);
+    const organization = await ctx.db.get(admin.organizationId);
+    if (employee && organization) {
+      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt));
+      await refreshAttendanceDay(ctx, employee, organization, workDate);
+    }
     await ctx.db.insert("auditLogs", { organizationId: admin.organizationId, actorUserId: admin._id, action: args.decision === "approved" ? "attendance.geofence_exception.approved" : "attendance.geofence_exception.rejected", entityType: "attendanceEvent", entityId: String(event._id), metadata: { supervisorRecommendation: event.supervisorRecommendation, supervisorNote: event.supervisorNote || null, note: note || null }, createdAt: Date.now() });
     return { finalized: true, decision: args.decision };
   },
