@@ -23,7 +23,8 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as locations from "../locations.js";
 import type * as leave from "../leave.js";
 import type * as policies from "../policies.js";
-import type * as overtime from "../overtime.js";\nimport type * as payroll from "../payroll.js";
+import type * as overtime from "../overtime.js";
+import type * as payroll from "../payroll.js";
 import type * as teamsWork from "../teamsWork.js";
 import type * as wages from "../wages.js";
 
@@ -49,7 +50,8 @@ declare const fullApi: ApiFromModules<{
   locations: typeof locations;
   leave: typeof leave;
   policies: typeof policies;
-  overtime: typeof overtime;\n  payroll: typeof payroll;
+  overtime: typeof overtime;
+  payroll: typeof payroll;
   teamsWork: typeof teamsWork;
   wages: typeof wages;
 }>;
