@@ -76,13 +76,14 @@ export const adminFeedbackWorkspace = query({
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
     const employees = await ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", viewer.organizationId).eq("status", "active")).collect();
     const visible = viewer.role === "superadmin" ? employees : employees.filter(employee => employee.reportingEmployeeId === viewer.employeeId || employee.approverEmployeeId === viewer.employeeId);
+    const workingEmployees = await Promise.all(visible.map(async employee => ({ employee, workingDay: await isWorkingDay(ctx, viewer.organizationId, employee, args.workDate) })));
     const feedback = await ctx.db.query("dailyEmployeeFeedback").withIndex("by_org_date", q => q.eq("organizationId", viewer.organizationId).eq("workDate", args.workDate)).collect();
     const byEmployee = new Map(feedback.map(item => [String(item.employeeId), item]));
     const reopened = await ctx.db.query("dailyFeedbackReopens").withIndex("by_org_date", q => q.eq("organizationId", viewer.organizationId).eq("workDate", args.workDate)).collect();
     const reopenedEmployees = new Set(reopened.map(item => String(item.employeeId)));
     const deadline = organization.feedbackDeadlineTime ?? "20:00";
     const now = Date.now();
-    return { deadline, employees: visible.map(employee => {
+    return { deadline, employees: workingEmployees.filter(item => item.workingDay).map(({ employee }) => {
       const record = byEmployee.get(String(employee._id));
       return { employeeId: employee._id, employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "), employeeCode: employee.employeeCode, departmentId: employee.departmentId, submitted: !!record, record: record ?? null, locked: afterDeadline(now, organization.timezone || "Asia/Kolkata", deadline) && !record?.reopenedAt && !reopenedEmployees.has(String(employee._id)) };
     }) };
