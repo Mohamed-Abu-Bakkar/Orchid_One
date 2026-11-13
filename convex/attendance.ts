@@ -50,12 +50,14 @@ export const recordPunch = mutation({
     const latest = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").first();
     if (latest?.reviewStatus === "pending") throw new Error("ATTENDANCE_REVIEW_PENDING");
-    const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+    const organization = await ctx.db.get(user.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
+    const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date());
     const todayEvents = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q => q.eq("employeeId", employee._id))
       .order("desc").take(100);
     const latestToday = todayEvents.find(event =>
-      new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(event.receivedAt)) === localToday &&
+      new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt)) === localToday &&
       (event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved")
     );
     const activeSession = Boolean(latestToday && latestToday.eventType !== "check_out");
@@ -301,13 +303,14 @@ export const adminRegister = query({
       if (event.eventType === "check_out" && (row.lastCheckOutAt === null || event.receivedAt > row.lastCheckOutAt)) row.lastCheckOutAt = event.receivedAt;
       if (event.reviewStatus === "pending") row.pendingReviews++;
       if (event.reviewStatus === "rejected") row.rejectedEvents++;
-      if (!event.geofencePassed) row.outsideGeofenceEvents++;
+      if (event.locationType !== "remote" && event.geofencePassed === false) row.outsideGeofenceEvents++;
       row.events.push({
         _id: event._id,
         eventType: event.eventType,
         receivedAt: event.receivedAt,
         clientTimestamp: event.clientTimestamp,
         geofencePassed: event.geofencePassed,
+        locationType: event.locationType ?? "physical",
         reviewStatus: event.reviewStatus ?? "not_required",
         exceptionCode: event.exceptionCode ?? null,
         accuracyM: event.accuracyM,
