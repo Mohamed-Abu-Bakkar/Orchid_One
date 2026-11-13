@@ -12,6 +12,7 @@ export function LocationManagement() {
   const account = useQuery(api.account.getMyAccountStatus, {});
   const saveConfiguration = useMutation(api.locations.saveConfiguration);
   const [selectedId, setSelectedId] = useState<string>("");
+  const [locationType, setLocationType] = useState<"physical" | "remote">("physical");
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -34,6 +35,7 @@ export function LocationManagement() {
   function chooseLocation(id: string) {
     const item = locations?.find(location => location._id === id);
     setSelectedId(id);
+    setLocationType(item?.locationType === "remote" ? "remote" : "physical");
     setAddress(item?.address ?? "");
     setLatitude(item && item.latitude !== 0 ? String(item.latitude) : "");
     setLongitude(item && item.longitude !== 0 ? String(item.longitude) : "");
@@ -85,8 +87,7 @@ export function LocationManagement() {
 
   async function save(activate: boolean) {
     if (!selectedId) { setError("Select a location first."); return; }
-    if (!address.trim() || !hasCoordinates || !Number.isInteger(Number(radius)) ||
-      Number(radius) < 10 || Number(radius) > 1000) {
+    if (locationType === "physical" && (!address.trim() || !hasCoordinates || !Number.isInteger(Number(radius)) || Number(radius) < 10 || Number(radius) > 1000)) {
       setError("Provide an address, valid GPS coordinates, and a whole-number radius between 10 and 1,000 metres.");
       return;
     }
@@ -94,13 +95,11 @@ export function LocationManagement() {
     try {
       await saveConfiguration({
         locationId: selectedId as any,
-        address: address.trim(),
-        latitude: lat,
-        longitude: lon,
-        geofenceRadiusM: Number(radius),
+        locationType,
+        ...(locationType === "physical" ? { address: address.trim(), latitude: lat, longitude: lon, geofenceRadiusM: Number(radius) } : {}),
         activate,
       });
-      setMessage(activate ? "Location configured and activated. It is now available in employee onboarding." : "Location configuration saved as a draft.");
+      setMessage(activate ? `${locationType === "remote" ? "Remote" : "Physical"} location activated and available for employee assignment.` : "Location configuration saved as a draft.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save location configuration.");
     } finally { setSaving(false); }
@@ -110,13 +109,13 @@ export function LocationManagement() {
 
   if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Location management</h2><p className="sub">Read-only workplace and geofence reference.</p></div></div><div className="grid-2-equal">{locations.map(item=><article className="panel" key={item._id}><div className="panel-head"><strong>{item.name}</strong><span className={`badge ${item.isActive?"badge-success":"badge-neutral"}`}>{item.isActive?"Active":"Draft"}</span></div><div className="panel-body"><p>{item.address||"Address not configured"}</p><p className="t-caption text-tertiary">Coordinates: {item.latitude}, {item.longitude} · Radius: {item.geofenceRadiusM} m</p></div></article>)}</div></section>;
   return <section className="sec location-management">
-    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Location management</h2><p className="sub">Configure workplace addresses and GPS geofences before activating locations for employee assignment.</p></div><span className="badge badge-neutral">{locations.length} locations</span></div>
+    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Location management</h2><p className="sub">Configure physical workplaces or activate remote workplaces without a geofence.</p></div><span className="badge badge-neutral">{locations.length} locations</span></div>
     <div className="location-layout">
       <div className="panel">
         <div className="panel-head"><span className="t-h3">Organization locations</span></div>
         <div className="location-list">
           {locations.map(item => <button type="button" key={item._id} className={`location-list-item ${selectedId === item._id ? "active" : ""}`} onClick={() => chooseLocation(item._id)}>
-            <span className="location-list-icon"><MapPin size={17}/></span><span className="location-list-copy"><strong>{item.name}</strong><small>{item.address || "Address and geofence not configured"}</small></span><span className={`badge ${item.isActive ? "badge-success" : "badge-neutral"}`}>{item.isActive ? "Active" : "Draft"}</span>
+            <span className="location-list-icon"><MapPin size={17}/></span><span className="location-list-copy"><strong>{item.name}</strong><small>{item.locationType === "remote" ? "Remote · Anywhere" : item.address || "Address and geofence not configured"}</small></span><span className={`badge ${item.isActive ? "badge-success" : "badge-neutral"}`}>{item.isActive ? "Active" : "Draft"}</span>
           </button>)}
           {locations.length === 0 && <div className="empty-state"><MapPin size={24}/><p>No locations have been created yet. Create a location from Employee Onboarding first.</p></div>}
         </div>
@@ -124,6 +123,14 @@ export function LocationManagement() {
       <div className="panel">
         <div className="panel-head"><span className="t-h3">{selected ? `Configure ${selected.name}` : "Location configuration"}</span></div>
         {!selected ? <div className="empty-state"><MapPin size={26}/><p>Select a location from the list to configure its address and GPS geofence.</p></div> : <div className="panel-body location-config-form">
+          <label className="policy-field">Location type
+            <select className="input" value={locationType} onChange={e => setLocationType(e.target.value as "physical" | "remote")}>
+              <option value="physical">Physical workplace · GPS geofence</option>
+              <option value="remote">Remote workplace · Anywhere</option>
+            </select>
+          </label>
+          {locationType === "remote" ? <div className="location-geofence-note"><ShieldCheck size={17}/><span>Remote employees can check in and out from anywhere. GPS is captured only when available; no address or geofence is required.</span></div> : <>
+
           <label className="policy-field">Workplace address
             <textarea className="input location-address" value={address} onChange={e => setAddress(e.target.value)} placeholder="Search for the workplace or enter its full address" rows={3}/>
           </label>
@@ -139,6 +146,7 @@ export function LocationManagement() {
           <label className="policy-field">Geofence radius (metres)<input className="input" type="number" min="10" max="1000" step="1" value={radius} onChange={e => setRadius(e.target.value)} placeholder="Enter radius in metres"/><small className="text-tertiary">Allowed range: 10–1,000 metres. Choose a radius that covers the actual workplace, not the surrounding neighbourhood.</small></label>
           {hasCoordinates && <div className="location-map-wrap"><iframe title="Selected workplace map" src={mapUrl} loading="lazy" referrerPolicy="no-referrer" /><a href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=18/${lat}/${lon}`} target="_blank" rel="noreferrer">Open map to verify pin</a></div>}
           <div className="location-geofence-note"><ShieldCheck size={17}/><span>Activation is explicit. Saving as draft will not make this location selectable for employees.</span></div>
+          </>}
           {message && <p className="onboarding-success" role="status">{message}</p>}
           {error && <p className="auth-error" role="alert">{error}</p>}
           <div className="location-save-actions"><button type="button" className="btn btn-outline" disabled={saving} onClick={() => save(Boolean(selected.isActive))}><Save size={15}/>{selected.isActive ? "Save changes" : "Save as draft"}</button><button type="button" className="btn btn-primary" disabled={saving} onClick={() => save(true)}><ShieldCheck size={15}/>{saving ? "Saving…" : "Save & activate"}</button></div>
