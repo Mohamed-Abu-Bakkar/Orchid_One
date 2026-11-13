@@ -262,7 +262,7 @@ export const hourlyAdminData = query({
         review: review ? { _id: review._id, status: review.status, suggestedRegularMinutes: review.suggestedRegularMinutes, suggestedOvertimeMinutes: review.suggestedOvertimeMinutes, supervisorReason: review.supervisorReason, approvedRegularMinutes: review.approvedRegularMinutes, approvedOvertimeMinutes: review.approvedOvertimeMinutes, reviewerNote: review.reviewerNote } : null,
         ratePaise: rate?.amountPaise ?? null, overtimeMultiplier: rate?.overtimeMultiplier ?? null,
         regularEarningsPaise: rate && review?.status === "approved" ? Math.round(regularMinutes * rate.amountPaise / 60) : null,
-        overtimeEarningsPaise: rate && rate.overtimeMultiplier !== undefined && review?.status === "approved" ? Math.round(overtimeMinutes * rate.amountPaise / 60 * rate.overtimeMultiplier) : null,
+        overtimeEarningsPaise: rate ? dayOvertimeRequests.filter(request => request.status === "approved").reduce((sum, request) => sum + Math.round((request.approvedMinutes ?? 0) * (request.rateSnapshotPaise ?? rate.amountPaise) / 60 * (request.appliedMultiplier ?? 1)), 0) : null,
       });
     }
     const departments = await Promise.all([...new Set(employees.map(e => e.departmentId))].map(id => ctx.db.get(id)));
