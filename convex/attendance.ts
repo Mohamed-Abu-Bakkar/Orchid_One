@@ -14,7 +14,7 @@ function distanceMeters(aLat: number, aLon: number, bLat: number, bLon: number) 
 export const recordPunch = mutation({
   args: {
     eventType: v.union(v.literal("check_in"), v.literal("check_out"), v.literal("break_start"), v.literal("break_end")),
-    latitude: v.number(), longitude: v.number(), accuracyM: v.number(),
+    latitude: v.optional(v.number()), longitude: v.optional(v.number()), accuracyM: v.optional(v.number()),
     clientTimestamp: v.number(), idempotencyKey: v.string(),
   },
   handler: async (ctx, args) => {
@@ -24,16 +24,27 @@ export const recordPunch = mutation({
     if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") throw new Error("EMPLOYEE_INACTIVE");
     const location = await ctx.db.get(employee.locationId);
     if (!location || location.organizationId !== user.organizationId || !location.isActive) throw new Error("LOCATION_UNAVAILABLE");
-    if (!Number.isFinite(args.latitude) || args.latitude < -90 || args.latitude > 90 || !Number.isFinite(args.longitude) || args.longitude < -180 || args.longitude > 180) throw new Error("INVALID_GPS_COORDINATES");
-    if (!Number.isFinite(location.geofenceRadiusM) || location.geofenceRadiusM <= 0) throw new Error("GEOFENCE_NOT_CONFIGURED");
-    if (!Number.isFinite(args.accuracyM) || args.accuracyM <= 0 || args.accuracyM > 1000) throw new Error("INVALID_GPS_ACCURACY");
+    const locationType = location.locationType ?? "physical";
+    const hasAnyGps = args.latitude !== undefined || args.longitude !== undefined || args.accuracyM !== undefined;
+    const hasCompleteGps = args.latitude !== undefined && args.longitude !== undefined && args.accuracyM !== undefined;
+    if (locationType === "physical") {
+      if (!hasCompleteGps) throw new Error("GPS_REQUIRED_FOR_PHYSICAL_LOCATION");
+      if (!Number.isFinite(args.latitude) || args.latitude! < -90 || args.latitude! > 90 || !Number.isFinite(args.longitude) || args.longitude! < -180 || args.longitude! > 180) throw new Error("INVALID_GPS_COORDINATES");
+      if (!Number.isFinite(location.geofenceRadiusM) || location.geofenceRadiusM <= 0) throw new Error("GEOFENCE_NOT_CONFIGURED");
+      if (!Number.isFinite(args.accuracyM) || args.accuracyM! <= 0 || args.accuracyM! > 1000) throw new Error("INVALID_GPS_ACCURACY");
+    } else if (hasAnyGps && !hasCompleteGps) {
+      throw new Error("INCOMPLETE_GPS_READING");
+    } else if (hasCompleteGps) {
+      if (!Number.isFinite(args.latitude) || args.latitude! < -90 || args.latitude! > 90 || !Number.isFinite(args.longitude) || args.longitude! < -180 || args.longitude! > 180) throw new Error("INVALID_GPS_COORDINATES");
+      if (!Number.isFinite(args.accuracyM) || args.accuracyM! <= 0 || args.accuracyM! > 1000) throw new Error("INVALID_GPS_ACCURACY");
+    }
     if (!Number.isFinite(args.clientTimestamp) || args.clientTimestamp <= 0 || !args.idempotencyKey.trim()) throw new Error("INVALID_PUNCH_REQUEST");
 
     const existing = await ctx.db.query("attendanceEvents")
       .withIndex("by_idempotency", q => q.eq("idempotencyKey", args.idempotencyKey)).unique();
     if (existing) {
       if (existing.organizationId !== user.organizationId || existing.employeeId !== employee._id) throw new Error("IDEMPOTENCY_KEY_CONFLICT");
-      return { eventId: existing._id, duplicate: true, geofencePassed: existing.geofencePassed, requiresReview: existing.reviewStatus === "pending" };
+      return { eventId: existing._id, duplicate: true, locationType: existing.locationType ?? "physical", geofencePassed: existing.geofencePassed, requiresReview: existing.reviewStatus === "pending" };
     }
 
     const latest = await ctx.db.query("attendanceEvents")
@@ -45,7 +56,7 @@ export const recordPunch = mutation({
       .order("desc").take(100);
     const latestToday = todayEvents.find(event =>
       new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(event.receivedAt)) === localToday &&
-      (event.geofencePassed || event.reviewStatus === "approved")
+      (event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved")
     );
     const activeSession = Boolean(latestToday && latestToday.eventType !== "check_out");
     if (args.eventType === "check_in" && activeSession) throw new Error("ALREADY_CHECKED_IN");
@@ -53,23 +64,25 @@ export const recordPunch = mutation({
     if (args.eventType === "break_end" && latestToday?.eventType !== "break_start") throw new Error("NO_ACTIVE_BREAK");
     if (args.eventType === "check_out" && (!activeSession || latestToday?.eventType === "break_start")) throw new Error(latestToday?.eventType === "break_start" ? "END_BREAK_BEFORE_CHECKOUT" : "NOT_CHECKED_IN");
 
-    const distance = distanceMeters(location.latitude, location.longitude, args.latitude, args.longitude);
-    const geofencePassed = distance <= location.geofenceRadiusM;
+    const distance = locationType === "physical"
+      ? distanceMeters(location.latitude, location.longitude, args.latitude!, args.longitude!)
+      : null;
+    const geofencePassed = locationType === "physical" ? distance! <= location.geofenceRadiusM : undefined;
     const now = Date.now();
-    const reviewStatus = geofencePassed ? undefined : "pending" as const;
+    const reviewStatus = geofencePassed === false ? "pending" as const : undefined;
     const eventId = await ctx.db.insert("attendanceEvents", {
       organizationId: user.organizationId, employeeId: employee._id, locationId: location._id, eventType: args.eventType,
-      latitude: args.latitude, longitude: args.longitude, accuracyM: args.accuracyM, clientTimestamp: args.clientTimestamp,
-      receivedAt: now, geofencePassed, exceptionCode: geofencePassed ? undefined : "OUTSIDE_GEOFENCE",
+      locationType, latitude: args.latitude, longitude: args.longitude, accuracyM: args.accuracyM, clientTimestamp: args.clientTimestamp,
+      receivedAt: now, geofencePassed, exceptionCode: geofencePassed === false ? "OUTSIDE_GEOFENCE" : undefined,
       reviewStatus, idempotencyKey: args.idempotencyKey,
     });
     await ctx.db.insert("auditLogs", {
       organizationId: user.organizationId, actorUserId: user._id, action: "attendance.punch",
       entityType: "attendanceEvent", entityId: String(eventId),
-      metadata: { eventType: args.eventType, geofencePassed, distanceM: Math.round(distance), reviewStatus: reviewStatus ?? "not_required" },
+      metadata: { eventType: args.eventType, locationType, geofencePassed: geofencePassed ?? null, distanceM: distance === null ? null : Math.round(distance), gpsCaptured: hasCompleteGps, reviewStatus: reviewStatus ?? "not_required" },
       createdAt: now,
     });
-    return { eventId, duplicate: false, geofencePassed, distanceM: Math.round(distance), requiresReview: !geofencePassed };
+    return { eventId, duplicate: false, locationType, geofencePassed, distanceM: distance === null ? null : Math.round(distance), requiresReview: reviewStatus === "pending" };
   },
 });
 
