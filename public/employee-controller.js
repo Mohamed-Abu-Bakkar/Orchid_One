@@ -27,6 +27,56 @@
     const date = new Date(value + "T00:00:00Z");
     return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { ...options, timeZone: "UTC" }).format(date);
   };
+  function renderHomeUpcoming(workspace = window.__orchidWorkspace) {
+    const root = document.getElementById("upcomingList");
+    if (!root) return;
+    root.replaceChildren();
+    const timeZone = workspace?.timeZone || "Asia/Kolkata";
+    const dateKey = (date) => new Intl.DateTimeFormat("en-CA", { timeZone }).format(date);
+    const addDays = (value, days) => {
+      const date = new Date(value + "T00:00:00Z");
+      date.setUTCDate(date.getUTCDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+    const today = dateKey(new Date());
+    const rangeEnd = addDays(today, 29);
+    const dateLabel = (value) => value === today ? "Today" :
+      value === addDays(today, 1) ? "Tomorrow" :
+      new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(new Date(value + "T00:00:00Z"));
+    const items = (Array.isArray(workspace?.upcoming) ? workspace.upcoming : [])
+      .filter(item => /^\\d{4}-\\d{2}-\\d{2}$/.test(item.date || "") &&
+        item.date >= today && item.date <= rangeEnd)
+      .sort((a, b) => a.date.localeCompare(b.date) || String(a.title).localeCompare(String(b.title)));
+    if (!items.length) {
+      empty(root, "No holidays, birthdays or scheduled events in the next 30 days.");
+      return;
+    }
+    items.forEach((item, index) => {
+      if (index) {
+        const divider = document.createElement("div");
+        divider.className = "h-px bg-outline-variant/30 mx-4";
+        root.append(divider);
+      }
+      const row = document.createElement("div");
+      row.className = "flex items-center justify-between gap-3 px-4 py-3";
+      const copy = document.createElement("div");
+      copy.className = "flex flex-col flex-1 min-w-0";
+      const title = document.createElement("p");
+      title.className = "text-body-md font-body-md font-medium text-on-surface";
+      title.textContent = item.title || "Upcoming event";
+      const subtitle = document.createElement("p");
+      subtitle.className = "text-label-sm font-label-sm text-on-surface-variant mt-0.5";
+      subtitle.textContent = item.subtitle || "Upcoming event";
+      copy.append(title, subtitle);
+      const date = document.createElement("span");
+      date.className = "flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide " +
+        (item.type === "birthday" ? "bg-secondary-fixed text-on-secondary-fixed" : "bg-surface-container-highest text-on-surface-variant");
+      date.textContent = dateLabel(item.date);
+      row.append(copy, date);
+      root.append(row);
+    });
+  }
+
   function renderMySchedule() {
     const workspace = window.__orchidWorkspace;
     const schedule = workspace?.schedule;
@@ -291,6 +341,7 @@
       const { workspace, policies, work } = payload;
       window.__orchidWorkspaceSnapshot = JSON.stringify({ workspace, policies, work });
       window.__orchidWorkspace = workspace;
+      renderHomeUpcoming(workspace);
       window.__orchidWork = work || { assignments: [], history: [] };
       window.renderHours?.();
       if (!workspace?.linked || !workspace.profile) {
