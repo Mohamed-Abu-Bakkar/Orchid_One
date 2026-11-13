@@ -40,7 +40,7 @@ export const myWorkspace = query({
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", today)).collect(),
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gt("workDate", today).lte("workDate", upcomingEnd)).collect(),
-      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", monthStart).lte("date", monthEnd)).collect(),
+      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("attendanceDays").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
       ctx.db.query("workCalendars").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
@@ -57,7 +57,7 @@ export const myWorkspace = query({
     const employeeCalendar = workCalendars.find(calendar => calendar.locationId === employee.locationId)
       ?? workCalendars.find(calendar => !calendar.locationId);
     const weeklyOffDays = employeeCalendar?.weeklyOffDays ?? [];
-    const holidayRows = holidays.filter(holiday => !holiday.locationId || holiday.locationId === employee.locationId);
+    const holidayRows = holidays.filter(holiday => (!holiday.locationId || holiday.locationId === employee.locationId) && holiday.date <= monthEnd && (holiday.toDate ?? holiday.date) >= monthStart);
     const scheduleDays = [];
     for (let cursor = new Date(monthStart + "T00:00:00Z"); cursor <= new Date(monthEnd + "T00:00:00Z"); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
       const workDate = cursor.toISOString().slice(0, 10);
@@ -72,7 +72,7 @@ export const myWorkspace = query({
           ? { id: shift._id, name: shift.name, startMinute: shift.startMinute, endMinute: shift.endMinute, breakMinutes: shift.breakMinutes }
           : null;
       }));
-      const dayHolidays = holidayRows.filter(holiday => holiday.date === workDate).map(holiday => holiday.name);
+      const dayHolidays = holidayRows.filter(holiday => holiday.date <= workDate && (holiday.toDate ?? holiday.date) >= workDate).map(holiday => holiday.name);
       scheduleDays.push({
         date: workDate,
         shifts: shiftsForDate.filter((shift): shift is NonNullable<typeof shift> => Boolean(shift)),
@@ -110,7 +110,7 @@ export const myWorkspace = query({
     const weeklyWage = wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
       .find(record => record.period?.periodType === "weekly" && (record.status === "approved" || record.status === "locked") && record.period.fromDate <= weekEnd && record.period.toDate >= weekStart) ?? null;
     const upcoming: { type: string; title: string; date: string; subtitle: string }[] = [];
-    for (const holiday of holidays) if (!holiday.locationId || holiday.locationId === employee.locationId) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date, subtitle: "Company holiday" });
+    for (const holiday of holidayRows) if ((holiday.toDate ?? holiday.date) >= today) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date < today ? today : holiday.date, endDate: holiday.toDate ?? holiday.date, subtitle: "Company holiday" });
     for (const colleague of organizationEmployees) {
       if (colleague.status !== "active" || !colleague.dateOfBirth) continue;
       const birthday = colleague.dateOfBirth.slice(5, 10);
@@ -182,18 +182,18 @@ export const submitMyLeaveRequest = mutation({
     if (new Set(dates).size !== dates.length || dates.some(date => !isValidRequestDate(date) || date < args.fromDate || date > args.toDate)) throw new Error("INVALID_LEAVE_SELECTION");
     const [assignments, holidays, balances, existing] = await Promise.all([
       ctx.db.query("shiftAssignments").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
-      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("date", args.fromDate).lte("date", args.toDate)).collect(),
+      ctx.db.query("holidays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id).eq("periodYear", Number(args.fromDate.slice(0, 4)))).collect(),
       ctx.db.query("leaveRequests").withIndex("by_employee", q => q.eq("employeeId", employee._id)).collect(),
     ]);
     if (existing.some(r => r.status === "pending" && r.fromDate <= args.toDate && r.toDate >= args.fromDate)) throw new Error("OVERLAPPING_PENDING_LEAVE_REQUEST");
-    const holidayDates = new Set(holidays.filter(h => !h.locationId || h.locationId === employee.locationId).map(h => h.date));
+    const applicableHolidays = holidays.filter(h => !h.locationId || h.locationId === employee.locationId);\n    const isHoliday = (date: string) => applicableHolidays.some(h => h.date <= date && (h.toDate ?? h.date) >= date);
     const scheduledDates = new Set(assignments.map(assignment => assignment.workDate));
     const defaultShift = employee.defaultShiftId ? await ctx.db.get(employee.defaultShiftId) : null;
     const hasValidDefaultShift = Boolean(defaultShift && defaultShift.organizationId === user.organizationId && defaultShift.isActive);
     for (const date of dates) {
       if (!scheduledDates.has(date) && !hasValidDefaultShift) throw new Error("LEAVE_DATE_NOT_SCHEDULED");
-      if (holidayDates.has(date)) throw new Error("LEAVE_DATE_IS_HOLIDAY");
+      if (isHoliday(date)) throw new Error("LEAVE_DATE_IS_HOLIDAY");
     }
     const requestedDays = args.daySelections.reduce((total, selection) => total + (selection.portion === "full" ? 1 : 0.5), 0);
     let balance = balances.find(b => b.leaveTypeId === leaveType._id);
