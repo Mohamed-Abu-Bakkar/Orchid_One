@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { Plus, Wallet, UserRound, Settings2, Archive, CheckCircle2 } from "lucide-react";
+import { Plus, Wallet, UserRound, Settings2, Archive, CheckCircle2, Pencil } from "lucide-react";
 
 type Line = { componentId: string; amount: string; reason: string };
 const money = (paise?: number) => paise === undefined ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(paise / 100);
@@ -14,11 +14,13 @@ export function WageManagement() {
   const data = useQuery(api.wages.listForAdmin, {});
   const account = useQuery(api.account.getMyAccountStatus, {});
   const rateData=useQuery(api.wages.wageRateAdminData,{});
-  const saveHourlyRate=useMutation(api.wages.saveHourlyRate);const saveDailyRate=useMutation(api.wages.saveDailyRate);
+  const saveHourlyRate=useMutation(api.wages.saveHourlyRate);const updateHourlyRate=useMutation(api.wages.updateHourlyRate);const saveDailyRate=useMutation(api.wages.saveDailyRate);
   const [wageTab,setWageTab]=useState<"permanent"|"hourly"|"daily">("permanent");
   const [rateEmployeeId,setRateEmployeeId]=useState("");const [rateAmount,setRateAmount]=useState("");const [overtimeMultiplier,setOvertimeMultiplier]=useState("");
-  const [rateEffectiveFrom,setRateEffectiveFrom]=useState(localDate);const [rateSaving,setRateSaving]=useState(false);
+  const [rateEffectiveFrom,setRateEffectiveFrom]=useState(localDate);const [rateSaving,setRateSaving]=useState(false);const [editingRateId,setEditingRateId]=useState<string|null>(null);
   const createComponent = useMutation(api.wages.createSalaryComponent);
+  const updateComponent = useMutation(api.wages.updateSalaryComponent);
+  const updateCompensation = useMutation(api.wages.updateEmployeeCompensation);
   const setComponentActive = useMutation(api.wages.setSalaryComponentActive);
   const saveCompensation = useMutation(api.wages.saveEmployeeCompensation);
   const [employeeId, setEmployeeId] = useState("");
@@ -29,6 +31,8 @@ export function WageManagement() {
   const [componentCode, setComponentCode] = useState("");
   const [componentCategory, setComponentCategory] = useState<"earning" | "deduction">("earning");
   const [saving, setSaving] = useState(false);
+  const [editingCompensationId,setEditingCompensationId]=useState<string|null>(null);
+  const [editingComponentId,setEditingComponentId]=useState<string|null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -44,9 +48,10 @@ export function WageManagement() {
   const submitComponent = async () => {
     setError(""); setMessage("");
     try {
-      await createComponent({ name: componentName, code: componentCode, category: componentCategory });
-      setComponentName(""); setComponentCode("");
-      setMessage("Salary component added to the organization catalogue.");
+      if(editingComponentId) await updateComponent({componentId:editingComponentId as any,name:componentName,code:componentCode,category:componentCategory});
+      else await createComponent({ name: componentName, code: componentCode, category: componentCategory });
+      setComponentName(""); setComponentCode(""); setEditingComponentId(null);
+      setMessage(editingComponentId?"Salary component updated.":"Salary component added to the organization catalogue.");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not create component."); }
   };
 
@@ -61,32 +66,33 @@ export function WageManagement() {
     if (fixed === undefined && payload.length === 0) { setError("Enter a fixed monthly amount or add at least one component."); return; }
     setSaving(true);
     try {
-      await saveCompensation({ employeeId: employeeId as any, effectiveFrom, fixedMonthlyAmountPaise: fixed, components: payload });
-      setMessage("Compensation configuration saved. It is a configuration record, not an approved or paid payroll run.");
-      setFixedAmount(""); setLines([]);
+      if(editingCompensationId) await updateCompensation({compensationId:editingCompensationId as any,effectiveFrom,fixedMonthlyAmountPaise:fixed,components:payload});
+      else await saveCompensation({ employeeId: employeeId as any, effectiveFrom, fixedMonthlyAmountPaise: fixed, components: payload });
+      setMessage(editingCompensationId?"Compensation configuration updated.":"Compensation configuration saved. It is a configuration record, not an approved or paid payroll run.");
+      setFixedAmount(""); setLines([]); setEditingCompensationId(null);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save compensation."); }
     finally { setSaving(false); }
   };
 
   if (data === undefined || rateData === undefined || account === undefined || account === null) return <section className="sec"><p className="sub">Loading wage configuration…</p></section>;
 
-  if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Read-only compensation reference. Final payable-hours decisions are handled in Hourly Workforce.</p></div></div><div className="grid-2-equal"><article className="panel"><div className="panel-head"><strong>Permanent compensation</strong></div><div className="panel-body">{data.employees.map(item=><div className="card p-3 mb-2" key={item._id}><strong>{item.firstName} {item.lastName} · {item.employeeCode}</strong>{item.compensation.map(record=><p className="t-body-sm" key={record._id}>Effective {record.effectiveFrom} · Fixed monthly: {money(record.fixedMonthlyAmountPaise)} · {record.components.length} salary component(s)</p>)}</div>)}</div></article><article className="panel"><div className="panel-head"><strong>Hourly and daily rates</strong></div><div className="panel-body">{[...rateData.hourlyEmployees.map(e=>({...e,type:"Hourly"})),...rateData.dailyEmployees.map(e=>({...e,type:"Daily"}))].map(e=><div className="card p-3 mb-2" key={e._id}><strong>{e.name} · {e.employeeCode} · {e.type}</strong>{e.rates.map(rate=><p className="t-body-sm" key={rate._id}>Effective {rate.effectiveFrom} · {money(rate.amountPaise)} / {e.type.toLowerCase()}{rate.overtimeMultiplier===undefined?"":" · OT ×"+rate.overtimeMultiplier}</p>)}</div>)}</div></article></div></section>;
+  if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Read-only compensation reference. Final payable-hours decisions are handled in Hourly Workforce.</p></div></div><div className="grid-2-equal"><article className="panel"><div className="panel-head"><strong>Permanent compensation</strong></div><div className="panel-body">{data.employees.map(item=><div className="card p-3 mb-2" key={item._id}><strong>{item.firstName} {item.lastName} · {item.employeeCode}</strong>{item.compensation.map(record=><p className="t-body-sm" key={record._id}>Effective {record.effectiveFrom} · Fixed monthly: {money(record.fixedMonthlyAmountPaise)} · {record.components.length} salary component(s)</p>)}</div>)}</div></article><article className="panel"><div className="panel-head"><strong>Hourly rates</strong></div><div className="panel-body">{rateData.hourlyEmployees.map(e=><div className="card p-3 mb-2" key={e._id}><strong>{e.name} · {e.employeeCode} · Hourly</strong>{e.rates.map(rate=><p className="t-body-sm" key={rate._id}>Effective {rate.effectiveFrom} · {money(rate.amountPaise)} / hour · OT ×{rate.overtimeMultiplier}</p>)}</div>)}</div></article></div></section>;
   return <section className="sec">
-    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Configure permanent monthly compensation and effective-dated hourly or daily wage rates.</p></div><span className="badge badge-neutral">{data.employees.length} permanent employees</span></div>
+    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Wage Management</h2><p className="sub">Configure permanent monthly compensation and effective-dated hourly rates.</p></div><span className="badge badge-neutral">{data.employees.length} permanent employees</span></div>
     <div className="wage-scope-note"><Wallet size={18}/><span><strong>Hourly and monthly wage configuration</strong> — approved hourly attendance is calculated separately from permanent employee monthly compensation. This does not generate payslips, process statutory deductions or record payments.</span></div>
     {message && <div className="onboarding-success" role="status"><CheckCircle2 size={16}/>{message}</div>}
     {error && <div className="auth-error" role="alert">{error}</div>}
 
-    <div className="panel mt-4"><div className="panel-head"><div><span className="t-h3">Compensation by employment type</span><p className="t-caption text-tertiary">Permanent monthly compensation and effective-dated hourly or daily rates.</p></div><Wallet size={18}/></div><div className="panel-body wage-form">
-<div className="row gap-2" role="tablist" aria-label="Wage type">{(["permanent","hourly","daily"] as const).map(tab=><button key={tab} type="button" role="tab" aria-selected={wageTab===tab} className={wageTab===tab?"btn btn-primary":"btn btn-outline"} onClick={()=>setWageTab(tab)}>{tab[0].toUpperCase()+tab.slice(1)}</button>)}</div>
+    <div className="panel mt-4"><div className="panel-head"><div><span className="t-h3">Compensation by employment type</span><p className="t-caption text-tertiary">Permanent monthly compensation and effective-dated hourly rates.</p></div><Wallet size={18}/></div><div className="panel-body wage-form">
+<div className="row gap-2" role="tablist" aria-label="Wage type">{(["permanent","hourly"] as const).map(tab=><button key={tab} type="button" role="tab" aria-selected={wageTab===tab} className={wageTab===tab?"btn btn-primary":"btn btn-outline"} onClick={()=>setWageTab(tab)}>{tab[0].toUpperCase()+tab.slice(1)}</button>)}</div>
 {wageTab==="permanent"?<div className="wage-scope-note"><UserRound size={18}/><span><strong>Permanent monthly compensation</strong> — configure fixed amounts and salary components below.</span></div>:<div className="wage-form">
-<div className="grid-2-equal"><label className="policy-field">{wageTab==="hourly"?"Hourly employee":"Daily wage employee"}<select className="input" value={rateEmployeeId} onChange={e=>setRateEmployeeId(e.target.value)}><option value="">Select employee</option>{(wageTab==="hourly"?rateData.hourlyEmployees:rateData.dailyEmployees).map(e=><option key={e._id} value={e._id}>{e.employeeCode} · {e.name}</option>)}</select></label>
-<label className="policy-field">{wageTab==="hourly"?"Hourly rate (₹)":"Daily rate (₹)"}<input className="input" type="number" min="0.01" step="0.01" value={rateAmount} onChange={e=>setRateAmount(e.target.value)}/></label>
-{wageTab==="hourly"&&<label className="policy-field">Overtime multiplier<input className="input" type="number" min="1" max="10" step="0.01" value={overtimeMultiplier} onChange={e=>setOvertimeMultiplier(e.target.value)}/></label>}
+<div className="grid-2-equal"><label className="policy-field">Hourly employee<select className="input" value={rateEmployeeId} onChange={e=>setRateEmployeeId(e.target.value)}><option value="">Select employee</option>{rateData.hourlyEmployees.map(e=><option key={e._id} value={e._id}>{e.employeeCode} · {e.name}</option>)}</select></label>
+<label className="policy-field">Hourly rate (₹)<input className="input" type="number" min="0.01" step="0.01" value={rateAmount} onChange={e=>setRateAmount(e.target.value)}/></label>
+<label className="policy-field">Overtime multiplier<input className="input" type="number" min="1" max="10" step="0.01" value={overtimeMultiplier} onChange={e=>setOvertimeMultiplier(e.target.value)}/></label>
 <label className="policy-field">Effective from<input className="input" type="date" value={rateEffectiveFrom} onChange={e=>setRateEffectiveFrom(e.target.value)}/></label></div>
-<button className="btn btn-primary" type="button" disabled={rateSaving||!rateEmployeeId||!rateAmount||(wageTab==="hourly"&&!overtimeMultiplier)} onClick={async()=>{setRateSaving(true);setError("");setMessage("");try{const amountPaise=Math.round(Number(rateAmount)*100);if(!Number.isSafeInteger(amountPaise)||amountPaise<=0)throw new Error("Enter a valid positive rate.");if(wageTab==="hourly")await saveHourlyRate({employeeId:rateEmployeeId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});else await saveDailyRate({employeeId:rateEmployeeId as any,amountPaise,effectiveFrom:rateEffectiveFrom});setMessage("Rate saved as a new effective-dated record.");setRateAmount("");setOvertimeMultiplier("");}catch(e){setError(e instanceof Error?e.message:"Could not save wage rate.");}finally{setRateSaving(false);}}}>{rateSaving?"Saving…":"Save rate"}</button>
-<p className="t-caption text-tertiary">Daily rates are configuration only. Payable-day rules and partial-day treatment are not inferred.</p>
-<div className="wage-record-list">{(wageTab==="hourly"?rateData.hourlyEmployees:rateData.dailyEmployees).map(e=><div className="wage-employee-record" key={e._id}><div className="wage-employee-heading"><div><strong>{e.name}</strong><small>{e.employeeCode} · {e.departmentName}</small></div><span className={e.rates.length?"badge badge-success":"badge badge-warning"}>{e.rates.length?"Rate configured":"Rate missing"}</span></div>{e.rates.map(r=><div className="wage-history-row" key={r._id}><span>Effective {r.effectiveFrom}</span><strong>{money(r.amountPaise)} / {wageTab==="hourly"?"hour":"day"}</strong><span>{r.overtimeMultiplier===undefined?"":"OT ×"+r.overtimeMultiplier}</span></div>)}</div>)}</div></div>}
+<button className="btn btn-primary" type="button" disabled={rateSaving||!rateEmployeeId||!rateAmount||(wageTab==="hourly"&&!overtimeMultiplier)} onClick={async()=>{setRateSaving(true);setError("");setMessage("");try{const amountPaise=Math.round(Number(rateAmount)*100);if(!Number.isSafeInteger(amountPaise)||amountPaise<=0)throw new Error("Enter a valid positive rate.");if(editingRateId)await updateHourlyRate({rateId:editingRateId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});else await saveHourlyRate({employeeId:rateEmployeeId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});setMessage(editingRateId?"Hourly rate updated.":"Hourly rate saved.");setRateAmount("");setOvertimeMultiplier("");setEditingRateId(null);}catch(e){setError(e instanceof Error?e.message:"Could not save wage rate.");}finally{setRateSaving(false);}}}>{rateSaving?"Saving…":editingRateId?"Update rate":"Save rate"}</button>
+ 
+<div className="wage-record-list">{(wageTab==="hourly"?rateData.hourlyEmployees:rateData.dailyEmployees).map(e=><div className="wage-employee-record" key={e._id}><div className="wage-employee-heading"><div><strong>{e.name}</strong><small>{e.employeeCode} · {e.departmentName}</small></div><span className={e.rates.length?"badge badge-success":"badge badge-warning"}>{e.rates.length?"Rate configured":"Rate missing"}</span></div>{e.rates.map(r=><div className="wage-history-row" key={r._id}><span>Effective {r.effectiveFrom}</span><strong>{money(r.amountPaise)} / {wageTab==="hourly"?"hour":"day"}</strong><span>OT ×{r.overtimeMultiplier}</span><button type="button" className="section-link" onClick={()=>{setEditingRateId(r._id);setRateEmployeeId(e._id);setRateAmount((r.amountPaise/100).toFixed(2));setOvertimeMultiplier(String(r.overtimeMultiplier??1));setRateEffectiveFrom(r.effectiveFrom);}}>Edit</button></div>)}</div>)}</div></div>}
 </div></div>
     {wageTab==="permanent" && <>
     <div className="grid-2-equal wage-config-grid">
@@ -120,8 +126,8 @@ export function WageManagement() {
               {component?.category === "deduction" && <label className="policy-field">Deduction reason (required)<input className="input" value={line.reason} onChange={e => updateLine(index,{reason:e.target.value})} placeholder="Enter reason for this deduction"/></label>}
             </div>;
           })}
-          <button type="button" className="btn btn-primary" onClick={submitCompensation} disabled={saving}>{saving ? "Saving…" : "Save compensation configuration"}</button>
-          <p className="t-caption text-tertiary">Each save creates a dated configuration record. A duplicate effective date for the same employee is rejected; existing records remain unchanged.</p>
+          <button type="button" className="btn btn-primary" onClick={submitCompensation} disabled={saving}>{saving ? "Saving…" : editingCompensationId ? "Update compensation configuration" : "Save compensation configuration"}</button>
+          <p className="t-caption text-tertiary">{editingCompensationId?"Editing updates the selected configuration directly.":"Save a new configuration for the selected effective date."}</p>
         </div>
       </div>
 
@@ -131,9 +137,9 @@ export function WageManagement() {
           <label className="policy-field">Component name<input className="input" value={componentName} onChange={e => setComponentName(e.target.value)} placeholder="e.g. Basic Pay"/></label>
           <label className="policy-field">Component code<input className="input" value={componentCode} onChange={e => setComponentCode(e.target.value)} placeholder="e.g. BASIC_PAY"/></label>
           <label className="policy-field">Component type<select className="input" value={componentCategory} onChange={e => setComponentCategory(e.target.value as "earning" | "deduction")}><option value="earning">Earning</option><option value="deduction">Manual deduction</option></select></label>
-          <button type="button" className="btn btn-outline" onClick={submitComponent} disabled={!componentName.trim() || !componentCode.trim()}><Plus size={15}/> Add to catalogue</button>
+          <button type="button" className="btn btn-outline" onClick={submitComponent} disabled={!componentName.trim() || !componentCode.trim()}>{editingComponentId?<Pencil size={15}/>:<Plus size={15}/>} {editingComponentId?"Update component":"Add to catalogue"}</button>
           <div className="wage-component-list">
-            {data.components.map(component => <div className="wage-component-item" key={component._id}><div><strong>{component.name}</strong><small>{component.code} · {component.category === "earning" ? "Earning" : "Manual deduction"}</small></div><span className={component.isActive ? "badge badge-success" : "badge badge-neutral"}>{component.isActive ? "Active" : "Archived"}</span><button type="button" className="section-link" onClick={() => setComponentActive({componentId:component._id,isActive:!component.isActive})}>{component.isActive ? <><Archive size={13}/> Archive</> : "Reactivate"}</button></div>)}
+            {data.components.map(component => <div className="wage-component-item" key={component._id}><div><strong>{component.name}</strong><small>{component.code} · {component.category === "earning" ? "Earning" : "Manual deduction"}</small></div><span className={component.isActive ? "badge badge-success" : "badge badge-neutral"}>{component.isActive ? "Active" : "Archived"}</span><button type="button" className="section-link" onClick={()=>{setEditingComponentId(component._id);setComponentName(component.name);setComponentCode(component.code);setComponentCategory(component.category);}}><Pencil size={13}/> Edit</button><button type="button" className="section-link" onClick={() => setComponentActive({componentId:component._id,isActive:!component.isActive})}>{component.isActive ? <><Archive size={13}/> Archive</> : "Reactivate"}</button></div>)}
             {data.components.length === 0 && <p className="t-caption text-tertiary">No components configured yet.</p>}
           </div>
         </div>
@@ -144,7 +150,7 @@ export function WageManagement() {
       <div className="panel-head"><span className="t-h3">Current and scheduled employee configurations</span><span className="t-caption text-tertiary">Historical records are retained</span></div>
       <div className="wage-record-list">
         {data.employees.map(item => <div className="wage-employee-record" key={item._id}><div className="wage-employee-heading"><div><strong>{item.firstName} {item.lastName}</strong><small>{item.employeeCode} · {item.departmentName}</small></div><span className="badge badge-neutral">{item.compensation.length} configuration(s)</span></div>
-          {item.compensation.length === 0 ? <p className="t-caption text-tertiary">No monthly compensation configured.</p> : item.compensation.map(record => <div className="wage-history-row" key={record._id}><span>Effective {record.effectiveFrom}</span><strong>{money(record.fixedMonthlyAmountPaise)}</strong><span>{record.components.length} component(s)</span></div>)}
+          {item.compensation.length === 0 ? <p className="t-caption text-tertiary">No monthly compensation configured.</p> : item.compensation.map(record => <div className="wage-history-row" key={record._id}><span>Effective {record.effectiveFrom}</span><strong>{money(record.fixedMonthlyAmountPaise)}</strong><span>{record.components.length} component(s)</span><button type="button" className="section-link" onClick={()=>{setEditingCompensationId(record._id);setEmployeeId(item._id);setEffectiveFrom(record.effectiveFrom);setFixedAmount(record.fixedMonthlyAmountPaise===undefined?"":(record.fixedMonthlyAmountPaise/100).toFixed(2));setLines(record.components.map(line=>({componentId:line.componentId,amount:(line.amountPaise/100).toFixed(2),reason:line.reason??""})));}}>Edit</button></div>)}
         </div>)}
         {data.employees.length === 0 && <div className="empty-state"><UserRound size={24}/><strong>No active permanent employees</strong><p>Active permanent employee records will appear here.</p></div>}
       </div>
