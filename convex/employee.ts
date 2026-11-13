@@ -86,7 +86,7 @@ export const myWorkspace = query({
     );
     const attendedDateKeys = new Set(
       monthEvents
-        .filter(event => event.eventType === "check_in" && (event.geofencePassed || event.reviewStatus === "approved"))
+        .filter(event => event.eventType === "check_in" && (event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved"))
         .map(event => dateKey(new Date(event.receivedAt)))
         .filter(workDate => scheduledDateKeys.has(workDate))
     );
