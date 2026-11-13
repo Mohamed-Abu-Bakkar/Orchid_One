@@ -57,7 +57,8 @@ export const myWorkspace = query({
     const employeeCalendar = workCalendars.find(calendar => calendar.locationId === employee.locationId)
       ?? workCalendars.find(calendar => !calendar.locationId);
     const weeklyOffDays = employeeCalendar?.weeklyOffDays ?? [];
-    const holidayRows = holidays.filter(holiday => (!holiday.locationId || holiday.locationId === employee.locationId) && holiday.date <= monthEnd && (holiday.toDate ?? holiday.date) >= monthStart);
+    const applicableHolidayRows = holidays.filter(holiday => !holiday.locationId || holiday.locationId === employee.locationId);
+    const holidayRows = applicableHolidayRows.filter(holiday => holiday.date <= monthEnd && (holiday.toDate ?? holiday.date) >= monthStart);
     const scheduleDays = [];
     for (let cursor = new Date(monthStart + "T00:00:00Z"); cursor <= new Date(monthEnd + "T00:00:00Z"); cursor.setUTCDate(cursor.getUTCDate() + 1)) {
       const workDate = cursor.toISOString().slice(0, 10);
@@ -109,8 +110,8 @@ export const myWorkspace = query({
     const leaveRequestsWithTypes = await Promise.all(leaveRequests.map(async request => ({ ...request, leaveTypeName: (await ctx.db.get(request.leaveTypeId))?.name ?? "Leave" })));
     const weeklyWage = wageRecords.map((record, index) => ({ ...record, period: wagePeriods[index] }))
       .find(record => record.period?.periodType === "weekly" && (record.status === "approved" || record.status === "locked") && record.period.fromDate <= weekEnd && record.period.toDate >= weekStart) ?? null;
-    const upcoming: { type: string; title: string; date: string; subtitle: string }[] = [];
-    for (const holiday of holidayRows) if ((holiday.toDate ?? holiday.date) >= today) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date < today ? today : holiday.date, endDate: holiday.toDate ?? holiday.date, subtitle: "Company holiday" });
+    const upcoming: { type: string; title: string; date: string; endDate?: string; subtitle: string }[] = [];
+    for (const holiday of applicableHolidayRows) if ((holiday.toDate ?? holiday.date) >= today) upcoming.push({ type: "holiday", title: holiday.name, date: holiday.date < today ? today : holiday.date, endDate: holiday.toDate ?? holiday.date, subtitle: "Company holiday" });
     for (const colleague of organizationEmployees) {
       if (colleague.status !== "active" || !colleague.dateOfBirth) continue;
       const birthday = colleague.dateOfBirth.slice(5, 10);
