@@ -11,6 +11,100 @@ function distanceMeters(aLat: number, aLon: number, bLat: number, bLon: number) 
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 }
 
+
+function localDateTimeUtc(date: string, minuteOfDay: number, timeZone: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  const target = Date.UTC(year, month - 1, day, Math.floor(minuteOfDay / 60), minuteOfDay % 60);
+  let guess = target;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23" }).formatToParts(new Date(guess));
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    const represented = Date.UTC(Number(values.year), Number(values.month)-1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
+    const difference = represented - target;
+    if (!difference) break;
+    guess -= difference;
+  }
+  return guess;
+}
+
+async function refreshAttendanceDay(ctx: any, employee: any, organization: any, workDate: string) {
+  const start = localDateTimeUtc(workDate, 0, organization.timezone);
+  const end = localDateTimeUtc(workDate, 1440, organization.timezone);
+  const events = await ctx.db.query("attendanceEvents")
+    .withIndex("by_employee_time", (q: any) => q.eq("employeeId", employee._id).gte("receivedAt", start).lt("receivedAt", end))
+    .collect();
+  events.sort((a: any, b: any) => a.receivedAt - b.receivedAt);
+  let openIn: number | null = null, openBreak: number | null = null, workMs = 0, breakMs = 0, incomplete = false;
+  for (const event of events) {
+    if (event.reviewStatus === "rejected") continue;
+    if (event.eventType === "check_in") {
+      if (openIn !== null) incomplete = true; else openIn = event.receivedAt;
+    } else if (event.eventType === "check_out") {
+      if (openIn === null) incomplete = true;
+      else { workMs += Math.max(0, event.receivedAt - openIn); openIn = null; }
+    } else if (event.eventType === "break_start") {
+      if (openBreak !== null || openIn === null) incomplete = true; else openBreak = event.receivedAt;
+    } else if (event.eventType === "break_end") {
+      if (openBreak === null) incomplete = true;
+      else { breakMs += Math.max(0, event.receivedAt - openBreak); openBreak = null; }
+    }
+  }
+  if (openIn !== null || openBreak !== null) incomplete = true;
+  const pending = events.some((event: any) => event.reviewStatus === "pending");
+  const firstCheckInAt = events.find((event: any) => event.eventType === "check_in" && event.reviewStatus !== "rejected")?.receivedAt;
+  const lastCheckOutAt = [...events].reverse().find((event: any) => event.eventType === "check_out" && event.reviewStatus !== "rejected")?.receivedAt;
+  const existing = await ctx.db.query("attendanceDays").withIndex("by_employee_date", (q: any) => q.eq("employeeId", employee._id).eq("workDate", workDate)).first();
+  const values = {
+    organizationId: employee.organizationId, employeeId: employee._id, workDate,
+    firstCheckInAt, lastCheckOutAt,
+    payableMinutes: incomplete || pending ? 0 : Math.max(0, Math.floor(workMs / 60000) - Math.floor(breakMs / 60000)),
+    breakMinutes: Math.floor(breakMs / 60000),
+    status: pending ? "pending_review" : events.some((event: any) => event.reviewStatus === "rejected") ? "exception" : "present",
+    updatedAt: Date.now(),
+  };
+  if (existing) await ctx.db.patch(existing._id, values); else await ctx.db.insert("attendanceDays", values);
+  return { events, incomplete, pending };
+}
+
+async function createDetectedOvertime(ctx: any, employee: any, organization: any, workDate: string, events: any[]) {
+  if (employee.employmentType !== "hourly") return null;
+  const prior = await ctx.db.query("overtimeRequests").withIndex("by_employee_date", (q: any) => q.eq("employeeId", employee._id).eq("workDate", workDate)).collect();
+  if (prior.length) return null;
+  const assignments = await ctx.db.query("shiftAssignments").withIndex("by_employee_date", (q: any) => q.eq("employeeId", employee._id).eq("workDate", workDate)).collect();
+  const shiftId = assignments[0]?.shiftId ?? employee.defaultShiftId;
+  if (!shiftId) return null;
+  const shift = await ctx.db.get(shiftId);
+  if (!shift || shift.organizationId !== employee.organizationId || !shift.isActive) return null;
+  // Overnight shifts need an explicit work-date attribution policy; do not guess their overtime.
+  if (shift.endMinute <= shift.startMinute || shift.endMinute > 1440 || shift.endMinute < 0) return null;
+  const shiftEndAt = localDateTimeUtc(workDate, shift.endMinute, organization.timezone);
+  const accepted = events.filter(event => event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved");
+  accepted.sort((a, b) => a.receivedAt - b.receivedAt);
+  let openIn: number | null = null, openBreak: number | null = null, extraMs = 0;
+  for (const event of accepted) {
+    if (event.eventType === "check_in") openIn = event.receivedAt;
+    else if (event.eventType === "check_out" && openIn !== null) {
+      const from = Math.max(openIn, shiftEndAt), to = event.receivedAt;
+      if (to > from) extraMs += to - from;
+      openIn = null;
+    } else if (event.eventType === "break_start") openBreak = event.receivedAt;
+    else if (event.eventType === "break_end" && openBreak !== null) {
+      const from = Math.max(openBreak, shiftEndAt), to = event.receivedAt;
+      if (to > from) extraMs -= to - from;
+      openBreak = null;
+    }
+  }
+  const detectedMinutes = Math.max(0, Math.floor(extraMs / 60000));
+  if (!detectedMinutes) return null;
+  const id = await ctx.db.insert("overtimeRequests", {
+    organizationId: employee.organizationId, employeeId: employee._id, workDate,
+    requestedMinutes: detectedMinutes, detectedMinutes, shiftEndAt,
+    reason: "Automatically detected from verified attendance after the assigned shift",
+    status: "awaiting_employee_confirmation", createdAt: Date.now(),
+  });
+  return id;
+}
+
 export const recordPunch = mutation({
   args: {
     eventType: v.union(v.literal("check_in"), v.literal("check_out"), v.literal("break_start"), v.literal("break_end")),
@@ -84,7 +178,17 @@ export const recordPunch = mutation({
       metadata: { eventType: args.eventType, locationType, geofencePassed: geofencePassed ?? null, distanceM: distance === null ? null : Math.round(distance), gpsCaptured: hasCompleteGps, reviewStatus: reviewStatus ?? "not_required" },
       createdAt: now,
     });
-    return { eventId, duplicate: false, locationType, geofencePassed, distanceM: distance === null ? null : Math.round(distance), requiresReview: reviewStatus === "pending" };
+    const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(now));
+    const refreshed = await refreshAttendanceDay(ctx, employee, organization, workDate);
+    const overtimeRequestId = args.eventType === "check_out" && !refreshed.pending && !refreshed.incomplete
+      ? await createDetectedOvertime(ctx, employee, organization, workDate, refreshed.events)
+      : null;
+    if (overtimeRequestId) await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId, actorUserId: user._id, action: "overtime.auto_detected",
+      entityType: "overtimeRequest", entityId: String(overtimeRequestId),
+      metadata: { workDate, employeeCode: employee.employeeCode }, createdAt: now,
+    });
+    return { eventId, duplicate: false, locationType, geofencePassed, distanceM: distance === null ? null : Math.round(distance), requiresReview: reviewStatus === "pending", overtimeRequestId };
   },
 });
 
