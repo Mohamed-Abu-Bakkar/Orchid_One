@@ -937,14 +937,14 @@
     const events = window.__orchidWorkspace?.attendance ?? [];
     const latest = events[0];
     if (latest?.reviewStatus === "pending") { window.toast?.("Attendance is awaiting supervisor or admin review."); return; }
-    const latestAccepted = events.find(event => event.geofencePassed || event.reviewStatus === "approved");
+
+    const latestAccepted = events.find(event =>
+      event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved"
+    );
     const eventType = latestAccepted && latestAccepted.eventType !== "check_out" ? "check_out" : "check_in";
-    if (!navigator.geolocation) {
-      window.toast?.("Location services are not available on this device.");
-      return;
-    }
-    window.toast?.("Verifying your location…");
-    navigator.geolocation.getCurrentPosition(async position => {
+    const isRemote = window.__orchidWorkspace?.location?.locationType === "remote";
+
+    const submitPunch = async (gps) => {
       try {
         const response = await fetch("/api/employee/workspace", {
           method: "POST",
@@ -952,9 +952,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             eventType,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracyM: position.coords.accuracy,
+            ...(gps || {}),
             clientTimestamp: Date.now(),
             idempotencyKey: crypto.randomUUID(),
           }),
@@ -971,9 +969,29 @@
         console.error("[Orchid attendance]", error);
         window.toast?.(error instanceof Error ? error.message : "Unable to record attendance.");
       }
-    }, error => {
-      window.toast?.(error.code === 1 ? "Location permission is required to record attendance." : "Unable to verify your location.");
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    };
+
+    // Remote attendance is not geofenced and must not depend on device GPS.
+    if (isRemote) {
+      void submitPunch();
+      return;
+    }
+    if (!navigator.geolocation) {
+      window.toast?.("Location services are not available on this device.");
+      return;
+    }
+    window.toast?.("Verifying your location…");
+    navigator.geolocation.getCurrentPosition(
+      position => void submitPunch({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracyM: position.coords.accuracy,
+      }),
+      error => {
+        window.toast?.(error.code === 1 ? "Location permission is required to record attendance." : "Unable to verify your location.");
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   };
   const leavePortionLabels = { full: "Full day", first_half: "First half", second_half: "Second half" };
   const renderLeaveDaySelections = () => {
