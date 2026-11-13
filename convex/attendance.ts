@@ -109,7 +109,7 @@ export const pendingGeofenceExceptions = query({
         workplaceLatitude: location?.latitude ?? null,
         workplaceLongitude: location?.longitude ?? null,
         geofenceRadiusM: location?.geofenceRadiusM ?? null,
-        distanceFromWorkplaceM: location
+        distanceFromWorkplaceM: location && event.latitude !== undefined && event.longitude !== undefined
           ? Math.round(distanceMeters(location.latitude, location.longitude, event.latitude, event.longitude))
           : null,
       };
