@@ -448,7 +448,7 @@
 
       const attendance = workspace.attendance ?? [];
       const latest = attendance[0];
-      const acceptedEvents = attendance.filter(event => event.geofencePassed || event.reviewStatus === "approved");
+      const acceptedEvents = attendance.filter(event => event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved");
       const pendingReview = latest?.reviewStatus === "pending";
       const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
       const todayEvents = acceptedEvents.filter(event => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(event.receivedAt || event.clientTimestamp)) === todayKey).sort((x, y) => x.receivedAt - y.receivedAt);
@@ -475,8 +475,8 @@
       const gpsTitle = document.getElementById("gpsStatusTitle"), gpsDetail = document.getElementById("gpsStatusDetail"), gpsBadge = document.getElementById("gpsStatusBadge");
       if (gpsTitle && gpsDetail && gpsBadge) {
         if (latestToday) {
-          const verified = latestToday.geofencePassed || latestToday.reviewStatus === "approved";
-          gpsTitle.textContent = verified ? "Attendance location verified" : "Location requires review";
+          const verified = latestToday.locationType === "remote" || latestToday.geofencePassed === true || latestToday.reviewStatus === "approved";
+          gpsTitle.textContent = latestToday.locationType === "remote" ? (latestToday.accuracyM ? "Remote attendance · GPS recorded" : "Remote attendance · GPS unavailable") : verified ? "Attendance location verified" : "Location requires review";
           gpsDetail.textContent = "Last verified punch · " + formatPunchTime(latestToday.receivedAt || latestToday.clientTimestamp);
           gpsBadge.textContent = verified ? "Verified" : "Review";
           gpsBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 " + (verified ? "bg-[#e6f4ea] text-[#1E8E4E]" : "bg-[#fff4e0] text-[#b26a00]");
