@@ -47,3 +47,8 @@ Configure identity provider, Convex deployment, private document storage, secret
 **Deprecated / unused React employee prototype:** `src/components/employee/employee-portal.tsx`. It is not imported by the active `/employee` route and must not be used for new employee features. It is retained temporarily as a reference only and exports `DeprecatedEmployeePortalPrototype` to make its status explicit.
 
 **Development rule:** all employee-side feature changes must target the active OrchidHRM HTML/controller/API/Convex path unless a separately approved migration replaces that implementation. Do not assume that changes to the deprecated React prototype are visible to employees.
+
+
+## Temporary administrator role
+
+The `admin` role currently has the same application permissions as `superadmin`. Both roles are organization-wide administrators, including account and role management. `superadmin` remains a distinct role for future hierarchy and granular permission design. Backend authorization is enforced in Convex; UI visibility is not treated as a security boundary.
