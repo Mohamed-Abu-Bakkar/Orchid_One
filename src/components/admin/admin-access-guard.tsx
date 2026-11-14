@@ -7,7 +7,7 @@ import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import AdminShell from "@/components/admin/admin-shell";
 
-const ADMIN_ROLES = ["superadmin", "supervisor"];
+const ADMIN_ROLES = ["superadmin", "admin", "supervisor"];
 
 export function AdminAccessGuard() {
   const router = useRouter();
