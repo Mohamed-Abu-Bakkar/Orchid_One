@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchAuthMutation, isAuthenticated } from "@/lib/auth-server";
 import { api } from "@/../convex/_generated/api";
+import type { Id } from "@/../convex/_generated/dataModel";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "INVALID_OVERTIME_CONFIRMATION" }, { status: 400 });
       }
       const result = await fetchAuthMutation(api.employee.confirmMyOvertimeRequest, {
-        requestId: body.requestId,
+        requestId: body.requestId as Id<"overtimeRequests">,
         confirmed: body.confirmed,
       });
       return NextResponse.json({ type: "overtime_confirmation", ...result }, {
