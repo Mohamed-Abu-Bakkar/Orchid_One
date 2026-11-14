@@ -75,7 +75,7 @@ export const adminFeedbackWorkspace = query({
     const organization = await ctx.db.get(viewer.organizationId);
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
     const employees = await ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", viewer.organizationId).eq("status", "active")).collect();
-    const visible = viewer.role === "superadmin" ? employees : employees.filter(employee => employee.reportingEmployeeId === viewer.employeeId || employee.approverEmployeeId === viewer.employeeId);
+    const visible = (viewer.role === "superadmin" || viewer.role === "admin") ? employees : employees.filter(employee => employee.reportingEmployeeId === viewer.employeeId || employee.approverEmployeeId === viewer.employeeId);
     const workingEmployees = await Promise.all(visible.map(async employee => ({ employee, workingDay: await isWorkingDay(ctx, viewer.organizationId, employee, args.workDate) })));
     const feedback = await ctx.db.query("dailyEmployeeFeedback").withIndex("by_org_date", q => q.eq("organizationId", viewer.organizationId).eq("workDate", args.workDate)).collect();
     const byEmployee = new Map(feedback.map(item => [String(item.employeeId), item]));
