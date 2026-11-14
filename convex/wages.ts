@@ -279,7 +279,7 @@ export const hourlyAdminData = query({
 export const saveHourlyRate = mutation({
   args: { employeeId: v.id("employees"), amountPaise: v.number(), overtimeMultiplier: v.number(), effectiveFrom: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireRole(ctx, ["superadmin"]);
+    const user = await requireRole(ctx, ["superadmin", "admin"]);
     if (!validDate(args.effectiveFrom) || !Number.isSafeInteger(args.amountPaise) || args.amountPaise <= 0 || !Number.isFinite(args.overtimeMultiplier) || args.overtimeMultiplier < 1 || args.overtimeMultiplier > 10) throw new Error("INVALID_HOURLY_RATE");
     const employee = await ctx.db.get(args.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.employmentType !== "hourly" || employee.status !== "active") throw new Error("ACTIVE_HOURLY_EMPLOYEE_REQUIRED");
@@ -295,7 +295,7 @@ export const saveHourlyRate = mutation({
 export const updateHourlyRate = mutation({
   args: { rateId: v.id("wageRates"), amountPaise: v.number(), overtimeMultiplier: v.number(), effectiveFrom: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireRole(ctx, ["superadmin"]);
+    const user = await requireRole(ctx, ["superadmin", "admin"]);
     if (!validDate(args.effectiveFrom) || !Number.isSafeInteger(args.amountPaise) || args.amountPaise <= 0 || !Number.isFinite(args.overtimeMultiplier) || args.overtimeMultiplier < 1 || args.overtimeMultiplier > 10) throw new Error("INVALID_HOURLY_RATE");
     const rate = await ctx.db.get(args.rateId);
     if (!rate || rate.organizationId !== user.organizationId || rate.employmentType !== "hourly" || !rate.employeeId) throw new Error("HOURLY_RATE_NOT_FOUND");
@@ -349,7 +349,7 @@ export const submitHourlyReview = mutation({
 export const decideHourlyReview = mutation({
   args: { reviewId: v.id("hourlyWageReviews"), decision: v.union(v.literal("approved"), v.literal("rejected")), note: v.optional(v.string()), approvedRegularMinutes: v.optional(v.number()), approvedOvertimeMinutes: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const user = await requireRole(ctx, ["superadmin"]);
+    const user = await requireRole(ctx, ["superadmin", "admin"]);
     const review = await ctx.db.get(args.reviewId);
     if (!review || review.organizationId !== user.organizationId) throw new Error("HOURLY_REVIEW_NOT_FOUND");
     if (review.status !== "pending") throw new Error("HOURLY_REVIEW_ALREADY_DECIDED");
