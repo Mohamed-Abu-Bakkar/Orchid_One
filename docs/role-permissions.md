@@ -1,41 +1,41 @@
 # Orchid One role permissions
 
-## Current role model
+## Role hierarchy
 
-The application currently supports four distinct account roles:
+The application supports four distinct roles:
 
-| Role | Current access |
+| Role | Authority |
 | --- | --- |
-| `superadmin` | Full organization-wide administration |
-| `admin` | Inherits the complete current `superadmin` permission set |
-| `supervisor` | Existing supervisor-scoped access and approval workflows |
-| `employee` | Existing self-service employee access |
+| `superadmin` | Highest authority. Manages admins, superadmins, employees, supervisors, and all organization operations. |
+| `admin` | Organization-wide operational authority. Manages employees and supervisors, but cannot view or manage admin/superadmin accounts or grant administrator privileges. |
+| `supervisor` | Existing supervisor-scoped access and approval workflows. |
+| `employee` | Existing self-service employee access. |
 
-## Admin inheritance
+## User and account management boundary
 
-For the current phase, any backend authorization check that explicitly allows `superadmin` also allows `admin`. This is implemented centrally in `convex/lib/auth.ts` through `requireRole`, so privileged endpoints do not need duplicated role lists.
+- Only `superadmin` can list, view, promote, demote, suspend, or reactivate `admin` and `superadmin` accounts.
+- Administrator account records are excluded from the user-management query for an `admin`; they are not merely hidden by the frontend.
+- An `admin` can view and manage only `employee` and `supervisor` accounts.
+- An `admin` can change roles only between `employee` and `supervisor`; backend mutations reject attempts to modify administrator accounts or assign `admin`/`superadmin` roles.
+- An `admin` can suspend/reactivate only `employee` and `supervisor` accounts.
+- A `superadmin` can manage all four roles and account statuses.
+- Role and status changes continue to write audit records.
+- The last active `superadmin` cannot be demoted or suspended. Admin accounts do not count as superadmins for this safeguard.
+- Users cannot change their own role or suspend their own account.
 
-The inherited permission set includes account and role management, account status management, organization-wide employee and workforce administration, wage configuration and approvals, payroll operations, policy and settings administration, and other operations currently reserved for `superadmin`.
+## Other organization permissions
 
-The `admin` and `superadmin` values remain separate in the database and API. Existing accounts are not migrated or promoted automatically. An authorized administrator can assign the `admin` role through Settings → User Management.
+The current phase retains the existing admin inheritance for operational organization-wide permissions, including employee/workforce administration, wage and payroll operations, policy/settings administration, and other organization functions. The separation above is an explicit exception for administrator-account governance.
 
-## Preserved restrictions
-
-- `supervisor` retains the existing supervisor workflows and employee/reporting-line scope.
-- `employee` retains the existing self-service restrictions.
-- Organization isolation, account suspension checks, validation, approval sequencing and audit logging continue to apply.
-- Role assignment and account status changes remain restricted to `admin` and `superadmin`.
-- An administrator cannot suspend their own account or remove their own administrative role. The last active administrative account cannot be demoted or suspended.
-
-## Future hierarchy
-
-This is an interim compatibility rule, not a permanent role hierarchy. When granular permissions are introduced, replace the inheritance rule with explicit permissions/capabilities (for example, `users.manage`, `payroll.approve`, `organization.settings.manage`) and map each role to the approved permission set. Keep authorization enforced by Convex on the server; frontend visibility is only a usability layer.
+Backend authorization remains authoritative. Frontend controls and filtered lists are usability measures only; every privileged mutation independently enforces the role boundary and organization scope.
 
 ## Verification checklist
 
-- [ ] An `admin` can access all routes and mutations currently available to `superadmin`.
-- [ ] A `superadmin` retains all existing access.
-- [ ] A `supervisor` cannot access superadmin-only account, payroll, wage-configuration or organization-settings operations.
-- [ ] An `employee` cannot access administrative operations or another employee's records.
-- [ ] Cross-organization resource access remains rejected.
-- [ ] Role changes and account suspension remain audited.
+- [ ] Admin user-management list contains employees and supervisors only.
+- [ ] Admin cannot retrieve admin/superadmin account records through the account-list query.
+- [ ] Admin can change employee/supervisor roles between those two roles.
+- [ ] Admin cannot promote an account to admin/superadmin.
+- [ ] Admin cannot change the role or status of an admin/superadmin, including by direct mutation calls.
+- [ ] Superadmin can view and manage all account roles and statuses.
+- [ ] Last active superadmin cannot be demoted or suspended.
+- [ ] Role/status changes remain audited and cross-organization access remains rejected.
