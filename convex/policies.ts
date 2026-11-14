@@ -93,7 +93,7 @@ export const listPublishedForEmployee = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
-    if ((user.role !== "employee" && user.role !== "superadmin" && user.role !== "supervisor") || !user.employeeId) return [];
+    if ((user.role !== "employee" && (user.role !== "superadmin" && user.role !== "admin") && user.role !== "supervisor") || !user.employeeId) return [];
     const employee = await ctx.db.get(user.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") return [];
     const policies = await ctx.db.query("policies")
@@ -117,7 +117,7 @@ export const acknowledge = mutation({
   args: { policyId: v.id("policies") },
   handler: async (ctx, { policyId }) => {
     const user = await requireIdentity(ctx);
-    if ((user.role !== "employee" && user.role !== "superadmin") || !user.employeeId) throw new Error("EMPLOYEE_PROFILE_REQUIRED");
+    if ((user.role !== "employee" && (user.role !== "superadmin" && user.role !== "admin")) || !user.employeeId) throw new Error("EMPLOYEE_PROFILE_REQUIRED");
     const employee = await ctx.db.get(user.employeeId);
     if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") throw new Error("EMPLOYEE_INACTIVE");
     const policy = await ctx.db.get(policyId);
