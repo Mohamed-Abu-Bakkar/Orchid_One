@@ -196,7 +196,7 @@ export const recordPunch = mutation({
 export const pendingGeofenceExceptions = query({
   args: {},
   handler: async (ctx) => {
-    const reviewer = await requireRole(ctx, ["supervisor", "superadmin"]);
+    const reviewer = await requireRole(ctx, ["supervisor", "superadmin", "admin"]);
     const pending = await ctx.db.query("attendanceEvents")
       .withIndex("by_org_review_time", q => q.eq("organizationId", reviewer.organizationId).eq("reviewStatus", "pending"))
       .order("desc").collect();
@@ -309,7 +309,7 @@ export const adminRegister = query({
     employeeId: v.optional(v.id("employees")),
   },
   handler: async (ctx, args) => {
-    const admin = await requireRole(ctx, ["supervisor", "superadmin"]);
+    const admin = await requireRole(ctx, ["supervisor", "superadmin", "admin"]);
     const validDate = (value: string) => {
       if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;
       const parsed = new Date(value + "T00:00:00Z");
