@@ -1,6 +1,6 @@
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 
-export type AppRole = "superadmin" | "supervisor" | "employee";
+export type AppRole = "superadmin" | "admin" | "supervisor" | "employee";
 
 export async function requireIdentity(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
@@ -20,7 +20,7 @@ export async function requireRole(ctx: QueryCtx | MutationCtx, allowedRoles: rea
 }
 
 export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
-  return requireRole(ctx, ["superadmin", "supervisor"]);
+  return requireRole(ctx, ["superadmin", "admin", "supervisor"]);
 }
 
 export async function requireSupervisorOrAdmin(ctx: QueryCtx | MutationCtx) {
@@ -28,5 +28,5 @@ export async function requireSupervisorOrAdmin(ctx: QueryCtx | MutationCtx) {
 }
 
 export async function requireSuperadmin(ctx: QueryCtx | MutationCtx) {
-  return requireRole(ctx, ["superadmin"]);
+  return requireRole(ctx, ["superadmin", "admin"]);
 }
