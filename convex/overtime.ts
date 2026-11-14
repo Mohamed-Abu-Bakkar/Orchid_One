@@ -19,12 +19,11 @@ export const listForAdmin = query({
 
     // Query by work date so a large number of older requests cannot hide recent records.
     const records = await ctx.db.query("overtimeRequests")
-      .withIndex("by_org_date", q => {
-        let range = q.eq("organizationId", user.organizationId);
-        if (args.fromDate) range = range.gte("workDate", args.fromDate);
-        if (args.toDate) range = range.lte("workDate", args.toDate);
-        return range;
-      })
+      .withIndex("by_org_date", q =>
+        q.eq("organizationId", user.organizationId)
+          .gte("workDate", args.fromDate ?? "0000-01-01")
+          .lte("workDate", args.toDate ?? "9999-12-31")
+      )
       .order("desc")
       .take(1001);
 
