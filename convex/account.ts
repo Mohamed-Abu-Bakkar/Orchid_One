@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 
 const accountStatusValidator = v.union(v.literal("active"), v.literal("suspended"));
-const roleValidator = v.union(v.literal("superadmin"), v.literal("supervisor"), v.literal("employee"));
+const roleValidator = v.union(v.literal("superadmin"), v.literal("admin"), v.literal("supervisor"), v.literal("employee"));
 
 async function getOrCreateOrganization(ctx: MutationCtx) {
   const code = "ORCHID";
@@ -51,7 +51,7 @@ export const ensureUserProfile = mutation({
 
       return {
         status,
-        role: existing.role as "superadmin" | "supervisor" | "employee",
+        role: existing.role as "superadmin" | "admin" | "supervisor" | "employee",
       };
     }
 
@@ -93,7 +93,7 @@ export const getMyAccountStatus = query({
     if (!user) return null;
     return {
       status: user.accountStatus === "suspended" || !user.isActive ? "suspended" as const : "active" as const,
-      role: user.role as "superadmin" | "supervisor" | "employee",
+      role: user.role as "superadmin" | "admin" | "supervisor" | "employee",
       employeeId: user.employeeId,
     };
   },
