@@ -93,9 +93,9 @@ function AdminPolicyRow({policy,accountRole,onPublish,onArchive,onAcknowledgemen
   <div className="policy-row-main"><strong>{policy.title}</strong><span>Version {policy.version} · {categories.find(c=>c[0]===policy.category)?.[1]??policy.category} · {policy.originalFileName}</span>{policy.description&&<small>{policy.description}</small>}</div>
   <span className={"badge "+(policy.status==="published"?"badge-success":policy.status==="draft"?"badge-warning":"badge-neutral")}>{policy.status}</span>
   {fileUrl&&<button type="button" className="btn btn-outline btn-sm" onClick={()=>setPreviewOpen(value=>!value)}><Eye size={14}/>{previewOpen?"Hide preview":"View policy"}</button>}
-  {(accountRole==="superadmin"||accountRole==="admin")&&policy.status==="draft"&&<button className="btn btn-primary btn-sm" onClick={onPublish}>Publish</button>}
+  {(accountRole === "superadmin" || accountRole === "admin")&&policy.status==="draft"&&<button className="btn btn-primary btn-sm" onClick={onPublish}>Publish</button>}
   {policy.status==="published"&&<button className="btn btn-outline btn-sm" onClick={onAcknowledgements}>Acknowledgements</button>}
-  {(accountRole==="superadmin"||accountRole==="admin")&&policy.status!=="archived"&&<button className="icon-btn" title="Archive version" onClick={onArchive}><Archive size={16}/></button>}
+  {(accountRole === "superadmin" || accountRole === "admin")&&policy.status!=="archived"&&<button className="icon-btn" title="Archive version" onClick={onArchive}><Archive size={16}/></button>}
   {previewOpen&&fileUrl&&<div style={{width:"100%",flexBasis:"100%"}}>
    <div className="row" style={{justifyContent:"space-between",alignItems:"center",marginTop:8,marginBottom:8}}>
     <strong>Policy preview · {policy.originalFileName}</strong>
