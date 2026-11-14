@@ -24,7 +24,7 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
 }
 
 export async function requireSupervisorOrAdmin(ctx: QueryCtx | MutationCtx) {
-  return requireRole(ctx, ["superadmin", "supervisor"]);
+  return requireRole(ctx, ["superadmin", "admin", "supervisor"]);
 }
 
 export async function requireSuperadmin(ctx: QueryCtx | MutationCtx) {
