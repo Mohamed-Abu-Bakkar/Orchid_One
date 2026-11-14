@@ -15,7 +15,12 @@ export async function requireIdentity(ctx: QueryCtx | MutationCtx) {
 
 export async function requireRole(ctx: QueryCtx | MutationCtx, allowedRoles: readonly AppRole[]) {
   const user = await requireIdentity(ctx);
-  if (!allowedRoles.includes(user.role as AppRole)) throw new Error("FORBIDDEN");
+  // During the current phase, admin inherits every permission granted to superadmin.
+  // Keep the role values distinct so a future permission hierarchy can separate them.
+  const effectiveRoles = allowedRoles.includes("superadmin")
+    ? [...allowedRoles, "admin" as const]
+    : allowedRoles;
+  if (!effectiveRoles.includes(user.role as AppRole)) throw new Error("FORBIDDEN");
   return user;
 }
 
