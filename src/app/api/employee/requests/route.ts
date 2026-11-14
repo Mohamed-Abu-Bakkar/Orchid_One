@@ -22,6 +22,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ type: "leave", ...result }, { headers: { "Cache-Control": "no-store" } });
     }
 
+    if (body?.type === "overtime_confirmation") {
+      if (typeof body.requestId !== "string" || typeof body.confirmed !== "boolean") {
+        return NextResponse.json({ error: "INVALID_OVERTIME_CONFIRMATION" }, { status: 400 });
+      }
+      const result = await fetchAuthMutation(api.employee.confirmMyOvertimeRequest, {
+        requestId: body.requestId,
+        confirmed: body.confirmed,
+      });
+      return NextResponse.json({ type: "overtime_confirmation", ...result }, {
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+
     if (body?.type === "overtime") {
       const requestId = await fetchAuthMutation(api.employee.submitMyOvertimeRequest, {
         workDate: body.workDate,
