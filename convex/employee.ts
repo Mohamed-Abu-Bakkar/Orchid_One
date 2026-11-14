@@ -329,7 +329,7 @@ export const listForAdmin = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
-    if (user.role !== "superadmin" && user.role !== "supervisor") {
+    if ((user.role !== "superadmin" && user.role !== "admin") && user.role !== "supervisor") {
       throw new Error("FORBIDDEN");
     }
 
@@ -373,7 +373,7 @@ export const listOnboardingOptions = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireIdentity(ctx);
-    if (user.role !== "superadmin" && user.role !== "supervisor") throw new Error("FORBIDDEN");
+    if ((user.role !== "superadmin" && user.role !== "admin") && user.role !== "supervisor") throw new Error("FORBIDDEN");
     const [departments, locations, shifts] = await Promise.all([
       ctx.db.query("departments").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("locations").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
@@ -393,7 +393,7 @@ export const createDepartmentForAdmin = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
+    if (admin.role !== "superadmin" && admin.role !== "admin") throw new Error("FORBIDDEN");
     const name = args.name.trim().replace(/\s+/g, " ");
     if (!name || name.length > 80) throw new Error("INVALID_DEPARTMENT_NAME");
     const existing = await ctx.db.query("departments").withIndex("by_org_code", q => q.eq("organizationId", admin.organizationId)).collect();
@@ -413,7 +413,7 @@ export const createLocationDraftForAdmin = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("FORBIDDEN");
     const name = args.name.trim().replace(/\s+/g, " ");
     if (!name || name.length > 80) throw new Error("INVALID_LOCATION_NAME");
     const existing = await ctx.db.query("locations").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
@@ -433,7 +433,7 @@ export const listAccountsForLinking = query({
   args: {},
   handler: async (ctx) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("FORBIDDEN");
     const users = await ctx.db.query("users")
       .withIndex("by_org", q => q.eq("organizationId", admin.organizationId))
       .order("desc")
@@ -475,7 +475,7 @@ export const createForAdmin = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("FORBIDDEN");
     const firstName = args.firstName.trim();
     const lastName = args.lastName?.trim();
     const phone = args.phone.trim();
@@ -558,7 +558,7 @@ export const linkAccount = mutation({
   args: { userId: v.id("users"), employeeId: v.id("employees") },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("FORBIDDEN");
     const [account, employee] = await Promise.all([ctx.db.get(args.userId), ctx.db.get(args.employeeId)]);
     if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
     if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
@@ -589,7 +589,7 @@ export const unlinkAccount = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("FORBIDDEN");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("FORBIDDEN");
     const account = await ctx.db.get(userId);
     if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
     if (account.role !== "employee") throw new Error("ONLY_EMPLOYEE_ACCOUNTS_CAN_BE_UNLINKED");
@@ -608,16 +608,16 @@ export const unlinkAccount = mutation({
 
 /** Role changes are restricted to superadmins and never permit self-demotion. */
 export const updateAccountRole = mutation({
-  args: { userId: v.id("users"), role: v.union(v.literal("superadmin"), v.literal("supervisor"), v.literal("employee")) },
+  args: { userId: v.id("users"), role: v.union(v.literal("superadmin"), v.literal("admin"), v.literal("supervisor"), v.literal("employee")) },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("SUPERADMIN_REQUIRED");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("SUPERADMIN_REQUIRED");
     const account = await ctx.db.get(args.userId);
     if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
-    if (account._id === admin._id && args.role !== "superadmin") throw new Error("CANNOT_CHANGE_OWN_SUPERADMIN_ROLE");
-    if (account.role === "superadmin" && args.role !== "superadmin") {
+    if (account._id === admin._id && (args.role !== "superadmin" && args.role !== "admin")) throw new Error("CANNOT_CHANGE_OWN_SUPERADMIN_ROLE");
+    if ((account.role === "superadmin" || account.role === "admin") && (args.role !== "superadmin" && args.role !== "admin")) {
       const superadmins = await ctx.db.query("users").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
-      if (superadmins.filter(user => user.role === "superadmin" && user.isActive && user.accountStatus !== "suspended").length <= 1) {
+      if (superadmins.filter(user => (user.role === "superadmin" || user.role === "admin") && user.isActive && user.accountStatus !== "suspended").length <= 1) {
         throw new Error("CANNOT_REMOVE_LAST_ACTIVE_SUPERADMIN");
       }
     }
@@ -638,13 +638,13 @@ export const setAccountStatus = mutation({
   args: { userId: v.id("users"), status: v.union(v.literal("active"), v.literal("suspended")) },
   handler: async (ctx, args) => {
     const admin = await requireIdentity(ctx);
-    if (admin.role !== "superadmin") throw new Error("SUPERADMIN_REQUIRED");
+    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("SUPERADMIN_REQUIRED");
     const account = await ctx.db.get(args.userId);
     if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
     if (account._id === admin._id && args.status === "suspended") throw new Error("CANNOT_SUSPEND_OWN_ACCOUNT");
-    if (account.role === "superadmin" && args.status === "suspended" && account.isActive) {
+    if ((account.role === "superadmin" || account.role === "admin") && args.status === "suspended" && account.isActive) {
       const superadmins = await ctx.db.query("users").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
-      if (superadmins.filter(user => user.role === "superadmin" && user.isActive && user.accountStatus !== "suspended" && user._id !== account._id).length === 0) {
+      if (superadmins.filter(user => (user.role === "superadmin" || user.role === "admin") && user.isActive && user.accountStatus !== "suspended" && user._id !== account._id).length === 0) {
         throw new Error("CANNOT_SUSPEND_LAST_ACTIVE_SUPERADMIN");
       }
     }
