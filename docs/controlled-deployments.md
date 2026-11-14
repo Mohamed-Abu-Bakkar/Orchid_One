@@ -29,3 +29,7 @@ The hook deploys the latest commit on `main` when it is triggered. Avoid pushing
 ## Important
 
 This controls Vercel production builds only. It does not deploy Convex functions. Convex Development updates remain a separate operation and must continue targeting the existing Development deployment. Never run `npx convex deploy` for this project without an explicit Production migration decision.
+
+## Release trigger
+
+- Release trigger commit: `b4d8b13aa7ba70ede6ca4ae708e50e6f433269e6` (requested deployment; triggered by a dedicated `[deploy]` release commit).
