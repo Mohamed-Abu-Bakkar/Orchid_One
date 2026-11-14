@@ -5,7 +5,7 @@ import { requireIdentity, requireRole } from "./lib/auth";
 export const listForAdmin = query({
   args: {},
   handler: async (ctx) => {
-    const admin = await requireRole(ctx, ["superadmin"]);
+    const admin = await requireRole(ctx, ["superadmin", "admin"]);
     return await ctx.db.query("locations")
       .withIndex("by_org", q => q.eq("organizationId", admin.organizationId))
       .order("asc")
@@ -24,7 +24,7 @@ export const saveConfiguration = mutation({
     activate: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireRole(ctx, ["superadmin"]);
+    const admin = await requireRole(ctx, ["superadmin", "admin"]);
     const location = await ctx.db.get(args.locationId);
     if (!location || location.organizationId !== admin.organizationId) throw new Error("LOCATION_NOT_FOUND");
 
