@@ -46,7 +46,7 @@ export function EmployeeOnboarding() {
     finally {setSaving(false);}
   };
   if(options===undefined||account===undefined||(account?.role==="superadmin"&&accounts===undefined))return <section className="sec"><p className="sub">Loading onboarding options…</p></section>;
-  if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Employee onboarding</h2><p className="sub">Employee records and account creation are managed by Superadmin.</p></div></div><div className="panel"><div className="panel-body"><p className="sub">You have read-only access to employee records. Review workforce details from People → Employees.</p></div></div></section>;
+  if(account?.role==="supervisor") return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Employee onboarding</h2><p className="sub">Employee records and account creation are managed by an administrator.</p></div></div><div className="panel"><div className="panel-body"><p className="sub">You have read-only access to employee records. Review workforce details from People → Employees.</p></div></div></section>;
   return <section className="sec">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Employee onboarding</h2><p className="sub">Create the employee record first. Linking an existing login account is optional.</p></div><span className="badge badge-neutral">Automatic code · ORC-0001</span></div>
     <form className="panel onboarding-panel" onSubmit={submit}>
