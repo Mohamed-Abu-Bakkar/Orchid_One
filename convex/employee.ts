@@ -438,7 +438,11 @@ export const listAccountsForLinking = query({
       .withIndex("by_org", q => q.eq("organizationId", admin.organizationId))
       .order("desc")
       .collect();
-    return await Promise.all(users.map(async account => {
+    // Admins must not discover administrator or superadministrator accounts.
+    const visibleUsers = admin.role === "superadmin"
+      ? users
+      : users.filter(account => account.role === "employee" || account.role === "supervisor");
+    return await Promise.all(visibleUsers.map(async account => {
       const employee = account.employeeId ? await ctx.db.get(account.employeeId) : null;
       return {
         _id: account._id,
@@ -607,17 +611,26 @@ export const unlinkAccount = mutation({
 });
 
 /** Role changes are restricted to superadmins and never permit self-demotion. */
+/** Only superadmins can manage admin/superadmin accounts. Admins can manage employee/supervisor roles. */
 export const updateAccountRole = mutation({
   args: { userId: v.id("users"), role: v.union(v.literal("superadmin"), v.literal("admin"), v.literal("supervisor"), v.literal("employee")) },
   handler: async (ctx, args) => {
-    const admin = await requireIdentity(ctx);
-    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("SUPERADMIN_REQUIRED");
+    const actor = await requireIdentity(ctx);
+    if (actor.role !== "superadmin" && actor.role !== "admin") throw new Error("FORBIDDEN");
     const account = await ctx.db.get(args.userId);
-    if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
-    if (account._id === admin._id && (args.role !== "superadmin" && args.role !== "admin")) throw new Error("CANNOT_CHANGE_OWN_SUPERADMIN_ROLE");
-    if ((account.role === "superadmin" || account.role === "admin") && (args.role !== "superadmin" && args.role !== "admin")) {
-      const superadmins = await ctx.db.query("users").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
-      if (superadmins.filter(user => (user.role === "superadmin" || user.role === "admin") && user.isActive && user.accountStatus !== "suspended").length <= 1) {
+    if (!account || account.organizationId !== actor.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+
+    if (actor.role === "admin") {
+      if (account.role !== "employee" && account.role !== "supervisor") throw new Error("FORBIDDEN");
+      if (args.role !== "employee" && args.role !== "supervisor") throw new Error("FORBIDDEN");
+    }
+
+    if (account._id === actor._id && args.role !== account.role) throw new Error("CANNOT_CHANGE_OWN_ROLE");
+    if (account.role === "superadmin" && args.role !== "superadmin") {
+      const activeSuperadmins = await ctx.db.query("users")
+        .withIndex("by_org", q => q.eq("organizationId", actor.organizationId))
+        .collect();
+      if (activeSuperadmins.filter(user => user.role === "superadmin" && user.isActive && user.accountStatus !== "suspended").length <= 1) {
         throw new Error("CANNOT_REMOVE_LAST_ACTIVE_SUPERADMIN");
       }
     }
@@ -625,7 +638,7 @@ export const updateAccountRole = mutation({
     if (previousRole === args.role) return true;
     await ctx.db.patch(account._id, { role: args.role });
     await ctx.db.insert("auditLogs", {
-      organizationId: admin.organizationId, actorUserId: admin._id,
+      organizationId: actor.organizationId, actorUserId: actor._id,
       action: "user.role_updated", entityType: "user", entityId: String(account._id),
       metadata: { previousRole, newRole: args.role }, createdAt: Date.now(),
     });
@@ -637,14 +650,17 @@ export const updateAccountRole = mutation({
 export const setAccountStatus = mutation({
   args: { userId: v.id("users"), status: v.union(v.literal("active"), v.literal("suspended")) },
   handler: async (ctx, args) => {
-    const admin = await requireIdentity(ctx);
-    if ((admin.role !== "superadmin" && admin.role !== "admin")) throw new Error("SUPERADMIN_REQUIRED");
+    const actor = await requireIdentity(ctx);
+    if (actor.role !== "superadmin" && actor.role !== "admin") throw new Error("FORBIDDEN");
     const account = await ctx.db.get(args.userId);
-    if (!account || account.organizationId !== admin.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
-    if (account._id === admin._id && args.status === "suspended") throw new Error("CANNOT_SUSPEND_OWN_ACCOUNT");
-    if ((account.role === "superadmin" || account.role === "admin") && args.status === "suspended" && account.isActive) {
-      const superadmins = await ctx.db.query("users").withIndex("by_org", q => q.eq("organizationId", admin.organizationId)).collect();
-      if (superadmins.filter(user => (user.role === "superadmin" || user.role === "admin") && user.isActive && user.accountStatus !== "suspended" && user._id !== account._id).length === 0) {
+    if (!account || account.organizationId !== actor.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
+    if (actor.role === "admin" && account.role !== "employee" && account.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (account._id === actor._id && args.status === "suspended") throw new Error("CANNOT_SUSPEND_OWN_ACCOUNT");
+    if (account.role === "superadmin" && args.status === "suspended" && account.isActive) {
+      const activeSuperadmins = await ctx.db.query("users")
+        .withIndex("by_org", q => q.eq("organizationId", actor.organizationId))
+        .collect();
+      if (activeSuperadmins.filter(user => user.role === "superadmin" && user.isActive && user.accountStatus !== "suspended" && user._id !== account._id).length === 0) {
         throw new Error("CANNOT_SUSPEND_LAST_ACTIVE_SUPERADMIN");
       }
     }
@@ -653,7 +669,7 @@ export const setAccountStatus = mutation({
     const previousStatus = account.accountStatus ?? "active";
     await ctx.db.patch(account._id, { accountStatus: args.status, isActive });
     await ctx.db.insert("auditLogs", {
-      organizationId: admin.organizationId, actorUserId: admin._id,
+      organizationId: actor.organizationId, actorUserId: actor._id,
       action: "user.account_status_updated", entityType: "user", entityId: String(account._id),
       metadata: { previousStatus, newStatus: args.status }, createdAt: Date.now(),
     });
