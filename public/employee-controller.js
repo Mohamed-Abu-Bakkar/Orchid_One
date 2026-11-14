@@ -663,6 +663,7 @@
       };
       window.setPerformanceRange = range => { if (range==="weekly"||range==="monthly") { performanceRange=range; renderPerformanceTrend(); } };
       renderPerformanceTrend();
+      void loadDailyEmployeeFeedback();
       const upcomingList = document.getElementById("upcomingList");
       if (upcomingList) {
         upcomingList.replaceChildren(); const upcoming = workspace.upcoming ?? [];
@@ -1031,6 +1032,89 @@
   });
 
   
+  async function loadDailyEmployeeFeedback() {
+    const root = document.getElementById("dailyFeedbackCard");
+    if (!root) return;
+    const make = (tag, className, value) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (value !== undefined) node.textContent = value;
+      return node;
+    };
+    const fieldClass = "w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-md text-on-surface";
+    const labelClass = "flex flex-col gap-1 text-label-sm font-medium text-on-surface-variant";
+    const buttonClass = "w-full rounded-lg bg-primary text-white font-semibold py-3 disabled:opacity-50";
+    try {
+      const response = await fetch("/api/employee/performance-feedback", { credentials: "same-origin", cache: "no-store" });
+      const state = await response.json();
+      if (!response.ok) throw new Error(state.error || "Unable to load daily feedback.");
+      root.replaceChildren();
+      const heading = make("div", "flex items-center justify-between gap-2");
+      const title = make("span", "text-body-lg font-body-lg font-semibold text-on-surface", "Daily self-feedback");
+      const due = make("span", "text-label-sm text-on-surface-variant", "Due " + state.deadline);
+      heading.append(title, due);
+      root.append(heading);
+      const note = make("p", "text-label-sm text-on-surface-variant", "Share what you completed, your achievements, challenges and plan for the next working day.");
+      root.append(note);
+      const message = (titleText, detail) => {
+        const box = make("div", "rounded-lg bg-surface-container-low p-3");
+        box.append(make("p", "font-semibold text-on-surface", titleText), make("p", "text-body-sm text-on-surface-variant mt-1", detail));
+        root.append(box);
+      };
+      if (!state.workingDay) { message("No feedback required today", "Today is configured as a non-working day for your location."); return; }
+      if (state.record && !state.record.reopenedAt) {
+        const status = make("div", "rounded-lg bg-[#e8f5ec] text-[#176b36] px-3 py-2 text-sm font-semibold", "Submitted · " + fmtDate(state.record.submittedAt));
+        root.append(status);
+        const rows = [["Work completed",state.record.completedWork],["Achievements",state.record.achievements],["Challenges",state.record.challenges],["Self-rating",state.record.selfRating + " / 5"],["Next working day plan",state.record.nextDayPlan]];
+        rows.forEach(([label,value]) => { root.append(make("p","text-label-sm font-semibold text-on-surface-variant mt-2",label),make("p","text-body-sm text-on-surface whitespace-pre-wrap",value)); });
+        if (state.record.additionalFeedback) root.append(make("p","text-body-sm text-on-surface mt-2",state.record.additionalFeedback));
+        return;
+      }
+      if (state.locked) { message("Submission deadline passed", "Daily feedback is locked. Contact your administrator if you need it reopened."); return; }
+      const form = make("form", "flex flex-col gap-3");
+      const fields = [
+        ["completedWork","Work completed today"],
+        ["achievements","Achievements and targets"],
+        ["challenges","Challenges or blockers"],
+        ["nextDayPlan","Plan for next working day"]
+      ];
+      const controls = {};
+      fields.forEach(([key,titleText]) => {
+        const label = make("label",labelClass,titleText);
+        const input = make("textarea",fieldClass);
+        input.rows = 3; input.required = true; input.maxLength = 3000; input.name = key;
+        controls[key] = input; label.append(input); form.append(label);
+      });
+      const ratingLabel = make("label",labelClass,"Self-rating (1–5)");
+      const rating = make("select",fieldClass);
+      [1,2,3,4,5].forEach(n => rating.add(new Option(n + " / 5",String(n))));
+      rating.value = "3"; ratingLabel.append(rating); form.append(ratingLabel);
+      const extraLabel = make("label",labelClass,"Additional feedback (optional)");
+      const extra = make("textarea",fieldClass); extra.rows = 2; extra.maxLength = 3000; extraLabel.append(extra); form.append(extraLabel);
+      const submit = make("button",buttonClass,"Submit daily feedback"); submit.type = "submit";
+      form.append(submit);
+      const error = make("p","text-sm text-error"); error.setAttribute("role","alert");
+      form.append(error);
+      form.addEventListener("submit", async event => {
+        event.preventDefault(); submit.disabled = true; submit.textContent = "Submitting…"; error.textContent = "";
+        try {
+          const body = { workDate: state.workDate, completedWork: controls.completedWork.value, achievements: controls.achievements.value, challenges: controls.challenges.value, nextDayPlan: controls.nextDayPlan.value, selfRating: Number(rating.value), additionalFeedback: extra.value };
+          const result = await fetch("/api/employee/performance-feedback", { method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+          const data = await result.json();
+          if (!result.ok) throw new Error(data.error || "Unable to submit feedback.");
+          window.toast?.("Daily feedback submitted successfully.");
+          await loadDailyEmployeeFeedback();
+        } catch (err) {
+          error.textContent = err instanceof Error ? err.message : "Unable to submit feedback.";
+          submit.disabled = false; submit.textContent = "Submit daily feedback";
+        }
+      });
+      root.append(form);
+    } catch (error) {
+      root.replaceChildren(make("p","text-sm text-error",error instanceof Error ? error.message : "Unable to load daily feedback."));
+    }
+  }
+  window.loadDailyEmployeeFeedback = loadDailyEmployeeFeedback;
   window.toggleEmployeeBreak = async () => {
     const state = window.__orchidBreakState;
     if (!state?.enabled) { window.toast?.("A configured shift break is not available right now."); return; }

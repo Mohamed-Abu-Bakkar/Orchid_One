@@ -745,6 +745,14 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 </div>
 <p class="text-label-sm font-label-sm text-on-surface-variant">Daily working hours</p>
 <div id="performanceTrendBars" class="h-40 w-full flex items-end justify-between gap-2 pt-4 relative mt-2" aria-live="polite"><p class="w-full text-center text-label-sm text-on-surface-variant py-8">Loading working hours…</p></div></div>
+<!-- Daily employee self-feedback -->
+<div class="bento-card flex flex-col gap-3" id="dailyFeedbackCard" aria-live="polite">
+  <div class="flex items-center justify-between gap-2">
+    <div><span class="text-body-lg font-body-lg font-semibold text-on-surface">Daily self-feedback</span><p class="text-label-sm text-on-surface-variant mt-1">Reflect on today's work and achievements.</p></div>
+    <span class="text-label-sm text-on-surface-variant" id="dailyFeedbackDeadline">Loading…</span>
+  </div>
+  <p class="text-label-sm text-on-surface-variant">Loading your feedback status…</p>
+</div>
 <!-- Performance data notes -->
 <div class="bento-card">
 <span class="text-body-lg font-body-lg font-semibold text-on-surface">Performance summary</span>
