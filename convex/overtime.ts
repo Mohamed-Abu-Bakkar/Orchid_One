@@ -1,6 +1,60 @@
 import {mutation,query} from "./_generated/server";import {v} from "convex/values";import {requireAdmin,requireRole} from "./lib/auth";
 function validDate(value:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;const d=new Date(value+"T00:00:00.000Z");return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===value;}
-export const listForAdmin=query({args:{fromDate:v.optional(v.string()),toDate:v.optional(v.string()),status:v.optional(v.union(v.literal("pending"),v.literal("approved"),v.literal("rejected")))},handler:async(ctx,args)=>{const user=await requireAdmin(ctx);if((args.fromDate&&!validDate(args.fromDate))||(args.toDate&&!validDate(args.toDate))||(args.fromDate&&args.toDate&&args.fromDate>args.toDate))throw new Error("INVALID_OVERTIME_DATE_RANGE");const records=await ctx.db.query("overtimeRequests").withIndex("by_org_status",q=>q.eq("organizationId",user.organizationId)).take(1001);const rows=await Promise.all(records.filter(r=>r.status!=="awaiting_employee_confirmation"&&(!args.status||r.status===args.status)&&(!args.fromDate||r.workDate>=args.fromDate)&&(!args.toDate||r.workDate<=args.toDate)).map(async r=>{const e=await ctx.db.get(r.employeeId);if(!e||e.organizationId!==user.organizationId)return null;return {_id:r._id,employeeCode:e.employeeCode,employeeName:[e.firstName,e.lastName].filter(Boolean).join(" "),workDate:r.workDate,requestedMinutes:r.requestedMinutes,approvedMinutes:r.approvedMinutes,detectedMinutes:r.detectedMinutes,appliedMultiplier:r.appliedMultiplier,multiplierOverride:r.multiplierOverride,reason:r.reason,status:r.status,reviewerNote:r.reviewerNote,supervisorRecommendation:r.supervisorRecommendation,supervisorNote:r.supervisorNote};}));return {rows:rows.filter(Boolean),truncated:records.length>1000};}});
+export const listForAdmin = query({
+  args: {
+    fromDate: v.optional(v.string()),
+    toDate: v.optional(v.string()),
+    status: v.optional(v.union(
+      v.literal("awaiting_employee_confirmation"),
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected")
+    )),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAdmin(ctx);
+    if ((args.fromDate && !validDate(args.fromDate)) || (args.toDate && !validDate(args.toDate)) || (args.fromDate && args.toDate && args.fromDate > args.toDate)) {
+      throw new Error("INVALID_OVERTIME_DATE_RANGE");
+    }
+
+    // Query by work date so a large number of older requests cannot hide recent records.
+    const records = await ctx.db.query("overtimeRequests")
+      .withIndex("by_org_date", q => {
+        let range = q.eq("organizationId", user.organizationId);
+        if (args.fromDate) range = range.gte("workDate", args.fromDate);
+        if (args.toDate) range = range.lte("workDate", args.toDate);
+        return range;
+      })
+      .order("desc")
+      .take(1001);
+
+    const rows = await Promise.all(records
+      .filter(request => !args.status || request.status === args.status)
+      .map(async request => {
+        const employee = await ctx.db.get(request.employeeId);
+        if (!employee || employee.organizationId !== user.organizationId) return null;
+        return {
+          _id: request._id,
+          employeeCode: employee.employeeCode,
+          employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
+          workDate: request.workDate,
+          requestedMinutes: request.requestedMinutes,
+          approvedMinutes: request.approvedMinutes,
+          detectedMinutes: request.detectedMinutes,
+          appliedMultiplier: request.appliedMultiplier,
+          multiplierOverride: request.multiplierOverride,
+          reason: request.reason,
+          status: request.status,
+          reviewerNote: request.reviewerNote,
+          supervisorRecommendation: request.supervisorRecommendation,
+          supervisorNote: request.supervisorNote,
+          employeeConfirmedAt: request.employeeConfirmedAt,
+          createdAt: request.createdAt,
+        };
+      }));
+    return { rows: rows.filter(Boolean), truncated: records.length > 1000 };
+  },
+});
 export const submitRequest=mutation({args:{employeeId:v.id("employees"),workDate:v.string(),requestedMinutes:v.number(),reason:v.string()},handler:async(ctx,args)=>{
  const user=await requireRole(ctx,["superadmin"]);if(!validDate(args.workDate)||!Number.isSafeInteger(args.requestedMinutes)||args.requestedMinutes<=0||!args.reason.trim()||args.reason.trim().length>1000)throw new Error("INVALID_OVERTIME_REQUEST");
  const employee=await ctx.db.get(args.employeeId);if(!employee||employee.organizationId!==user.organizationId||employee.status!=="active"||employee.employmentType!=="hourly")throw new Error("ACTIVE_HOURLY_EMPLOYEE_REQUIRED");
