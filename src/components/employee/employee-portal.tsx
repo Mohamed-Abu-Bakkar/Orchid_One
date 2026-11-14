@@ -1,5 +1,21 @@
 "use client";
 
+/**
+ * DEPRECATED / UNUSED EMPLOYEE UI PROTOTYPE
+ *
+ * This React implementation is NOT the active employee application.
+ * The active employee experience is served by:
+ *   - src/app/employee/page.tsx
+ *   - src/components/employee-realtime-frame.tsx
+ *   - OrchidHRM/employee_mobileApp.html
+ *   - public/employee-controller.js
+ *
+ * Do not add employee-facing features here. Implement them in the active
+ * OrchidHRM employee application and its authenticated Next.js/Convex APIs.
+ * Retained temporarily as a development reference only.
+ */
+
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
@@ -23,7 +39,7 @@ const DefaultProfileIcon = ({ size = 20 }: { size?: number }) => (
   </svg>
 );
 
-export function EmployeePortal() {
+export function DeprecatedEmployeePortalPrototype() {
  const router=useRouter(), session=authClient.useSession();
  const account=useQuery(api.account.getMyAccountStatus,session.data?{}:"skip");
  const allowed=!!session.data&&account?.status==="active"&&account.role==="employee"&&!!account.employeeId;

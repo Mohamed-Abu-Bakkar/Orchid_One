@@ -38,3 +38,12 @@ Configure identity provider, Convex deployment, private document storage, secret
 - The preview remains a static prototype: attendance, requests, wage figures, documents and notifications are sample/local interactions only; they are not authenticated or persisted to Convex.
 - Prototype image assets are currently loaded from the feature branch's raw GitHub URLs. Before production, move these assets into the app's own `public/` directory and migrate interactions to React components and authenticated backend operations.
 - The original employee HTML in `OrchidHRM/` remains unchanged.
+
+
+## Employee application source of truth
+
+**Active employee application:** the legacy mobile-first employee interface in `OrchidHRM/employee_mobileApp.html`, served through `src/app/employee/page.tsx` and `src/components/employee-realtime-frame.tsx`. Its browser-side controller is `public/employee-controller.js`; authenticated server routes and Convex functions provide persisted operations.
+
+**Deprecated / unused React employee prototype:** `src/components/employee/employee-portal.tsx`. It is not imported by the active `/employee` route and must not be used for new employee features. It is retained temporarily as a reference only and exports `DeprecatedEmployeePortalPrototype` to make its status explicit.
+
+**Development rule:** all employee-side feature changes must target the active OrchidHRM HTML/controller/API/Convex path unless a separately approved migration replaces that implementation. Do not assume that changes to the deprecated React prototype are visible to employees.
