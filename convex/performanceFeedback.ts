@@ -71,7 +71,7 @@ export const submitDailyFeedback = mutation({
 export const adminFeedbackWorkspace = query({
   args: { workDate: v.string() },
   handler: async (ctx, args) => {
-    const viewer = await requireRole(ctx, ["superadmin", "supervisor"]);
+    const viewer = await requireRole(ctx, ["superadmin", "admin", "supervisor"]);
     const organization = await ctx.db.get(viewer.organizationId);
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
     const employees = await ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", viewer.organizationId).eq("status", "active")).collect();
