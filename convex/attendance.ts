@@ -240,7 +240,7 @@ export const reviewGeofenceException = mutation({
 export const finalizeGeofenceException = mutation({
   args: { eventId: v.id("attendanceEvents"), decision: v.union(v.literal("approved"), v.literal("rejected")), note: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const admin = await requireRole(ctx, ["superadmin"]);
+    const admin = await requireRole(ctx, ["superadmin", "admin"]);
     const event = await ctx.db.get(args.eventId);
     if (!event || event.organizationId !== admin.organizationId) throw new Error("ATTENDANCE_EVENT_NOT_FOUND");
     if (event.reviewStatus !== "pending" || !event.supervisorRecommendation) throw new Error("SUPERVISOR_REVIEW_REQUIRED");
