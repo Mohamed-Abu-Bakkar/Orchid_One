@@ -1379,11 +1379,11 @@ Submit Request
             const overtime = (workspace.overtimeRequests || []).map(request => ({
                 id: String(request._id), type: 'overtime', title: 'Overtime request',
                 date: request.workDate, detail: (request.requestedMinutes / 60).toFixed(2) + ' hrs requested · ' + (request.reason || 'No reason provided'),
-                status: request.status, approvedMinutes: request.approvedMinutes, reviewerNote: request.reviewerNote, createdAt: request.createdAt
+                status: request.status, approvedMinutes: request.approvedMinutes, reviewerNote: request.reviewerNote, detectedMinutes: request.detectedMinutes, createdAt: request.createdAt
             }));
             const records = [...leave, ...overtime].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            const pending = records.filter(item => item.status === 'pending');
-            const history = records.filter(item => item.status !== 'pending');
+            const pending = records.filter(item => item.status === 'pending' || item.status === 'awaiting_employee_confirmation');
+            const history = records.filter(item => item.status !== 'pending' && item.status !== 'awaiting_employee_confirmation');
             const counts = { pending: pending.length, history: history.length };
             tabs.forEach(tab => {
                 const key = tab.dataset.rt;
@@ -1427,6 +1427,12 @@ Submit Request
                     detail.textContent = item.type === 'leave'
                         ? formatRequestDate(item.date) + ' – ' + formatRequestDate(item.endDate) + ' · ' + item.detail
                         : formatRequestDate(item.date) + ' · ' + item.detail;
+                    if (item.type === 'overtime' && item.status === 'awaiting_employee_confirmation') {
+                        const prompt = document.createElement('p');
+                        prompt.className = 'text-label-sm font-label-sm text-amber-700 mt-1';
+                        prompt.textContent = 'Please verify the automatically detected overtime before it is sent for approval.';
+                        copy.append(prompt);
+                    }
                     copy.append(title, detail);
                     if (item.type === 'overtime' && item.status === 'approved' && Number.isFinite(item.approvedMinutes)) {
                         const approved = document.createElement('p');
@@ -1446,8 +1452,48 @@ Submit Request
                          item.status === 'rejected' ? 'bg-[#fde8e8] text-[#B3261E]' :
                          item.status === 'cancelled' ? 'bg-surface-container-highest text-on-surface-variant' :
                          'bg-secondary-fixed text-secondary');
-                    badge.textContent = item.status;
+                    badge.textContent = item.status === 'awaiting_employee_confirmation' ? 'Needs confirmation' : item.status.replaceAll('_', ' ');
                     card.append(iconWrap, copy, badge);
+                    if (item.type === 'overtime' && item.status === 'awaiting_employee_confirmation') {
+                        const actions = document.createElement('div');
+                        actions.className = 'flex gap-2 w-full mt-3';
+                        const confirmButton = document.createElement('button');
+                        confirmButton.type = 'button';
+                        confirmButton.className = 'flex-1 rounded-lg px-3 py-2 text-sm font-semibold bg-primary text-white disabled:opacity-50';
+                        confirmButton.textContent = 'Confirm overtime';
+                        const declineButton = document.createElement('button');
+                        declineButton.type = 'button';
+                        declineButton.className = 'rounded-lg px-3 py-2 text-sm font-semibold border border-outline text-on-surface disabled:opacity-50';
+                        declineButton.textContent = 'Decline';
+                        const submitConfirmation = async confirmed => {
+                            if (!confirmed && !window.confirm('Decline this automatically detected overtime? It will not be sent for approval.')) return;
+                            confirmButton.disabled = true;
+                            declineButton.disabled = true;
+                            confirmButton.textContent = confirmed ? 'Confirming…' : 'Processing…';
+                            try {
+                                const response = await fetch('/api/employee/requests', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ type: 'overtime_confirmation', requestId: item.id, confirmed })
+                                });
+                                const result = await response.json().catch(() => ({}));
+                                if (!response.ok) throw new Error(result.error || 'OVERTIME_CONFIRMATION_FAILED');
+                                if (typeof window.toast === 'function') window.toast(confirmed ? 'Overtime confirmed and sent for supervisor review.' : 'Overtime declined. It will not be sent for approval.');
+                                window.location.reload();
+                            } catch (error) {
+                                confirmButton.disabled = false;
+                                declineButton.disabled = false;
+                                confirmButton.textContent = 'Confirm overtime';
+                                if (typeof window.toast === 'function') window.toast(error instanceof Error ? error.message : 'Unable to update overtime request.');
+                            }
+                        };
+                        confirmButton.addEventListener('click', () => void submitConfirmation(true));
+                        declineButton.addEventListener('click', () => void submitConfirmation(false));
+                        actions.append(confirmButton, declineButton);
+                        card.classList.add('flex-wrap');
+                        card.append(actions);
+                    }
                     content.append(card);
                 });
             }
