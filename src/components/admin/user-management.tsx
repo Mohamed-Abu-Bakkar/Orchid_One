@@ -19,7 +19,7 @@ export function UserManagement() {
  const available=employees.filter(e=>!accounts.some(a=>a.employeeId===e._id));
  async function run(id:string,fn:()=>Promise<unknown>){setBusy(id);setMessage("");try{await fn();setMessage("Account updated successfully.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to update account.");}finally{setBusy("");}}
  return <section className="sec">
- <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>User management</h2><p className="sub">Manage employee links and account access. Role and status changes are superadmin-only.</p></div><span className="badge badge-neutral">{accounts.length} accounts</span></div>
+ <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>User management</h2><p className="sub">Manage employee links and account access. Role and status changes are administrator-only.</p></div><span className="badge badge-neutral">{accounts.length} accounts</span></div>
  <div className="employee-directory-toolbar"><div className="segmented-control">{["all","unlinked","linked"].map(x=><button type="button" key={x} className={filter===x?"active":""} onClick={()=>setFilter(x)}>{x==="all"?"All accounts":x==="unlinked"?"Unlinked":"Linked"}</button>)}</div><div className="input-icon-wrap employee-directory-search"><span className="input-prefix"><Search size={16}/></span><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email, role or status…"/></div></div>
  {message&&<p className="onboarding-success" role="status">{message}</p>}
  <div className="panel"><div className="user-link-list">{rows.map(a=><div className="user-link-row" key={a._id}>
