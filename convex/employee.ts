@@ -241,7 +241,17 @@ export const confirmMyOvertimeRequest = mutation({
     const { user, employee } = await getActiveEmployeeForRequest(ctx);
     const request = await ctx.db.get(args.requestId);
     if (!request || request.organizationId !== user.organizationId || request.employeeId !== employee._id) throw new Error("OVERTIME_REQUEST_NOT_FOUND");
-    if (request.status !== "awaiting_employee_confirmation") throw new Error("OVERTIME_REQUEST_NOT_AWAITING_CONFIRMATION");
+    if (request.status !== "awaiting_employee_confirmation") {
+      // A repeated tap or retry should return the recorded employee decision.
+      if (request.status === "pending" && request.employeeConfirmedBy === user._id) {
+        return { confirmed: true, alreadyConfirmed: true };
+      }
+      if (request.status === "rejected" && request.reviewedBy === user._id &&
+          request.reviewerNote === "Employee declined the automatically detected overtime.") {
+        return { confirmed: false, alreadyConfirmed: true };
+      }
+      throw new Error("OVERTIME_REQUEST_NOT_AWAITING_CONFIRMATION");
+    }
     const now = Date.now();
     if (!args.confirmed) {
       await ctx.db.patch(request._id, { status: "rejected", reviewerNote: "Employee declined the automatically detected overtime.", reviewedAt: now, reviewedBy: user._id });

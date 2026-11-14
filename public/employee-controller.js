@@ -1064,11 +1064,18 @@
   };
 
   window.toggleCheckIn = () => {
-    const events = window.__orchidWorkspace?.attendance ?? [];
-    const latest = events[0];
+    const workspace = window.__orchidWorkspace;
+    const events = workspace?.attendance ?? [];
+    const timeZone = workspace?.timeZone || "Asia/Kolkata";
+    const localDate = new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date());
+    const todaysEvents = events.filter(event => {
+      if (!event.receivedAt) return event.workDate === localDate;
+      return new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(event.receivedAt)) === localDate;
+    });
+    const latest = todaysEvents[0];
     if (latest?.reviewStatus === "pending") { window.toast?.("Attendance is awaiting supervisor or admin review."); return; }
 
-    const latestAccepted = events.find(event =>
+    const latestAccepted = todaysEvents.find(event =>
       event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved"
     );
     const eventType = latestAccepted && latestAccepted.eventType !== "check_out" ? "check_out" : "check_in";
