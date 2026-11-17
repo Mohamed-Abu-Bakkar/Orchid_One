@@ -158,13 +158,13 @@ export const recordPunch = mutation({
 
     // Find the latest non-rejected event before this organization-local day.
     // If it is not a checkout, the previous attendance session is unfinished.
-    const priorEvents = await ctx.db.query("attendanceEvents")
+    const latestPriorNonRejected = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q =>
         q.eq("employeeId", employee._id).lt("receivedAt", todayStart),
       )
+      .filter(q => q.neq(q.field("reviewStatus"), "rejected"))
       .order("desc")
-      .collect();
-    const latestPriorNonRejected = priorEvents.find(event => event.reviewStatus !== "rejected");
+      .first();
 
     if (shouldBlockAttendancePunch(localToday, pendingEvents, organization.timezone, latestPriorNonRejected)) {
       throw new Error("ATTENDANCE_REVIEW_PENDING");
