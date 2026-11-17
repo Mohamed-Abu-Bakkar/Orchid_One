@@ -1,6 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireSuperadmin } from "./lib/auth";
+import { requireAdmin, requireOrganizationAdmin } from "./lib/auth";
 
 const employmentType = v.union(v.literal("permanent"), v.literal("hourly"), v.literal("daily"), v.literal("contract"));
 const employeeStatus = v.union(v.literal("active"), v.literal("inactive"), v.literal("pending"), v.literal("archived"));
@@ -34,7 +34,7 @@ export const updateEmployee = mutation({
     defaultShiftId: v.union(v.id("shifts"), v.null()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const employee = await ctx.db.get(args.employeeId);
     if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
     const firstName = args.firstName.trim();
@@ -80,7 +80,7 @@ export const updateEmployee = mutation({
 export const archiveEmployee = mutation({
   args: { employeeId: v.id("employees") },
   handler: async (ctx, { employeeId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const employee = await ctx.db.get(employeeId);
     if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
     if (employee.status === "archived") return true;
@@ -95,7 +95,7 @@ export const archiveEmployee = mutation({
 export const updateDepartment = mutation({
   args: { departmentId: v.id("departments"), name: v.string(), managerEmployeeId: v.union(v.id("employees"), v.null()) },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const department = await ctx.db.get(args.departmentId);
     if (!department || department.organizationId !== admin.organizationId) throw new Error("DEPARTMENT_NOT_FOUND");
     const name = args.name.trim().replace(/\\s+/g, " ");
@@ -115,7 +115,7 @@ export const updateDepartment = mutation({
 export const archiveDepartment = mutation({
   args: { departmentId: v.id("departments") },
   handler: async (ctx, { departmentId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const department = await ctx.db.get(departmentId);
     if (!department || department.organizationId !== admin.organizationId) throw new Error("DEPARTMENT_NOT_FOUND");
     const employees = await ctx.db.query("employees").withIndex("by_department", q => q.eq("departmentId", departmentId)).collect();
@@ -129,7 +129,7 @@ export const archiveDepartment = mutation({
 export const archiveLocation = mutation({
   args: { locationId: v.id("locations") },
   handler: async (ctx, { locationId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const location = await ctx.db.get(locationId);
     if (!location || location.organizationId !== admin.organizationId) throw new Error("LOCATION_NOT_FOUND");
     const employees = await ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", admin.organizationId)).collect();
@@ -143,7 +143,7 @@ export const archiveLocation = mutation({
 export const updateShift = mutation({
   args: { shiftId: v.id("shifts"), name: v.string(), startMinute: v.number(), endMinute: v.number(), breakMinutes: v.number() },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const shift = await ctx.db.get(args.shiftId);
     if (!shift || shift.organizationId !== admin.organizationId) throw new Error("SHIFT_NOT_FOUND");
     const name = args.name.trim();
@@ -159,7 +159,7 @@ export const updateShift = mutation({
 export const archiveShift = mutation({
   args: { shiftId: v.id("shifts") },
   handler: async (ctx, { shiftId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const shift = await ctx.db.get(shiftId);
     if (!shift || shift.organizationId !== admin.organizationId) throw new Error("SHIFT_NOT_FOUND");
     const [employees, assignments, teams] = await Promise.all([
@@ -177,7 +177,7 @@ export const archiveShift = mutation({
 export const updateTeam = mutation({
   args: { teamId: v.id("teams"), name: v.string(), shiftId: v.id("shifts") },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const team = await ctx.db.get(args.teamId);
     const shift = await ctx.db.get(args.shiftId);
     const name = args.name.trim();
@@ -193,7 +193,7 @@ export const updateTeam = mutation({
 export const archiveTeam = mutation({
   args: { teamId: v.id("teams") },
   handler: async (ctx, { teamId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const team = await ctx.db.get(teamId);
     if (!team || team.organizationId !== admin.organizationId) throw new Error("TEAM_NOT_FOUND");
     await ctx.db.patch(teamId, { isActive: false });
