@@ -4,7 +4,7 @@ import {
   canChangePrimarySuperadmin,
   canManageAccountRole,
   hasRole,
-  canDeleteDraftPayroll,
+  canDeletePayrollPeriod,
 } from "./rolePolicy";
 
 describe("platform and organization role boundaries", () => {
@@ -44,25 +44,30 @@ describe("platform and organization role boundaries", () => {
 });
 
 
-describe("primary Super Admin payroll deletion policy", () => {
-  it("allows the primary operator to delete a draft period with only draft records", () => {
-    expect(canDeleteDraftPayroll(true, "draft", ["draft", "draft"])).toBe(true);
-    expect(canDeleteDraftPayroll(true, "draft", [])).toBe(true);
+describe("role-based payroll deletion policy", () => {
+  it("allows the primary Super Admin to delete draft, approved, and locked periods", () => {
+    expect(canDeletePayrollPeriod("superadmin", true, "draft", ["draft"])).toBe(true);
+    expect(canDeletePayrollPeriod("superadmin", true, "approved", ["approved"])).toBe(true);
+    expect(canDeletePayrollPeriod("superadmin", true, "locked", ["locked"])).toBe(true);
   });
 
-  it("denies payroll deletion to non-primary accounts", () => {
-    expect(canDeleteDraftPayroll(false, "draft", ["draft"])).toBe(false);
+  it("denies payroll deletion to non-primary Super Admin accounts", () => {
+    expect(canDeletePayrollPeriod("superadmin", false, "draft", ["draft"])).toBe(false);
+    expect(canDeletePayrollPeriod("superadmin", false, "locked", ["locked"])).toBe(false);
   });
 
-  it("protects pending, approved, and locked payroll periods", () => {
-    expect(canDeleteDraftPayroll(true, "pending_approval", ["draft"])).toBe(false);
-    expect(canDeleteDraftPayroll(true, "approved", ["draft"])).toBe(false);
-    expect(canDeleteDraftPayroll(true, "locked", ["draft"])).toBe(false);
+  it("allows Admins to delete only draft periods with draft records", () => {
+    expect(canDeletePayrollPeriod("admin", false, "draft", ["draft", "draft"])).toBe(true);
+    expect(canDeletePayrollPeriod("admin", false, "draft", [])).toBe(true);
   });
 
-  it("protects a draft period if any wage record has advanced beyond draft", () => {
-    expect(canDeleteDraftPayroll(true, "draft", ["draft", "pending_approval"])).toBe(false);
-    expect(canDeleteDraftPayroll(true, "draft", ["draft", "approved"])).toBe(false);
-    expect(canDeleteDraftPayroll(true, "draft", ["locked"])).toBe(false);
+  it("prevents Admins from deleting approved or locked periods", () => {
+    expect(canDeletePayrollPeriod("admin", false, "approved", ["approved"])).toBe(false);
+    expect(canDeletePayrollPeriod("admin", false, "locked", ["locked"])).toBe(false);
+  });
+
+  it("prevents Admins from deleting a draft period containing advanced wage records", () => {
+    expect(canDeletePayrollPeriod("admin", false, "draft", ["draft", "approved"])).toBe(false);
+    expect(canDeletePayrollPeriod("admin", false, "draft", ["locked"])).toBe(false);
   });
 });
