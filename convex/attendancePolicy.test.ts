@@ -26,6 +26,7 @@ describe("attendance next-day punch policy", () => {
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
       [event("check_out", "2026-11-16T16:00:00.000Z")],
+      "Asia/Kolkata",
       event("check_out", "2026-11-16T16:00:00.000Z"),
     )).toBe(false);
   });
@@ -37,6 +38,7 @@ describe("attendance next-day punch policy", () => {
         event("check_out", "2026-11-16T16:00:00.000Z"),
         event("check_in", "2026-11-17T03:00:00.000Z"),
       ],
+      "Asia/Kolkata",
       event("check_out", "2026-11-16T16:00:00.000Z"),
     )).toBe(true);
   });
@@ -48,6 +50,7 @@ describe("attendance next-day punch policy", () => {
         event("check_in", "2026-11-15T03:00:00.000Z"),
         event("check_out", "2026-11-16T16:00:00.000Z"),
       ],
+      "Asia/Kolkata",
       event("check_out", "2026-11-16T16:00:00.000Z"),
     )).toBe(true);
   });
@@ -56,6 +59,7 @@ describe("attendance next-day punch policy", () => {
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
       [event("break_start", "2026-11-16T11:00:00.000Z")],
+      "Asia/Kolkata",
       event("break_start", "2026-11-16T11:00:00.000Z"),
     )).toBe(true);
   });
@@ -64,6 +68,7 @@ describe("attendance next-day punch policy", () => {
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
       [],
+      "Asia/Kolkata",
       event("check_in", "2026-11-16T03:00:00.000Z", undefined),
     )).toBe(true);
   });
@@ -72,6 +77,7 @@ describe("attendance next-day punch policy", () => {
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
       [],
+      "Asia/Kolkata",
       event("check_out", "2026-11-16T16:00:00.000Z", undefined),
     )).toBe(false);
   });
@@ -80,6 +86,7 @@ describe("attendance next-day punch policy", () => {
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
       [],
+      "Asia/Kolkata",
       event("check_out", "2026-11-16T16:00:00.000Z", "approved"),
     )).toBe(false);
   });
