@@ -36,3 +36,11 @@ export async function requireOrganizationAdmin(ctx: QueryCtx | MutationCtx) {
 export async function requireSuperadmin(ctx: QueryCtx | MutationCtx) {
   return requireRole(ctx, ["superadmin"]);
 }
+
+
+/** Destructive platform-owner capability. Role alone is insufficient: the account must be the claimed primary operator. */
+export async function requirePrimarySuperadmin(ctx: QueryCtx | MutationCtx) {
+  const user = await requireRole(ctx, ["superadmin"]);
+  if (user.isPrimarySuperadmin !== true) throw new Error("PRIMARY_SUPERADMIN_REQUIRED");
+  return user;
+}

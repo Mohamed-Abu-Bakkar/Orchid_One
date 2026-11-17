@@ -34,3 +34,12 @@ export function canChangePrimarySuperadmin(
   if (!isPrimarySuperadmin) return true;
   return nextRole === "superadmin" && nextStatus !== "suspended";
 }
+
+
+export function canDeleteDraftPayroll(
+  isPrimarySuperadmin: boolean,
+  periodStatus: "draft" | "pending_approval" | "approved" | "locked",
+  recordStatuses: readonly ("draft" | "pending_approval" | "approved" | "locked")[],
+) {
+  return isPrimarySuperadmin && periodStatus === "draft" && recordStatuses.every((status) => status === "draft");
+}
