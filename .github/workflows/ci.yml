@@ -31,3 +31,7 @@ jobs:
         run: npm run lint
       - name: Production build
         run: npm run build
+        env:
+          # Build-time placeholders only; production uses the real Vercel environment values.
+          NEXT_PUBLIC_CONVEX_URL: https://ci-placeholder.convex.cloud
+          NEXT_PUBLIC_CONVEX_SITE_URL: https://ci-placeholder.convex.site
