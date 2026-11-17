@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireIdentity, requireSuperadmin } from "./lib/auth";
+import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -12,7 +12,7 @@ function money(value: number) { return Math.round(value); }
 export const listPeriods = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireSuperadmin(ctx);
+    const user = await requireOrganizationAdmin(ctx);
     const periods = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).order("desc").take(60);
     return await Promise.all(periods.map(async period => ({
       ...period,
@@ -24,7 +24,7 @@ export const listPeriods = query({
 export const generatePeriod = mutation({
   args: { fromDate: v.string(), toDate: v.string(), periodType: v.union(v.literal("weekly"),v.literal("monthly"),v.literal("custom")) },
   handler: async (ctx, args) => {
-    const user = await requireSuperadmin(ctx);
+    const user = await requireOrganizationAdmin(ctx);
     if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_PAYROLL_PERIOD");
     const overlap = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).collect();
     if (overlap.some(p => p.fromDate <= args.toDate && p.toDate >= args.fromDate)) throw new Error("PAYROLL_PERIOD_OVERLAPS_FINALIZED_PERIOD");
@@ -119,7 +119,7 @@ export const generatePeriod = mutation({
 export const addDraftAdjustment = mutation({
   args: { recordId: v.id("wageRecords"), category: v.union(v.literal("earning"),v.literal("deduction")), label: v.string(), amountPaise: v.number(), reason: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireSuperadmin(ctx);
+    const user = await requireOrganizationAdmin(ctx);
     const record = await ctx.db.get(args.recordId);
     if (!record || record.organizationId !== user.organizationId || record.status !== "draft") throw new Error("DRAFT_PAYROLL_RECORD_REQUIRED");
     const period = await ctx.db.get(record.wagePeriodId);
@@ -144,7 +144,7 @@ export const addDraftAdjustment = mutation({
 export const approvePeriod = mutation({
   args: { periodId: v.id("wagePeriods") },
   handler: async (ctx, args) => {
-    const user = await requireSuperadmin(ctx);
+    const user = await requireOrganizationAdmin(ctx);
     const period = await ctx.db.get(args.periodId);
     if (!period || period.organizationId !== user.organizationId) throw new Error("PAYROLL_PERIOD_NOT_FOUND");
     if (period.status !== "draft") throw new Error("PAYROLL_PERIOD_NOT_DRAFT");
@@ -161,7 +161,7 @@ export const approvePeriod = mutation({
 export const lockPeriod = mutation({
   args: { periodId: v.id("wagePeriods") },
   handler: async (ctx, args) => {
-    const user = await requireSuperadmin(ctx);
+    const user = await requireOrganizationAdmin(ctx);
     const period = await ctx.db.get(args.periodId);
     if (!period || period.organizationId !== user.organizationId) throw new Error("PAYROLL_PERIOD_NOT_FOUND");
     if (period.status !== "approved") throw new Error("PAYROLL_PERIOD_NOT_APPROVED");

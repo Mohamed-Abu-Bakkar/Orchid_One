@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity } from "./lib/auth";
+import { canChangeAccountStatus, canChangePrimarySuperadmin, canManageAccountRole } from "./lib/rolePolicy";
 
 export const myWorkspace = query({
   args: {},
@@ -616,16 +617,13 @@ export const updateAccountRole = mutation({
   args: { userId: v.id("users"), role: v.union(v.literal("superadmin"), v.literal("admin"), v.literal("supervisor"), v.literal("employee")) },
   handler: async (ctx, args) => {
     const actor = await requireIdentity(ctx);
-    if (actor.role !== "superadmin" && actor.role !== "admin") throw new Error("FORBIDDEN");
     const account = await ctx.db.get(args.userId);
     if (!account || account.organizationId !== actor.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
-
-    if (actor.role === "admin") {
-      if (account.role !== "employee" && account.role !== "supervisor") throw new Error("FORBIDDEN");
-      if (args.role !== "employee" && args.role !== "supervisor") throw new Error("FORBIDDEN");
-    }
-
+    if (!canManageAccountRole(actor.role, account.role, args.role)) throw new Error("FORBIDDEN");
     if (account._id === actor._id && args.role !== account.role) throw new Error("CANNOT_CHANGE_OWN_ROLE");
+    if (!canChangePrimarySuperadmin(account.isPrimarySuperadmin === true, args.role)) {
+      throw new Error("PRIMARY_SUPERADMIN_PROTECTED");
+    }
     if (account.role === "superadmin" && args.role !== "superadmin") {
       const activeSuperadmins = await ctx.db.query("users")
         .withIndex("by_org", q => q.eq("organizationId", actor.organizationId))
@@ -651,11 +649,13 @@ export const setAccountStatus = mutation({
   args: { userId: v.id("users"), status: v.union(v.literal("active"), v.literal("suspended")) },
   handler: async (ctx, args) => {
     const actor = await requireIdentity(ctx);
-    if (actor.role !== "superadmin" && actor.role !== "admin") throw new Error("FORBIDDEN");
     const account = await ctx.db.get(args.userId);
     if (!account || account.organizationId !== actor.organizationId) throw new Error("ACCOUNT_NOT_FOUND");
-    if (actor.role === "admin" && account.role !== "employee" && account.role !== "supervisor") throw new Error("FORBIDDEN");
+    if (!canChangeAccountStatus(actor.role, account.role)) throw new Error("FORBIDDEN");
     if (account._id === actor._id && args.status === "suspended") throw new Error("CANNOT_SUSPEND_OWN_ACCOUNT");
+    if (!canChangePrimarySuperadmin(account.isPrimarySuperadmin === true, account.role, args.status)) {
+      throw new Error("PRIMARY_SUPERADMIN_PROTECTED");
+    }
     if (account.role === "superadmin" && args.status === "suspended" && account.isActive) {
       const activeSuperadmins = await ctx.db.query("users")
         .withIndex("by_org", q => q.eq("organizationId", actor.organizationId))

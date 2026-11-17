@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireIdentity, requireSuperadmin } from "./lib/auth";
+import { requireAdmin, requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 
 const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -8,7 +8,7 @@ const ALLOWED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireSuperadmin(ctx);
+    await requireOrganizationAdmin(ctx);
     return ctx.storage.generateUploadUrl();
   },
 });
@@ -24,7 +24,7 @@ export const create = mutation({
     fileSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const title = args.title.trim();
     const category = args.category.trim();
     const fileName = args.originalFileName.trim();
@@ -84,7 +84,7 @@ export const listForAdmin = query({
 export const archive = mutation({
   args: { documentId: v.id("companyDocuments") },
   handler: async (ctx, { documentId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const document = await ctx.db.get(documentId);
     if (!document || document.organizationId !== admin.organizationId) throw new Error("DOCUMENT_NOT_FOUND");
     if (document.status === "archived") return { success: true };

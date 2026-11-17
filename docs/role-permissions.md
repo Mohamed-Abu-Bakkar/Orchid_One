@@ -1,41 +1,50 @@
 # Orchid One role permissions
 
-## Role hierarchy
+## Authority model
 
-The application supports four distinct roles:
+| Role | Scope | Authority |
+| --- | --- | --- |
+| `superadmin` | Platform operator identity; current operational data is still organization-scoped | Platform-level account governance and all organization operations |
+| `admin` | Its assigned organization only | Business administration for Orchid Flowers; cannot govern platform administrator accounts |
+| `supervisor` | Existing supervisor scope | Existing supervisor workflows and approvals |
+| `employee` | Own linked employee profile | Employee self-service |
 
-| Role | Authority |
-| --- | --- |
-| `superadmin` | Highest authority. Manages admins, superadmins, employees, supervisors, and all organization operations. |
-| `admin` | Organization-wide operational authority. Manages employees and supervisors, but cannot view or manage admin/superadmin accounts or grant administrator privileges. |
-| `supervisor` | Existing supervisor-scoped access and approval workflows. |
-| `employee` | Existing self-service employee access. |
+## Super Admin and Admin boundary
 
-## User and account management boundary
-
-- Only `superadmin` can list, view, promote, demote, suspend, or reactivate `admin` and `superadmin` accounts.
-- Administrator account records are excluded from the user-management query for an `admin`; they are not merely hidden by the frontend.
-- An `admin` can view and manage only `employee` and `supervisor` accounts.
-- An `admin` can change roles only between `employee` and `supervisor`; backend mutations reject attempts to modify administrator accounts or assign `admin`/`superadmin` roles.
-- An `admin` can suspend/reactivate only `employee` and `supervisor` accounts.
-- A `superadmin` can manage all four roles and account statuses.
-- Role and status changes continue to write audit records.
-- The last active `superadmin` cannot be demoted or suspended. Admin accounts do not count as superadmins for this safeguard.
+- `requireSuperadmin` accepts only `superadmin`; no implicit Admin inheritance.
+- `requireOrganizationAdmin` accepts `superadmin` and `admin` for organization-level configuration and management.
+- `requireAdmin` retains the existing supervisor-inclusive operational access where that is intentional.
+- Admin account lists are filtered server-side to employee and supervisor accounts.
+- Admins can only change employee/supervisor roles and account statuses.
+- Only Super Admins can manage Admin and Super Admin accounts.
+- Role and status mutations enforce authorization independently of the UI.
 - Users cannot change their own role or suspend their own account.
+- The primary Super Admin marker is protected from downgrade and suspension.
+- The primary account is established once through the internal-only `claimPrimarySuperadmin` bootstrap mutation. It requires the auth subject of the existing active Super Admin account and cannot be called from a browser session.
+- The last active Super Admin safeguard remains in place.
 
-## Other organization permissions
+## Tenant isolation
 
-The current phase retains the existing admin inheritance for operational organization-wide permissions, including employee/workforce administration, wage and payroll operations, policy/settings administration, and other organization functions. The separation above is an explicit exception for administrator-account governance.
+Organization operational queries and mutations continue to scope records to the authenticated user's `organizationId`. Client-provided organization IDs are not treated as authorization. The current release does not add a cross-organization data browser or raw database console; these require a separately designed platform operations surface and audited APIs.
 
-Backend authorization remains authoritative. Frontend controls and filtered lists are usability measures only; every privileged mutation independently enforces the role boundary and organization scope.
+## Database and infrastructure access
 
-## Verification checklist
+Convex does not expose conventional per-user SQL database logins. Super Admin application permissions are enforced in Convex functions. Production deployment credentials, Convex dashboard access, backup/export controls and Vercel/GitHub administration remain infrastructure-level capabilities and must be secured separately with MFA and least privilege. Never place deployment or database secrets in browser code.
 
-- [ ] Admin user-management list contains employees and supervisors only.
-- [ ] Admin cannot retrieve admin/superadmin account records through the account-list query.
-- [ ] Admin can change employee/supervisor roles between those two roles.
-- [ ] Admin cannot promote an account to admin/superadmin.
-- [ ] Admin cannot change the role or status of an admin/superadmin, including by direct mutation calls.
-- [ ] Superadmin can view and manage all account roles and statuses.
-- [ ] Last active superadmin cannot be demoted or suspended.
-- [ ] Role/status changes remain audited and cross-organization access remains rejected.
+## Additional Super Admins
+
+Additional Super Admin accounts are not provisioned by this change. Existing Super Admin role assignment remains available to Super Admins in the current account-management flow. Additional accounts receive the same application role. The primary marker prevents another Super Admin from demoting or suspending the primary account.
+
+## One-time primary account setup
+
+After the schema/function deployment, an operator must run the internal mutation `bootstrap:claimPrimarySuperadmin` once using the auth subject belonging to the existing primary Super Admin account. Do not guess the subject or use an email address in place of the provider subject. Verify the account's `isPrimarySuperadmin` field before enabling additional Super Admin accounts.
+
+## Verification
+
+- Admin cannot invoke platform-only functions protected by `requireSuperadmin`.
+- Admin retains organization configuration and workforce operations protected by `requireOrganizationAdmin`.
+- Admin cannot list, promote, demote, suspend or reactivate Admin/Super Admin accounts.
+- Super Admin can manage organization accounts and all organization roles.
+- Primary Super Admin cannot be downgraded or suspended by another Super Admin.
+- Profile refresh does not reactivate a suspended account.
+- Organization data access remains tenant-scoped.
