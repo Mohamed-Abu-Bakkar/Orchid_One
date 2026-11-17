@@ -115,7 +115,10 @@ export const generatePeriod = mutation({
     const componentMap = new Map(components.map(c => [String(c._id), c]));
     const periodId = await ctx.db.insert("wagePeriods", { organizationId: user.organizationId, periodType: args.periodType, fromDate: args.fromDate, toDate: args.toDate, status: "draft", createdBy: user._id, createdAt: Date.now() });
     let totalGross = 0, totalDeductions = 0, totalNet = 0, employeeCount = 0;
-    const eligible = employees.filter(e =>\n      ["permanent", "hourly", "daily"].includes(e.employmentType) &&\n      isEmployeeEligibleForPayrollPeriod(args.periodType, e.employmentType as "permanent" | "hourly" | "daily")\n    );
+    const eligible = employees.filter(e =>
+      ["permanent", "hourly", "daily"].includes(e.employmentType) &&
+      isEmployeeEligibleForPayrollPeriod(args.periodType, e.employmentType as "permanent" | "hourly" | "daily")
+    );
     for (const employee of eligible) {
       const employeeDays = days.filter(d => String(d.employeeId) === String(employee._id) && d.status !== "exception" && d.status !== "pending_review");
       const earnings: {label:string;amountPaise:number}[] = [];
