@@ -1,7 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { requireAdmin, requireIdentity, requireSuperadmin } from "./lib/auth";
+import { requireAdmin, requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 const dateOk=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s);
 const dayNumber=(date:string)=>Math.floor(Date.parse(date+"T00:00:00Z")/86400000);
 const dateFromDay=(day:number)=>new Date(day*86400000).toISOString().slice(0,10);
@@ -31,12 +31,12 @@ export const adminWorkspace=query({args:{workDate:v.string()},handler:async(ctx,
  return {recurringSchedules:recurringSchedules.filter(s=>s.isActive).map(s=>({_id:s._id,title:s.title,frequency:s.frequency,weekdays:s.weekdays??[],startDate:s.startDate,endDate:s.endDate??null,nextRunDate:s.nextRunDate})),employees:employeeRows,shifts:shifts.filter(s=>s.isActive).map(s=>({_id:s._id,name:s.name,startMinute:s.startMinute,endMinute:s.endMinute,breakMinutes:s.breakMinutes,isActive:s.isActive})),templates:templates.filter(t=>t.isActive).map(t=>({_id:t._id,title:t.title,description:t.description??"",category:t.category,priority:t.priority})),categories:categories.filter(c=>c.isActive).map(c=>c.name),categoryRecords:categories.filter(c=>c.isActive).map(c=>({_id:c._id,name:c.name})),teams:teamRows,memberships:memberships.filter(m=>m.isActive).map(m=>({teamId:m.teamId,employeeId:m.employeeId})),assignments:assignmentRows};
 }});
 
-export const createShift=mutation({args:{name:v.string(),startMinute:v.number(),endMinute:v.number(),breakMinutes:v.number()},handler:async(ctx,a)=>{const u=await requireSuperadmin(ctx),name=a.name.trim();if(!name||name.length>80)throw Error("INVALID_SHIFT_NAME");if(!Number.isInteger(a.startMinute)||a.startMinute<0||a.startMinute>=1440||!Number.isInteger(a.endMinute)||a.endMinute<0||a.endMinute>=1440||a.startMinute===a.endMinute)throw Error("INVALID_SHIFT_TIME");if(!Number.isInteger(a.breakMinutes)||a.breakMinutes<0||a.breakMinutes>720)throw Error("INVALID_BREAK_DURATION");const rows=await ctx.db.query("shifts").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect();if(rows.some(s=>s.name.toLowerCase()===name.toLowerCase()))throw Error("SHIFT_ALREADY_EXISTS");const id=await ctx.db.insert("shifts",{organizationId:u.organizationId,name,startMinute:a.startMinute,endMinute:a.endMinute,breakMinutes:a.breakMinutes,isActive:true});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"shift.created",entityType:"shift",entityId:String(id),metadata:{name,startMinute:a.startMinute,endMinute:a.endMinute,breakMinutes:a.breakMinutes},createdAt:Date.now()});return id;}});
+export const createShift=mutation({args:{name:v.string(),startMinute:v.number(),endMinute:v.number(),breakMinutes:v.number()},handler:async(ctx,a)=>{const u=await requireOrganizationAdmin(ctx),name=a.name.trim();if(!name||name.length>80)throw Error("INVALID_SHIFT_NAME");if(!Number.isInteger(a.startMinute)||a.startMinute<0||a.startMinute>=1440||!Number.isInteger(a.endMinute)||a.endMinute<0||a.endMinute>=1440||a.startMinute===a.endMinute)throw Error("INVALID_SHIFT_TIME");if(!Number.isInteger(a.breakMinutes)||a.breakMinutes<0||a.breakMinutes>720)throw Error("INVALID_BREAK_DURATION");const rows=await ctx.db.query("shifts").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect();if(rows.some(s=>s.name.toLowerCase()===name.toLowerCase()))throw Error("SHIFT_ALREADY_EXISTS");const id=await ctx.db.insert("shifts",{organizationId:u.organizationId,name,startMinute:a.startMinute,endMinute:a.endMinute,breakMinutes:a.breakMinutes,isActive:true});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"shift.created",entityType:"shift",entityId:String(id),metadata:{name,startMinute:a.startMinute,endMinute:a.endMinute,breakMinutes:a.breakMinutes},createdAt:Date.now()});return id;}});
 export const createWorkCategory=mutation({args:{name:v.string()},handler:async(ctx,a)=>{const u=await requireAdmin(ctx),name=a.name.trim().replace(/\\s+/g," ");if(!name||name.length>60)throw Error("INVALID_WORK_CATEGORY");const rows=await ctx.db.query("workCategories").withIndex("by_org",q=>q.eq("organizationId",u.organizationId)).collect();if(rows.some(c=>c.name.toLowerCase()===name.toLowerCase()))throw Error("WORK_CATEGORY_ALREADY_EXISTS");const id=await ctx.db.insert("workCategories",{organizationId:u.organizationId,name,isActive:true,createdBy:u._id,createdAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"work_category.created",entityType:"workCategory",entityId:String(id),metadata:{name},createdAt:Date.now()});return id;}});
 
-export const createTeam=mutation({args:{name:v.string(),shiftId:v.id("shifts")},handler:async(ctx,a)=>{const u=await requireSuperadmin(ctx),name=a.name.trim(),s=await ctx.db.get(a.shiftId);if(!name||name.length>80)throw Error("TEAM_NAME_INVALID");if(!s||s.organizationId!==u.organizationId||!s.isActive)throw Error("SHIFT_NOT_AVAILABLE");const id=await ctx.db.insert("teams",{organizationId:u.organizationId,name,shiftId:a.shiftId,isActive:true,createdBy:u._id,createdAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"team.created",entityType:"team",entityId:String(id),createdAt:Date.now()});return id;}});
+export const createTeam=mutation({args:{name:v.string(),shiftId:v.id("shifts")},handler:async(ctx,a)=>{const u=await requireOrganizationAdmin(ctx),name=a.name.trim(),s=await ctx.db.get(a.shiftId);if(!name||name.length>80)throw Error("TEAM_NAME_INVALID");if(!s||s.organizationId!==u.organizationId||!s.isActive)throw Error("SHIFT_NOT_AVAILABLE");const id=await ctx.db.insert("teams",{organizationId:u.organizationId,name,shiftId:a.shiftId,isActive:true,createdBy:u._id,createdAt:Date.now()});await ctx.db.insert("auditLogs",{organizationId:u.organizationId,actorUserId:u._id,action:"team.created",entityType:"team",entityId:String(id),createdAt:Date.now()});return id;}});
 export const setTeamMembers=mutation({args:{teamId:v.id("teams"),workDate:v.string(),employeeIds:v.array(v.id("employees"))},handler:async(ctx,a)=>{
- const u=await requireSuperadmin(ctx);
+ const u=await requireOrganizationAdmin(ctx);
  if(!dateOk(a.workDate)||a.employeeIds.length>100||new Set(a.employeeIds).size!==a.employeeIds.length)throw Error("INVALID_MEMBERS");
  const t=await ctx.db.get(a.teamId);
  if(!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("TEAM_NOT_AVAILABLE");
@@ -64,7 +64,7 @@ export const setTeamMembers=mutation({args:{teamId:v.id("teams"),workDate:v.stri
 }});
 
 export const setEmployeeDefaultShift=mutation({args:{employeeId:v.id("employees"),shiftId:v.union(v.id("shifts"),v.null())},handler:async(ctx,a)=>{
- const u=await requireSuperadmin(ctx),employee=await ctx.db.get(a.employeeId);
+ const u=await requireOrganizationAdmin(ctx),employee=await ctx.db.get(a.employeeId);
  if(!employee||employee.organizationId!==u.organizationId)throw Error("EMPLOYEE_NOT_FOUND");
  if(employee.status!=="active")throw Error("EMPLOYEE_NOT_ACTIVE");
  let nextDefault=null;
@@ -95,7 +95,7 @@ export const setEmployeeDefaultShift=mutation({args:{employeeId:v.id("employees"
 }});
 
 export const setEmployeeShiftsForDate=mutation({args:{employeeId:v.id("employees"),workDate:v.string(),shiftIds:v.array(v.id("shifts"))},handler:async(ctx,a)=>{
- const u=await requireSuperadmin(ctx),employee=await ctx.db.get(a.employeeId);
+ const u=await requireOrganizationAdmin(ctx),employee=await ctx.db.get(a.employeeId);
  if(!dateOk(a.workDate)||a.shiftIds.length>10||new Set(a.shiftIds).size!==a.shiftIds.length)throw Error("INVALID_SHIFT_ASSIGNMENTS");
  if(!employee||employee.organizationId!==u.organizationId)throw Error("EMPLOYEE_NOT_FOUND");
  if(employee.status!=="active")throw Error("EMPLOYEE_NOT_ACTIVE");
@@ -243,7 +243,7 @@ export const myWorkDashboard=query({args:{workDate:v.string()},handler:async(ctx
 
 
 export const archiveShift=mutation({args:{shiftId:v.id("shifts")},handler:async(ctx,{shiftId})=>{
- const user=await requireSuperadmin(ctx),shift=await ctx.db.get(shiftId);
+ const user=await requireOrganizationAdmin(ctx),shift=await ctx.db.get(shiftId);
  if(!shift||shift.organizationId!==user.organizationId)throw Error("SHIFT_NOT_FOUND");
  if(!shift.isActive)return {archived:false};
  const [teams,assignments,employees]=await Promise.all([
