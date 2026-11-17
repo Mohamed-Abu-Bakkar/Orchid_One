@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireIdentity, requireOrganizationAdmin, requirePrimarySuperadmin } from "./lib/auth";
+import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 import { canDeletePayrollPeriod } from "./lib/rolePolicy";
 
 function validDate(value: string) {
@@ -15,11 +15,23 @@ export const listPeriods = query({
   handler: async (ctx) => {
     const user = await requireOrganizationAdmin(ctx);
     const periods = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).order("desc").take(60);
-    return await Promise.all(periods.map(async period => ({
-      ...period,
-      canDelete: canDeletePayrollPeriod(user.role, user.isPrimarySuperadmin === true, period.status, (await ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()).map(record => record.status)),
-      records: await Promise.all((await ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()).map(async record => { const employee = await ctx.db.get(record.employeeId); return { ...record, employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Former employee", employeeCode: employee?.employeeCode ?? "—" }; })),
-    })));
+    return await Promise.all(periods.map(async period => {
+      const wageRecords = await ctx.db.query("wageRecords")
+        .withIndex("by_period", q => q.eq("wagePeriodId", period._id))
+        .collect();
+      return {
+        ...period,
+        canDelete: canDeletePayrollPeriod(user.role, user.isPrimarySuperadmin === true, period.status, wageRecords.map(record => record.status)),
+        records: await Promise.all(wageRecords.map(async record => {
+          const employee = await ctx.db.get(record.employeeId);
+          return {
+            ...record,
+            employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Former employee",
+            employeeCode: employee?.employeeCode ?? "—",
+          };
+        })),
+      };
+    }));
   },
 });
 
