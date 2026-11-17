@@ -4,6 +4,7 @@ import {
   canChangePrimarySuperadmin,
   canManageAccountRole,
   hasRole,
+  canDeleteDraftPayroll,
 } from "./rolePolicy";
 
 describe("platform and organization role boundaries", () => {
@@ -39,5 +40,29 @@ describe("platform and organization role boundaries", () => {
     expect(canChangePrimarySuperadmin(true, "superadmin", "suspended")).toBe(false);
     expect(canChangePrimarySuperadmin(true, "superadmin", "active")).toBe(true);
     expect(canChangePrimarySuperadmin(false, "admin")).toBe(true);
+  });
+});
+
+
+describe("primary Super Admin payroll deletion policy", () => {
+  it("allows the primary operator to delete a draft period with only draft records", () => {
+    expect(canDeleteDraftPayroll(true, "draft", ["draft", "draft"])).toBe(true);
+    expect(canDeleteDraftPayroll(true, "draft", [])).toBe(true);
+  });
+
+  it("denies payroll deletion to non-primary accounts", () => {
+    expect(canDeleteDraftPayroll(false, "draft", ["draft"])).toBe(false);
+  });
+
+  it("protects pending, approved, and locked payroll periods", () => {
+    expect(canDeleteDraftPayroll(true, "pending_approval", ["draft"])).toBe(false);
+    expect(canDeleteDraftPayroll(true, "approved", ["draft"])).toBe(false);
+    expect(canDeleteDraftPayroll(true, "locked", ["draft"])).toBe(false);
+  });
+
+  it("protects a draft period if any wage record has advanced beyond draft", () => {
+    expect(canDeleteDraftPayroll(true, "draft", ["draft", "pending_approval"])).toBe(false);
+    expect(canDeleteDraftPayroll(true, "draft", ["draft", "approved"])).toBe(false);
+    expect(canDeleteDraftPayroll(true, "draft", ["locked"])).toBe(false);
   });
 });
