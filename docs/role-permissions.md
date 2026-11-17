@@ -48,3 +48,13 @@ After the schema/function deployment, an operator must run the internal mutation
 - Primary Super Admin cannot be downgraded or suspended by another Super Admin.
 - Profile refresh does not reactivate a suspended account.
 - Organization data access remains tenant-scoped.
+
+
+## Primary Super Admin payroll deletion
+
+- The payroll history query exposes a delete action only when the authenticated user is the claimed Primary Super Admin.
+- The server mutation independently requires `role === "superadmin"` and `isPrimarySuperadmin === true`; hiding the button is not treated as authorization.
+- Permanent deletion is limited to a `wagePeriod` whose status is exactly `draft` and whose every linked `wageRecord` is also `draft`.
+- The mutation writes a `payroll.draft_period_deleted` audit event, deletes the draft wage records, and then deletes the period in one Convex transaction.
+- Pending-approval, approved, and locked periods/records cannot be deleted through this operation.
+- The UI requires an explicit browser confirmation; the mutation also requires the fixed confirmation token.
