@@ -51,12 +51,9 @@ export function GeofenceExceptionMap(props: Props) {
       loading="lazy"
       referrerPolicy="no-referrer"
     />
-    <div className="geofence-map-legend">
-      <span><i className="geofence-legend-dot employee"/> Employee's recorded punch (map marker)</span>
-      {workplaceValid && <span><i className="geofence-legend-dot workplace"/> Workplace coordinates shown in the review details</span>}
-    </div>
+    
     <p className="location-attribution">
-      Map data © OpenStreetMap contributors. The marker represents device-reported GPS and is not proof of physical presence.
+     The marker represents device-reported GPS and is not proof of physical presence.
     </p>
   </div>;
 }
