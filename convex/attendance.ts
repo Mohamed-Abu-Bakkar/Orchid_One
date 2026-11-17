@@ -142,12 +142,24 @@ export const recordPunch = mutation({
       return { eventId: existing._id, duplicate: true, locationType: existing.locationType ?? "physical", geofencePassed: existing.geofencePassed, requiresReview: existing.reviewStatus === "pending" };
     }
 
-    const latest = await ctx.db.query("attendanceEvents")
-      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").first();
-    if (latest?.reviewStatus === "pending") throw new Error("ATTENDANCE_REVIEW_PENDING");
     const organization = await ctx.db.get(user.organizationId);
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
     const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date());
+
+    // A pending punch from today must be resolved before another punch is accepted.
+    // A completed checkout awaiting review from an earlier workday must not block
+    // the employee from starting a new attendance session today.
+    const recentEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id))
+      .order("desc").take(100);
+    const latestPending = recentEvents.find(event => event.reviewStatus === "pending");
+    if (latestPending) {
+      const pendingWorkDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone })
+        .format(new Date(latestPending.receivedAt));
+      if (pendingWorkDate === localToday || latestPending.eventType !== "check_out") {
+        throw new Error("ATTENDANCE_REVIEW_PENDING");
+      }
+    }
     const todayEvents = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q => q.eq("employeeId", employee._id))
       .order("desc").take(100);
