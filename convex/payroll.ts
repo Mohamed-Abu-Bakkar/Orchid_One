@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
-import { canDeletePayrollPeriod } from "./lib/rolePolicy";
+import { canDeletePayrollPeriod, isEmployeeEligibleForPayrollPeriod } from "./lib/rolePolicy";
 
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -115,7 +115,10 @@ export const generatePeriod = mutation({
     const componentMap = new Map(components.map(c => [String(c._id), c]));
     const periodId = await ctx.db.insert("wagePeriods", { organizationId: user.organizationId, periodType: args.periodType, fromDate: args.fromDate, toDate: args.toDate, status: "draft", createdBy: user._id, createdAt: Date.now() });
     let totalGross = 0, totalDeductions = 0, totalNet = 0, employeeCount = 0;
-    const eligible = employees.filter(e => ["permanent","hourly","daily"].includes(e.employmentType));
+    const eligible = employees.filter(e =>
+      ["permanent", "hourly", "daily"].includes(e.employmentType) &&
+      isEmployeeEligibleForPayrollPeriod(args.periodType, e.employmentType as "permanent" | "hourly" | "daily")
+    );
     for (const employee of eligible) {
       const employeeDays = days.filter(d => String(d.employeeId) === String(employee._id) && d.status !== "exception" && d.status !== "pending_review");
       const earnings: {label:string;amountPaise:number}[] = [];

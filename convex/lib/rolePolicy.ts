@@ -46,3 +46,15 @@ export function canDeletePayrollPeriod(
   if (actorRole !== "admin" || periodStatus !== "draft") return false;
   return recordStatuses.every((status) => status === "draft");
 }
+
+
+/**
+ * Weekly payroll is reserved for variable-wage employees. Permanent employees
+ * receive their fixed monthly salary only through monthly or custom runs.
+ */
+export function isEmployeeEligibleForPayrollPeriod(
+  periodType: "weekly" | "monthly" | "custom",
+  employmentType: "permanent" | "hourly" | "daily",
+) {
+  return periodType !== "weekly" || employmentType !== "permanent";
+}

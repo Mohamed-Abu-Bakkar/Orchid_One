@@ -71,3 +71,26 @@ describe("role-based payroll deletion policy", () => {
     expect(canDeletePayrollPeriod("admin", false, "draft", ["locked"])).toBe(false);
   });
 });
+
+
+describe("payroll period employee eligibility", () => {
+  it("excludes permanent employees from weekly payroll", async () => {
+    const { isEmployeeEligibleForPayrollPeriod } = await import("./rolePolicy");
+    expect(isEmployeeEligibleForPayrollPeriod("weekly", "permanent")).toBe(false);
+  });
+
+  it("includes hourly and daily employees in weekly payroll", async () => {
+    const { isEmployeeEligibleForPayrollPeriod } = await import("./rolePolicy");
+    expect(isEmployeeEligibleForPayrollPeriod("weekly", "hourly")).toBe(true);
+    expect(isEmployeeEligibleForPayrollPeriod("weekly", "daily")).toBe(true);
+  });
+
+  it("includes all supported employment types in monthly and custom payroll", async () => {
+    const { isEmployeeEligibleForPayrollPeriod } = await import("./rolePolicy");
+    for (const periodType of ["monthly", "custom"] as const) {
+      expect(isEmployeeEligibleForPayrollPeriod(periodType, "permanent")).toBe(true);
+      expect(isEmployeeEligibleForPayrollPeriod(periodType, "hourly")).toBe(true);
+      expect(isEmployeeEligibleForPayrollPeriod(periodType, "daily")).toBe(true);
+    }
+  });
+});
