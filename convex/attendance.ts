@@ -164,7 +164,7 @@ export const recordPunch = mutation({
       )
       .filter(q => q.neq(q.field("reviewStatus"), "rejected"))
       .order("desc")
-      .first();
+      .first() ?? undefined;
 
     if (shouldBlockAttendancePunch(localToday, pendingEvents, organization.timezone, latestPriorNonRejected)) {
       throw new Error("ATTENDANCE_REVIEW_PENDING");
