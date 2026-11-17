@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireIdentity, requireOrganizationAdmin, requirePrimarySuperadmin } from "./lib/auth";
-import { canDeleteDraftPayroll } from "./lib/rolePolicy";
+import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
+import { canDeletePayrollPeriod } from "./lib/rolePolicy";
 
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -15,27 +15,45 @@ export const listPeriods = query({
   handler: async (ctx) => {
     const user = await requireOrganizationAdmin(ctx);
     const periods = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).order("desc").take(60);
-    return await Promise.all(periods.map(async period => ({
-      ...period,
-      canDelete: user.role === "superadmin" && user.isPrimarySuperadmin === true,
-      records: await Promise.all((await ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect()).map(async record => { const employee = await ctx.db.get(record.employeeId); return { ...record, employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Former employee", employeeCode: employee?.employeeCode ?? "—" }; })),
-    })));
+    return await Promise.all(periods.map(async period => {
+      const wageRecords = await ctx.db.query("wageRecords")
+        .withIndex("by_period", q => q.eq("wagePeriodId", period._id))
+        .collect();
+      return {
+        ...period,
+        canDelete: canDeletePayrollPeriod(user.role, user.isPrimarySuperadmin === true, period.status, wageRecords.map(record => record.status)),
+        records: await Promise.all(wageRecords.map(async record => {
+          const employee = await ctx.db.get(record.employeeId);
+          return {
+            ...record,
+            employeeName: employee ? [employee.firstName, employee.lastName].filter(Boolean).join(" ") : "Former employee",
+            employeeCode: employee?.employeeCode ?? "—",
+          };
+        })),
+      };
+    }));
   },
 });
 
 
 /**
- * Permanently removes a payroll period only for the claimed Primary Super Admin.
- * This is intentionally limited to draft periods and draft wage records.
- * Convex mutations are transactional: any failed validation aborts all deletions.
+ * Permanently removes a payroll period under role-based deletion rules.
+ * Admins may delete drafts only; the claimed Primary Super Admin may delete
+ * draft, approved, and locked periods. All related wage records are removed
+ * atomically, while audit history is retained.
  */
-export const deleteDraftPeriod = mutation({
-  args: { periodId: v.id("wagePeriods"), confirmation: v.literal("DELETE DRAFT PAYROLL") },
+export const deletePeriod = mutation({
+  args: { periodId: v.id("wagePeriods"), confirmation: v.literal("DELETE PAYROLL") },
   handler: async (ctx, args) => {
-    const actor = await requirePrimarySuperadmin(ctx);
+    const actor = await requireOrganizationAdmin(ctx);
+    if (actor.role === "superadmin" && actor.isPrimarySuperadmin !== true) {
+      throw new Error("PRIMARY_SUPERADMIN_REQUIRED");
+    }
+
     const period = await ctx.db.get(args.periodId);
-    if (!period) throw new Error("PAYROLL_PERIOD_NOT_FOUND");
-    if (period.status !== "draft") throw new Error("ONLY_DRAFT_PAYROLL_CAN_BE_DELETED");
+    if (!period || period.organizationId !== actor.organizationId) {
+      throw new Error("PAYROLL_PERIOD_NOT_FOUND");
+    }
 
     const records = await ctx.db.query("wageRecords")
       .withIndex("by_period", q => q.eq("wagePeriodId", period._id))
@@ -44,23 +62,30 @@ export const deleteDraftPeriod = mutation({
     if (records.some(record => record.organizationId !== period.organizationId)) {
       throw new Error("PAYROLL_RECORD_ORGANIZATION_MISMATCH");
     }
-    if (!canDeleteDraftPayroll(actor.isPrimarySuperadmin === true, period.status, records.map(record => record.status))) {
-      throw new Error("ALL_PAYROLL_RECORDS_MUST_BE_DRAFT");
+    if (!canDeletePayrollPeriod(
+      actor.role,
+      actor.isPrimarySuperadmin === true,
+      period.status,
+      records.map(record => record.status),
+    )) {
+      throw new Error("PAYROLL_DELETE_NOT_ALLOWED_FOR_ROLE_OR_STATUS");
     }
 
     const now = Date.now();
     await ctx.db.insert("auditLogs", {
       organizationId: period.organizationId,
       actorUserId: actor._id,
-      action: "payroll.draft_period_deleted",
+      action: "payroll.period_deleted",
       entityType: "wagePeriod",
       entityId: String(period._id),
       metadata: {
         fromDate: period.fromDate,
         toDate: period.toDate,
+        previousStatus: period.status,
         deletedRecordCount: records.length,
+        recordStatuses: records.map(record => record.status),
         totalNetPaise: period.totalNetPaise ?? 0,
-        performedByPrimarySuperadmin: true,
+        performedByPrimarySuperadmin: actor.role === "superadmin",
       },
       createdAt: now,
     });

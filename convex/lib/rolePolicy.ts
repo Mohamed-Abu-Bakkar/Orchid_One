@@ -36,10 +36,13 @@ export function canChangePrimarySuperadmin(
 }
 
 
-export function canDeleteDraftPayroll(
+export function canDeletePayrollPeriod(
+  actorRole: AppRole,
   isPrimarySuperadmin: boolean,
   periodStatus: "draft" | "pending_approval" | "approved" | "locked",
   recordStatuses: readonly ("draft" | "pending_approval" | "approved" | "locked")[],
 ) {
-  return isPrimarySuperadmin && periodStatus === "draft" && recordStatuses.every((status) => status === "draft");
+  if (actorRole === "superadmin" && isPrimarySuperadmin) return true;
+  if (actorRole !== "admin" || periodStatus !== "draft") return false;
+  return recordStatuses.every((status) => status === "draft");
 }
