@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity, requireOrganizationAdmin, requirePrimarySuperadmin } from "./lib/auth";
+import { canDeleteDraftPayroll } from "./lib/rolePolicy";
 
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -43,7 +44,7 @@ export const deleteDraftPeriod = mutation({
     if (records.some(record => record.organizationId !== period.organizationId)) {
       throw new Error("PAYROLL_RECORD_ORGANIZATION_MISMATCH");
     }
-    if (records.some(record => record.status !== "draft")) {
+    if (!canDeleteDraftPayroll(actor.isPrimarySuperadmin === true, period.status, records.map(record => record.status))) {
       throw new Error("ALL_PAYROLL_RECORDS_MUST_BE_DRAFT");
     }
 
