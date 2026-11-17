@@ -7,11 +7,13 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"],
+  },
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
     rules: {
-      // Existing repository-wide debt is tracked as warnings; new code should avoid these patterns.
+      // Existing repository-wide lint debt is warnings; new code should avoid these patterns.
       "@typescript-eslint/no-explicit-any": "warn",
       "react/no-unescaped-entities": "warn",
       "prefer-const": "warn",
