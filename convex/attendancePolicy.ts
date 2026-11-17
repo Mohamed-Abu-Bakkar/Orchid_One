@@ -23,10 +23,11 @@ export function getOrganizationWorkDate(timestamp: number, timeZone: string): st
 export function shouldBlockAttendancePunch(
   currentWorkDate: string,
   pendingEvents: AttendanceReviewEvent[],
+  timeZone: string,
   latestPriorNonRejectedEvent?: AttendanceReviewEvent,
 ): boolean {
   const blockingPendingEvent = pendingEvents.some((event) => {
-    const eventWorkDate = getOrganizationWorkDate(event.receivedAt, "UTC");
+    const eventWorkDate = getOrganizationWorkDate(event.receivedAt, timeZone);
     return eventWorkDate === currentWorkDate || event.eventType !== "check_out";
   });
 
