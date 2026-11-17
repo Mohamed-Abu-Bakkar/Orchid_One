@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, requireIdentity, requireSuperadmin } from "./lib/auth";
+import { requireAdmin, requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 
 const MAX_POLICY_BYTES = 15 * 1024 * 1024;
 const policyCategory = v.union(
@@ -12,7 +12,7 @@ const policyCategory = v.union(
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireSuperadmin(ctx);
+    await requireOrganizationAdmin(ctx);
     return ctx.storage.generateUploadUrl();
   },
 });
@@ -29,7 +29,7 @@ export const createDraft = mutation({
     fileSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const title = args.title.trim();
     const fileName = args.originalFileName.trim();
     if (!title || title.length > 160) throw new Error("POLICY_TITLE_INVALID");
@@ -54,7 +54,7 @@ export const createDraft = mutation({
 export const publish = mutation({
   args: { policyId: v.id("policies") },
   handler: async (ctx, { policyId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const policy = await ctx.db.get(policyId);
     if (!policy || policy.organizationId !== admin.organizationId) throw new Error("POLICY_NOT_FOUND");
     if (policy.status !== "draft") throw new Error("POLICY_NOT_DRAFT");
@@ -165,7 +165,7 @@ export const acknowledgementReport = query({
 export const archive = mutation({
   args: { policyId: v.id("policies") },
   handler: async (ctx, { policyId }) => {
-    const admin = await requireSuperadmin(ctx);
+    const admin = await requireOrganizationAdmin(ctx);
     const policy = await ctx.db.get(policyId);
     if (!policy || policy.organizationId !== admin.organizationId) throw new Error("POLICY_NOT_FOUND");
     if (policy.status === "archived") return { success: true };
