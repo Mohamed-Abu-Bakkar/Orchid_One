@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { requireIdentity, requireRole } from "./lib/auth";
+import { getOrganizationWorkDate, shouldBlockAttendancePunch } from "./attendancePolicy";
 
 const EARTH_RADIUS_M = 6_371_000;
 function distanceMeters(aLat: number, aLon: number, bLat: number, bLon: number) {
@@ -144,21 +145,29 @@ export const recordPunch = mutation({
 
     const organization = await ctx.db.get(user.organizationId);
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
-    const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date());
+    const localToday = getOrganizationWorkDate(Date.now(), organization.timezone);
+    const todayStart = localDateTimeUtc(localToday, 0, organization.timezone);
 
-    // A pending punch from today must be resolved before another punch is accepted.
-    // A completed checkout awaiting review from an earlier workday must not block
-    // the employee from starting a new attendance session today.
-    const recentEvents = await ctx.db.query("attendanceEvents")
-      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id))
-      .order("desc").take(100);
-    const latestPending = recentEvents.find(event => event.reviewStatus === "pending");
-    if (latestPending) {
-      const pendingWorkDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone })
-        .format(new Date(latestPending.receivedAt));
-      if (pendingWorkDate === localToday || latestPending.eventType !== "check_out") {
-        throw new Error("ATTENDANCE_REVIEW_PENDING");
-      }
+    // Read every pending review for this employee; a bounded recent-events
+    // window could hide an older unresolved check-in or break event.
+    const pendingEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_review_time", q =>
+        q.eq("employeeId", employee._id).eq("reviewStatus", "pending"),
+      )
+      .collect();
+
+    // Find the latest non-rejected event before this organization-local day.
+    // If it is not a checkout, the previous attendance session is unfinished.
+    const priorEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_time", q =>
+        q.eq("employeeId", employee._id).lt("receivedAt", todayStart),
+      )
+      .order("desc")
+      .collect();
+    const latestPriorNonRejected = priorEvents.find(event => event.reviewStatus !== "rejected");
+
+    if (shouldBlockAttendancePunch(localToday, pendingEvents, organization.timezone, latestPriorNonRejected)) {
+      throw new Error("ATTENDANCE_REVIEW_PENDING");
     }
     const todayEvents = await ctx.db.query("attendanceEvents")
       .withIndex("by_employee_time", q => q.eq("employeeId", employee._id))
