@@ -174,10 +174,9 @@ export const generatePeriod = mutation({
     const periodStart = localDateTimeUtc(args.fromDate, 0, organization.timezone);
     const dayAfterEnd = new Date(Date.parse(args.toDate + "T00:00:00.000Z") + 86400000).toISOString().slice(0, 10);
     const periodEnd = localDateTimeUtc(dayAfterEnd, 0, organization.timezone);
-    const [employees, days, reviews, overtime, components, attendanceEvents, shiftAssignments, shifts] = await Promise.all([
+    const [employees, days, overtime, components, attendanceEvents, shiftAssignments, shifts] = await Promise.all([
       ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active")).collect(),
       ctx.db.query("attendanceDays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
-      ctx.db.query("hourlyWageReviews").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
       ctx.db.query("overtimeRequests").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
       ctx.db.query("salaryComponents").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("attendanceEvents").withIndex("by_org_time", q => q.eq("organizationId", user.organizationId).gte("receivedAt", periodStart).lt("receivedAt", periodEnd)).collect(),
@@ -254,6 +253,11 @@ export const generatePeriod = mutation({
           const shift = shiftId ? shiftMap.get(String(shiftId)) : undefined;
           let shiftStartAt: number | undefined;
           let shiftEndAt: number | undefined;
+          const dayOvertimeRequests = overtime.filter(request => String(request.employeeId) === String(employee._id) && request.workDate === day.workDate);
+          if (!shiftId) {
+            const recordedShiftEnd = dayOvertimeRequests.map(request => request.shiftEndAt).filter((value): value is number => typeof value === "number").sort((a, b) => a - b)[0];
+            if (recordedShiftEnd !== undefined) shiftEndAt = recordedShiftEnd;
+          }
           if (shiftId && (!shift || shift.organizationId !== user.organizationId || !shift.isActive)) {
             throw new Error("INVALID_SHIFT_CONFIGURATION:" + employee.employeeCode + ":" + day.workDate);
           }
