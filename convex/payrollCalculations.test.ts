@@ -47,9 +47,9 @@ describe("hourly payroll attendance calculations", () => {
   it("uses actual verified work when no shift boundaries are configured", () => {
     const intervals = calculateVerifiedWorkIntervals([
       { eventType: "check_in", receivedAt: at(9), locationType: "remote" },
-      { eventType: "break_start", receivedAt: at(13) },
-      { eventType: "break_end", receivedAt: at(13, 30) },
-      { eventType: "check_out", receivedAt: at(19) },
+      { eventType: "break_start", receivedAt: at(13), locationType: "remote" },
+      { eventType: "break_end", receivedAt: at(13, 30), locationType: "remote" },
+      { eventType: "check_out", receivedAt: at(19), locationType: "remote" },
     ]);
 
     expect(intervals).not.toBeNull();
