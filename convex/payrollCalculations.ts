@@ -27,9 +27,9 @@ function overlapMs(startA: number, endA: number, startB: number, endB: number) {
   return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
 }
 
-export function calculateVerifiedWorkIntervals(events: Array<{ eventType: string; receivedAt: number; reviewStatus?: string }>): VerifiedWorkIntervals | null {
+export function calculateVerifiedWorkIntervals(events: Array<{ eventType: string; receivedAt: number; reviewStatus?: string; locationType?: string; geofencePassed?: boolean }>): VerifiedWorkIntervals | null {
   const sorted = [...events].sort((a, b) => a.receivedAt - b.receivedAt);
-  if (sorted.some(event => event.reviewStatus === "pending" || event.reviewStatus === "rejected")) return null;
+  if (sorted.some(event => event.reviewStatus === "pending" || event.reviewStatus === "rejected" || (event.locationType !== "remote" && event.geofencePassed !== true && event.reviewStatus !== "approved"))) return null;
   const work: WorkInterval[] = [];
   const breaks: WorkInterval[] = [];
   let checkIn: number | null = null;
