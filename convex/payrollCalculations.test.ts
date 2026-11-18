@@ -11,10 +11,10 @@ const at = (hour: number, minuteOfHour = 0) => Date.UTC(2026, 0, 15, hour, minut
 describe("hourly payroll attendance calculations", () => {
   it("pays actual worked time for a late arrival and excludes breaks", () => {
     const intervals = calculateVerifiedWorkIntervals([
-      { eventType: "check_in", receivedAt: at(9, 30) },
-      { eventType: "break_start", receivedAt: at(13) },
-      { eventType: "break_end", receivedAt: at(13, 30) },
-      { eventType: "check_out", receivedAt: at(18) },
+      { eventType: "check_in", receivedAt: at(9, 30), locationType: "remote" },
+      { eventType: "break_start", receivedAt: at(13), locationType: "remote" },
+      { eventType: "break_end", receivedAt: at(13, 30), locationType: "remote" },
+      { eventType: "check_out", receivedAt: at(18), locationType: "remote" },
     ]);
 
     expect(intervals).not.toBeNull();
@@ -23,10 +23,10 @@ describe("hourly payroll attendance calculations", () => {
 
   it("caps regular hours at shift end so overtime is not double-counted", () => {
     const intervals = calculateVerifiedWorkIntervals([
-      { eventType: "check_in", receivedAt: at(9) },
+      { eventType: "check_in", receivedAt: at(9), locationType: "remote" },
       { eventType: "break_start", receivedAt: at(13) },
       { eventType: "break_end", receivedAt: at(13, 30) },
-      { eventType: "check_out", receivedAt: at(19) },
+      { eventType: "check_out", receivedAt: at(19), locationType: "remote" },
     ]);
 
     expect(intervals).not.toBeNull();
@@ -62,13 +62,13 @@ describe("hourly payroll attendance calculations", () => {
     ])).toBeNull();
 
     expect(calculateVerifiedWorkIntervals([
-      { eventType: "check_in", receivedAt: at(9), reviewStatus: "pending" },
+      { eventType: "check_in", receivedAt: at(9), locationType: "remote", reviewStatus: "pending" },
       { eventType: "check_out", receivedAt: at(18) },
     ])).toBeNull();
 
     expect(calculateVerifiedWorkIntervals([
       { eventType: "check_in", receivedAt: at(9) },
-      { eventType: "check_out", receivedAt: at(18), reviewStatus: "rejected" },
+      { eventType: "check_out", receivedAt: at(18), locationType: "remote", reviewStatus: "rejected" },
     ])).toBeNull();
   });
 
