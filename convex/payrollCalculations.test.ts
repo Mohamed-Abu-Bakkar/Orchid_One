@@ -24,8 +24,8 @@ describe("hourly payroll attendance calculations", () => {
   it("caps regular hours at shift end so overtime is not double-counted", () => {
     const intervals = calculateVerifiedWorkIntervals([
       { eventType: "check_in", receivedAt: at(9), locationType: "remote" },
-      { eventType: "break_start", receivedAt: at(13) },
-      { eventType: "break_end", receivedAt: at(13, 30) },
+      { eventType: "break_start", receivedAt: at(13), locationType: "remote" },
+      { eventType: "break_end", receivedAt: at(13, 30), locationType: "remote" },
       { eventType: "check_out", receivedAt: at(19), locationType: "remote" },
     ]);
 
@@ -36,8 +36,8 @@ describe("hourly payroll attendance calculations", () => {
 
   it("does not pay work performed before scheduled shift start as regular time", () => {
     const intervals = calculateVerifiedWorkIntervals([
-      { eventType: "check_in", receivedAt: at(8) },
-      { eventType: "check_out", receivedAt: at(18) },
+      { eventType: "check_in", receivedAt: at(8), locationType: "remote" },
+      { eventType: "check_out", receivedAt: at(18), locationType: "remote" },
     ]);
 
     expect(intervals).not.toBeNull();
@@ -46,7 +46,7 @@ describe("hourly payroll attendance calculations", () => {
 
   it("uses actual verified work when no shift boundaries are configured", () => {
     const intervals = calculateVerifiedWorkIntervals([
-      { eventType: "check_in", receivedAt: at(9) },
+      { eventType: "check_in", receivedAt: at(9), locationType: "remote" },
       { eventType: "break_start", receivedAt: at(13) },
       { eventType: "break_end", receivedAt: at(13, 30) },
       { eventType: "check_out", receivedAt: at(19) },
