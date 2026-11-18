@@ -31,11 +31,11 @@
 - The configured employee multiplier is used when present; missing multiplier defaults to 1×. The configured multiplier, optional override, applied multiplier and hourly-rate snapshot are retained on the approved request.
 - Submitter/reviewer metadata and audit events are retained.
 - Approved overtime requests are joined into hourly workforce earnings for the same employee/work date, using the applicable hourly rate and configured multiplier.
-- Overtime request records are separate from regular payable-hour reviews. Only approved overtime requests contribute to overtime earnings.
+- Overtime request records are separate from legacy regular-hour reviews. Only approved overtime requests contribute to overtime earnings.
 
 ## Authorization
-- Wage-rate creation and hourly payable-hour approval: Superadmin only.
-- Hourly payable-hour suggestions and overtime request submission: Supervisor only.
+- Wage-rate creation: Admin/Superadmin according to the wage-rate mutation's role policy.
+- Hourly regular payroll calculation: automatic from verified attendance; legacy `hourlyWageReviews` remain historical and are not a prerequisite for payroll-v2.
 - Overtime approval/rejection: Superadmin only.
 - All backend operations validate organization ownership and employee status/type as applicable.
 - Employee-facing users cannot call admin mutations.
@@ -53,7 +53,7 @@
 - `employeeCompensation`: permanent monthly compensation history.
 - `salaryComponents`: organization salary component catalogue.
 - `wageRates`: effective-dated hourly and daily employee rates; hourly records may include an overtime multiplier.
-- `hourlyWageReviews`: regular payable-hours suggestion and approval history.
+- `hourlyWageReviews`: legacy regular-hours suggestion and approval history; not consumed by payroll-v2 regular-hour calculations.
 - `overtimeRequests`: overtime request and decision lifecycle.
 - `attendanceEvents`: source attendance evidence.
 - `auditLogs`: actor and action history.
@@ -67,7 +67,7 @@
 - Automatic overtime detection currently applies to hourly employees with an active assigned/default shift and fully verified, complete attendance sequences.
 - Overtime request approval does not independently define legal/statutory eligibility.
 - Payroll period generation, approval/locking and employee payslips are implemented. Payment tracking, statutory deductions, tax, PF, ESI, professional tax, leave proration, partial-day rules and accounting integration are not implemented.
-- Existing legacy hourly review records may contain suggested overtime minutes. New regular-hour submissions use zero overtime; approved overtime now comes from `overtimeRequests`. Historical data should be reconciled before payroll use.
+- Existing legacy hourly review records may contain suggested regular/overtime minutes. Payroll-v2 ignores those records for regular pay; approved overtime continues to come only from `overtimeRequests`. Draft payroll created under payroll-v1 should be deleted and regenerated. Approved/locked historical snapshots are preserved.
 
 ## QA checklist
 - Configure hourly and daily rates with valid effective dates; reject wrong employment types, inactive employees, invalid amounts and duplicate effective dates.
