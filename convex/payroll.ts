@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 import { canDeletePayrollPeriod, isEmployeeEligibleForPayrollPeriod } from "./lib/rolePolicy";
+import { calculateRegularMinutes, calculateVerifiedWorkIntervals, localDateTimeUtc } from "./payrollCalculations";
 
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -105,14 +106,37 @@ export const generatePeriod = mutation({
     const overlap = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).collect();
     if (overlap.some(p => p.fromDate <= args.toDate && p.toDate >= args.fromDate)) throw new Error("PAYROLL_PERIOD_OVERLAPS_FINALIZED_PERIOD");
     if (overlap.some(p => p.fromDate === args.fromDate && p.toDate === args.toDate)) throw new Error("PAYROLL_PERIOD_ALREADY_EXISTS");
-    const [employees, days, reviews, overtime, components] = await Promise.all([
+    const organization = await ctx.db.get(user.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
+    const periodStart = localDateTimeUtc(args.fromDate, 0, organization.timezone);
+    const dayAfterEnd = new Date(Date.parse(args.toDate + "T00:00:00.000Z") + 86400000).toISOString().slice(0, 10);
+    const periodEnd = localDateTimeUtc(dayAfterEnd, 0, organization.timezone);
+    const [employees, days, overtime, components, attendanceEvents, shiftAssignments, shifts] = await Promise.all([
       ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active")).collect(),
       ctx.db.query("attendanceDays").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
-      ctx.db.query("hourlyWageReviews").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
       ctx.db.query("overtimeRequests").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
       ctx.db.query("salaryComponents").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
+      ctx.db.query("attendanceEvents").withIndex("by_org_time", q => q.eq("organizationId", user.organizationId).gte("receivedAt", periodStart).lt("receivedAt", periodEnd)).collect(),
+      ctx.db.query("shiftAssignments").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).collect(),
+      ctx.db.query("shifts").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
     ]);
     const componentMap = new Map(components.map(c => [String(c._id), c]));
+    const eventGroups = new Map<string, any[]>();
+    for (const event of attendanceEvents) {
+      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt));
+      const key = String(event.employeeId) + ":" + workDate;
+      const group = eventGroups.get(key) ?? [];
+      group.push(event);
+      eventGroups.set(key, group);
+    }
+    const assignmentMap = new Map<string, any[]>();
+    for (const assignment of shiftAssignments) {
+      const key = String(assignment.employeeId) + ":" + assignment.workDate;
+      const group = assignmentMap.get(key) ?? [];
+      group.push(assignment);
+      assignmentMap.set(key, group);
+    }
+    const shiftMap = new Map(shifts.map(shift => [String(shift._id), shift]));
     const periodId = await ctx.db.insert("wagePeriods", { organizationId: user.organizationId, periodType: args.periodType, fromDate: args.fromDate, toDate: args.toDate, status: "draft", createdBy: user._id, createdAt: Date.now() });
     let totalGross = 0, totalDeductions = 0, totalNet = 0, employeeCount = 0;
     const eligible = employees.filter(e =>
@@ -153,22 +177,51 @@ export const generatePeriod = mutation({
         payableUnits = payableDays;
         if (gross > 0) earnings.push({ label: "Daily wages (" + payableDays + " payable days)", amountPaise: gross });
       } else if (employee.employmentType === "hourly") {
-        const approvedReviews = reviews.filter(r => String(r.employeeId) === String(employee._id) && r.status === "approved");
         const rates = await ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).lte("effectiveFrom", args.toDate)).order("desc").collect();
-        for (const review of approvedReviews) {
-          const rate = rates.find(r => r.organizationId === user.organizationId && r.employmentType === "hourly" && r.effectiveFrom <= review.workDate && (!r.effectiveTo || r.effectiveTo >= review.workDate));
-          if (!rate) continue;
-          const mins = review.approvedRegularMinutes ?? 0;
+        const employeeDays = days.filter(day => String(day.employeeId) === String(employee._id) && (day.status === "present" || day.status === "late") && day.payableMinutes > 0);
+        for (const day of employeeDays) {
+          const key = String(employee._id) + ":" + day.workDate;
+          const dayEvents = eventGroups.get(key) ?? [];
+          const intervals = calculateVerifiedWorkIntervals(dayEvents);
+          if (!intervals) continue;
+          const assignments = assignmentMap.get(key) ?? [];
+          if (assignments.length > 1) throw new Error("MULTIPLE_SHIFTS_CONFIGURED_FOR_HOURLY_PAYROLL:" + employee.employeeCode + ":" + day.workDate);
+          const shiftId = assignments[0]?.shiftId ?? employee.defaultShiftId;
+          const shift = shiftId ? shiftMap.get(String(shiftId)) : undefined;
+          let shiftStartAt: number | undefined;
+          let shiftEndAt: number | undefined;
+          const dayOvertimeRequests = overtime.filter(request => String(request.employeeId) === String(employee._id) && request.workDate === day.workDate);
+          if (!shiftId) {
+            const recordedShiftEnd = dayOvertimeRequests.map(request => request.shiftEndAt).filter((value): value is number => typeof value === "number").sort((a, b) => a - b)[0];
+            if (recordedShiftEnd !== undefined) shiftEndAt = recordedShiftEnd;
+          }
+          if (shiftId && (!shift || shift.organizationId !== user.organizationId || !shift.isActive)) {
+            throw new Error("INVALID_SHIFT_CONFIGURATION:" + employee.employeeCode + ":" + day.workDate);
+          }
+          if (shift) {
+            if (shift.endMinute <= shift.startMinute || shift.startMinute < 0 || shift.endMinute > 1440) {
+              throw new Error("OVERNIGHT_OR_INVALID_SHIFT_UNSUPPORTED:" + employee.employeeCode + ":" + day.workDate);
+            }
+            shiftStartAt = localDateTimeUtc(day.workDate, shift.startMinute, organization.timezone);
+            shiftEndAt = localDateTimeUtc(day.workDate, shift.endMinute, organization.timezone);
+          }
+          const mins = calculateRegularMinutes(intervals, shiftStartAt, shiftEndAt);
+          if (!mins) continue;
+          const rate = rates.find(r => r.organizationId === user.organizationId && r.employmentType === "hourly" && r.effectiveFrom <= day.workDate && (!r.effectiveTo || r.effectiveTo >= day.workDate));
+          if (!rate) throw new Error("HOURLY_RATE_NOT_CONFIGURED:" + employee.employeeCode + ":" + day.workDate);
           payableMinutes += mins;
-          const dailyRegular = money(mins * rate.amountPaise / 60);
-          gross += dailyRegular;
-          if (dailyRegular > 0) earnings.push({ label: "Regular hours · " + review.workDate, amountPaise: dailyRegular });
+          const regularAmount = money(mins * rate.amountPaise / 60);
+          gross += regularAmount;
+          if (regularAmount > 0) earnings.push({ label: "Regular hours · " + day.workDate, amountPaise: regularAmount });
           ratePaise = rate.amountPaise;
         }
         const approvedOvertime = overtime.filter(r => String(r.employeeId) === String(employee._id) && r.status === "approved");
         for (const request of approvedOvertime) {
           const mins = request.approvedMinutes ?? 0;
-          const overtimeRate = request.rateSnapshotPaise ?? rates.find(r => r.organizationId === user.organizationId && r.employmentType === "hourly" && r.effectiveFrom <= request.workDate && (!r.effectiveTo || r.effectiveTo >= request.workDate))?.amountPaise ?? 0;
+          if (!mins) continue;
+          const applicableRate = rates.find(r => r.organizationId === user.organizationId && r.employmentType === "hourly" && r.effectiveFrom <= request.workDate && (!r.effectiveTo || r.effectiveTo >= request.workDate));
+          const overtimeRate = request.rateSnapshotPaise ?? applicableRate?.amountPaise;
+          if (!overtimeRate || overtimeRate <= 0) throw new Error("HOURLY_OVERTIME_RATE_NOT_CONFIGURED:" + employee.employeeCode + ":" + request.workDate);
           const amount = money(mins * overtimeRate / 60 * (request.appliedMultiplier ?? 1));
           overtimePaise += amount;
           if (amount > 0) earnings.push({ label: "Approved overtime · " + request.workDate, amountPaise: amount });
@@ -184,8 +237,8 @@ export const generatePeriod = mutation({
       const wageEmploymentType = employee.employmentType === "permanent" ? "monthly" : employee.employmentType === "hourly" || employee.employmentType === "daily" ? employee.employmentType : null;
       if (!wageEmploymentType) continue;
       const payslipNumber = "ORC-" + args.toDate.replaceAll("-","") + "-" + employee.employeeCode;
-      const snapshot = { employeeCode: employee.employeeCode, employeeName: [employee.firstName,employee.lastName].filter(Boolean).join(" "), departmentId: employee.departmentId, employmentType: employee.employmentType, period: { fromDate: args.fromDate, toDate: args.toDate }, earnings, deductions, grossPaise: gross, overtimePaise, deductionTotalPaise: deductionTotal, netPaise: net, payableUnits, payableMinutes, payableDays, generatedAt: Date.now(), ruleVersion: "orchid-payroll-v1", notes: employee.employmentType === "daily" ? "Each completed verified attendance day with payable minutes is counted as one daily unit. Partial-day proration is not applied." : employee.employmentType === "permanent" ? "Monthly salary is not prorated for joining, exit, unpaid leave or absence in this release." : "Only approved regular-hour reviews and approved overtime requests are included." };
-      await ctx.db.insert("wageRecords", { organizationId: user.organizationId, wagePeriodId: periodId, employeeId: employee._id, employmentType: wageEmploymentType, payableUnits, ratePaise, grossPaise: gross, overtimePaise, adjustmentPaise: 0, totalPaise: net, earnings, deductions, payableMinutes, payableDays, payslipNumber, calculationSnapshot: snapshot, calculationVersion: "orchid-payroll-v1", status: "draft", createdAt: Date.now() });
+      const snapshot = { employeeCode: employee.employeeCode, employeeName: [employee.firstName,employee.lastName].filter(Boolean).join(" "), departmentId: employee.departmentId, employmentType: employee.employmentType, period: { fromDate: args.fromDate, toDate: args.toDate }, earnings, deductions, grossPaise: gross, overtimePaise, deductionTotalPaise: deductionTotal, netPaise: net, payableUnits, payableMinutes, payableDays, generatedAt: Date.now(), ruleVersion: "orchid-payroll-v2", notes: employee.employmentType === "daily" ? "Each completed verified attendance day with payable minutes is counted as one daily unit. Partial-day proration is not applied." : employee.employmentType === "permanent" ? "Monthly salary is not prorated for joining, exit, unpaid leave or absence in this release." : "Regular hours are calculated from verified attendance, excluding breaks and capped at the scheduled shift end; post-shift time is paid only through approved overtime requests." };
+      await ctx.db.insert("wageRecords", { organizationId: user.organizationId, wagePeriodId: periodId, employeeId: employee._id, employmentType: wageEmploymentType, payableUnits, ratePaise, grossPaise: gross, overtimePaise, adjustmentPaise: 0, totalPaise: net, earnings, deductions, payableMinutes, payableDays, payslipNumber, calculationSnapshot: snapshot, calculationVersion: "orchid-payroll-v2", status: "draft", createdAt: Date.now() });
             totalGross += gross; totalDeductions += deductionTotal; totalNet += net; employeeCount++;
     }
     await ctx.db.patch(periodId, { employeeCount, totalGrossPaise: totalGross, totalDeductionsPaise: totalDeductions, totalNetPaise: totalNet });
