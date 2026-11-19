@@ -53,7 +53,7 @@ export function AttendanceExceptionReview() {
             {item.supervisorRecommendation && <p className="t-body-sm"><strong>Supervisor recommendation:</strong> {item.supervisorRecommendation}{item.supervisorNote ? " · " + item.supervisorNote : ""}</p>}
             <label className="t-caption text-tertiary" htmlFor={"attendance-review-" + item._id}>Review note (required for rejection and unclassified events)</label>
             <textarea id={"attendance-review-" + item._id} className="input" rows={2} value={notes[String(item._id)] ?? ""} onChange={e => setNotes(current => ({ ...current, [String(item._id)]: e.target.value }))} placeholder="Explain the decision"/>
-            {waitingForAdmin ? <p className="t-caption text-tertiary">Waiting for supervisor recommendation.</p> : <div className="row gap-2" style={{ marginTop: 12 }}>
+            {waitingForAdmin ? <p className="t-caption text-tertiary">Waiting for supervisor recommendation.</p> : (!geofence && !canFinalize) ? <p className="t-caption text-tertiary">An Admin must resolve this unclassified attendance review.</p> : <div className="row gap-2" style={{ marginTop: 12 }}>
               <button className="btn btn-primary" type="button" disabled={busyId !== null || (geofence && canFinalize && !item.supervisorRecommendation)} onClick={() => void decide(item, "approved")}><CheckCircle2 size={15}/>{geofence && !canFinalize ? "Recommend approval" : "Approve"}</button>
               <button className="btn btn-outline" type="button" disabled={busyId !== null || !(notes[String(item._id)] ?? "").trim()} onClick={() => void decide(item, "rejected")}><XCircle size={15}/>{geofence && !canFinalize ? "Recommend rejection" : "Reject"}</button>
             </div>}
