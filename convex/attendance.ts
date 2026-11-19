@@ -588,7 +588,6 @@ export const autoCheckoutAtDayEnd = internalMutation({
             workDate,
             checkoutAt: dayEnd,
             closedOpenBreak: hasOpenBreak,
-            payableMinutes: refreshed.pending || refreshed.incomplete ? 0 : Math.max(0, Math.floor((refreshed.events.filter(event => event.reviewStatus !== "rejected" && event.eventType === "check_out").length > 0 ? refreshed.events.reduce((total, event) => total, 0) : 0))),
             overtimeRequestId: overtimeRequestId ? String(overtimeRequestId) : null,
             source: "scheduled_system_job",
           },
