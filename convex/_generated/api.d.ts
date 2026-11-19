@@ -13,6 +13,7 @@ import type * as adminCrud from "../adminCrud.js";
 import type * as adminOptions from "../adminOptions.js";
 import type * as attendance from "../attendance.js";
 import type * as attendancePolicy from "../attendancePolicy.js";
+import type * as attendanceReview from "../attendanceReview.js";
 import type * as auth from "../auth.js";
 import type * as betterAuth_auth from "../betterAuth/auth.js";
 import type * as bootstrap from "../bootstrap.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   adminOptions: typeof adminOptions;
   attendance: typeof attendance;
   attendancePolicy: typeof attendancePolicy;
+  attendanceReview: typeof attendanceReview;
   auth: typeof auth;
   "betterAuth/auth": typeof betterAuth_auth;
   bootstrap: typeof bootstrap;
