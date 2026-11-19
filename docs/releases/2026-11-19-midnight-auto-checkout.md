@@ -19,3 +19,6 @@
 
 ## Operational note
 Convex schema/functions and cron configuration must be deployed to the production Convex deployment separately from the Vercel frontend deployment. Verify the cron appears in the production Convex dashboard after deployment.
+
+
+Release verification: final main-branch release commit includes the scheduled cron registration and system-generated event schema fields.
