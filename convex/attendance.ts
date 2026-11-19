@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { requireIdentity, requireRole } from "./lib/auth";
@@ -495,5 +495,118 @@ export const adminRegister = query({
       outsideGeofenceEvents: rows.reduce((sum, row) => sum + row.outsideGeofenceEvents, 0),
       rows,
     };
+  },
+});
+
+
+/**
+ * Closes sessions left open at the end of the previous organization-local day.
+ * The cron invokes this during each organization's midnight hour. Event timestamps
+ * are the final millisecond of that workday, independent of cron execution time.
+ */
+export const autoCheckoutAtDayEnd = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const organizations = await ctx.db.query("organizations").collect();
+    let checkedOut = 0;
+    let skipped = 0;
+
+    for (const organization of organizations) {
+      const localToday = getOrganizationWorkDate(now, organization.timezone);
+      const localParts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: organization.timezone, hour: "2-digit", hourCycle: "h23",
+      }).formatToParts(new Date(now));
+      const localHour = Number(localParts.find(part => part.type === "hour")?.value ?? "-1");
+      if (localHour !== 0) continue;
+
+      const previousDateValue = new Date(localToday + "T00:00:00.000Z");
+      previousDateValue.setUTCDate(previousDateValue.getUTCDate() - 1);
+      const workDate = previousDateValue.toISOString().slice(0, 10);
+      const dayStart = localDateTimeUtc(workDate, 0, organization.timezone);
+      const dayEnd = localDateTimeUtc(localToday, 0, organization.timezone) - 1;
+
+      const employees = await ctx.db.query("employees")
+        .withIndex("by_org_status", q => q.eq("organizationId", organization._id).eq("status", "active"))
+        .collect();
+
+      for (const employee of employees) {
+        const events = await ctx.db.query("attendanceEvents")
+          .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", dayStart).lte("receivedAt", dayEnd))
+          .collect();
+        events.sort((a, b) => a.receivedAt - b.receivedAt);
+        const latest = [...events].reverse().find(event => event.reviewStatus !== "rejected");
+        if (!latest || latest.eventType === "check_out") continue;
+        if (latest.eventType !== "check_in" && latest.eventType !== "break_start") continue;
+
+        const location = await ctx.db.get(employee.locationId);
+        if (!location || location.organizationId !== organization._id) { skipped++; continue; }
+
+        const hasOpenBreak = latest.eventType === "break_start";
+        const eventBase = {
+          organizationId: organization._id,
+          employeeId: employee._id,
+          locationId: location._id,
+          locationType: location.locationType ?? "physical" as const,
+          geofencePassed: true,
+          clientTimestamp: dayEnd,
+        };
+
+        if (hasOpenBreak) {
+          const breakEndAt = dayEnd - 1;
+          await ctx.db.insert("attendanceEvents", {
+            ...eventBase,
+            eventType: "break_end",
+            receivedAt: breakEndAt,
+            idempotencyKey: `system-midnight:${employee._id}:${workDate}:break_end`,
+            systemGenerated: true,
+            systemGeneratedReason: "Automatic end-of-day closure of an unclosed break",
+          });
+        }
+
+        const checkoutId = await ctx.db.insert("attendanceEvents", {
+          ...eventBase,
+          eventType: "check_out",
+          receivedAt: dayEnd,
+          idempotencyKey: `system-midnight:${employee._id}:${workDate}:check_out`,
+          systemGenerated: true,
+          systemGeneratedReason: "Automatic midnight checkout because the employee did not check out",
+        });
+
+        const refreshed = await refreshAttendanceDay(ctx, employee, organization, workDate);
+        const overtimeRequestId = !refreshed.pending && !refreshed.incomplete
+          ? await createDetectedOvertime(ctx, employee, organization, workDate, refreshed.events)
+          : null;
+
+        await ctx.db.insert("auditLogs", {
+          organizationId: organization._id,
+          action: "attendance.midnight_auto_checkout",
+          entityType: "attendanceEvent",
+          entityId: String(checkoutId),
+          metadata: {
+            employeeId: String(employee._id),
+            workDate,
+            checkoutAt: dayEnd,
+            closedOpenBreak: hasOpenBreak,
+            payableMinutes: refreshed.pending || refreshed.incomplete ? 0 : Math.max(0, Math.floor((refreshed.events.filter(event => event.reviewStatus !== "rejected" && event.eventType === "check_out").length > 0 ? refreshed.events.reduce((total, event) => total, 0) : 0))),
+            overtimeRequestId: overtimeRequestId ? String(overtimeRequestId) : null,
+            source: "scheduled_system_job",
+          },
+          createdAt: now,
+        });
+        if (overtimeRequestId) {
+          await ctx.db.insert("auditLogs", {
+            organizationId: organization._id,
+            action: "overtime.auto_detected",
+            entityType: "overtimeRequest",
+            entityId: String(overtimeRequestId),
+            metadata: { workDate, employeeCode: employee.employeeCode, source: "midnight_auto_checkout" },
+            createdAt: now,
+          });
+        }
+        checkedOut++;
+      }
+    }
+    return { checkedOut, skipped };
   },
 });
