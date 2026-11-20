@@ -142,6 +142,9 @@ export const openSessions = query({
 
       const blocker = blockingPending ?? latestPrior!;
       const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(blocker.receivedAt));
+      const pendingOnWorkday = pendingEvents.some(event =>
+        new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt)) === workDate
+      );
       const [location] = await Promise.all([ctx.db.get(blocker.locationId)]);
       return {
         employeeId: employee._id,
@@ -152,7 +155,7 @@ export const openSessions = query({
         eventType: blocker.eventType,
         receivedAt: blocker.receivedAt,
         reviewStatus: blocker.reviewStatus ?? "not_required",
-        hasPendingReview: Boolean(blockingPending),
+        hasPendingReview: Boolean(blockingPending || pendingOnWorkday),
         locationName: location && location.organizationId === reviewer.organizationId ? location.name : "Unknown location",
         locationType: blocker.locationType ?? "physical",
         reason: blockingPending ? "PENDING_REVIEW" : "MISSING_CHECKOUT",
