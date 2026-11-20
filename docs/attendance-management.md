@@ -8,7 +8,7 @@ The admin Attendance page reads attendance records from the organization's Conve
 - Optional employee filter and text search.
 - Employee/day grouping based on the organization's configured timezone.
 - Existing persisted `attendanceDays` summaries are included, including their stored status, payable minutes, break minutes and correction note. These are displayed as stored; this module does not recalculate them.
-- Actual check-in, check-out, break-start and break-end event history.
+- Actual check-in, check-out, break-start and break-end event history, including system-generated correction markers and audit reasons.
 - First recorded check-in and last recorded check-out timestamps.
 - Scheduled date-specific shifts where present.
 - Geofence pass/fail and pending/rejected review counts.
