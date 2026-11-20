@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
+import { useMutation } from "convex/react";
 
 export function EmployeeRealtimeFrame() {
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -11,6 +12,8 @@ export function EmployeeRealtimeFrame() {
   const policies = useQuery(api.policies.listPublishedForEmployee, {});
   const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const work = useQuery(api.teamsWork.myWorkDashboard, { workDate });
+  const markNotificationRead = useMutation(api.notifications.markRead);
+  const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
 
   useEffect(() => {
     if (!frameReady || workspace === undefined || policies === undefined || work === undefined) return;
