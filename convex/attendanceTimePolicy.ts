@@ -28,14 +28,14 @@ export function calculateShiftWorkBuckets(
       if (checkIn !== null) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
       checkIn = event.receivedAt;
     } else if (event.eventType === "check_out") {
-      if (checkIn === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
+      if (checkIn === null || event.receivedAt <= checkIn || breakStart !== null) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
       work.push({ start: checkIn, end: event.receivedAt });
       checkIn = null;
     } else if (event.eventType === "break_start") {
-      if (checkIn === null || breakStart !== null) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
+      if (checkIn === null || breakStart !== null || event.receivedAt <= checkIn) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
       breakStart = event.receivedAt;
     } else if (event.eventType === "break_end") {
-      if (breakStart === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
+      if (breakStart === null || checkIn === null || event.receivedAt <= breakStart) throw new Error("INVALID_ATTENDANCE_SEQUENCE");
       breaks.push({ start: breakStart, end: event.receivedAt });
       breakStart = null;
     }
