@@ -1,8 +1,8 @@
 # In-app notifications
 
 ## Scope
-- Authenticated Admin and Super Admin accounts receive organization-scoped alerts for new employee leave requests.
-- Employees receive notifications for assigned work (existing workflow) and leave decisions.
+- Authenticated Admin and Super Admin accounts receive organization-scoped alerts for employee leave submissions and overtime confirmations/declines.
+- Employees receive notifications for assigned work (existing workflow), leave decisions, and overtime decisions.
 - Each account reads only notifications addressed to its own user record.
 - Notifications are persisted in the existing `notifications` table.
 
