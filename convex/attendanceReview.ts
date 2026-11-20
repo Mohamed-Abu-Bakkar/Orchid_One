@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireRole } from "./lib/auth";
+import { calculateShiftWorkBuckets } from "./attendanceTimePolicy";
 
 function localDateTimeUtc(date: string, minuteOfDay: number, timeZone: string): number {
   const [year, month, day] = date.split("-").map(Number);
@@ -25,27 +26,36 @@ async function refreshDay(ctx: any, event: any, organization: any) {
     .withIndex("by_employee_time", (q: any) => q.eq("employeeId", event.employeeId).gte("receivedAt", start).lt("receivedAt", end))
     .collect();
   events.sort((a: any, b: any) => a.receivedAt - b.receivedAt);
-  let openIn: number | null = null, openBreak: number | null = null, workMs = 0, breakMs = 0, incomplete = false;
-  for (const item of events) {
-    if (item.reviewStatus === "rejected") continue;
-    if (item.eventType === "check_in") { if (openIn !== null) incomplete = true; else openIn = item.receivedAt; }
-    else if (item.eventType === "check_out") { if (openIn === null) incomplete = true; else { workMs += Math.max(0, item.receivedAt - openIn); openIn = null; } }
-    else if (item.eventType === "break_start") { if (openBreak !== null || openIn === null) incomplete = true; else openBreak = item.receivedAt; }
-    else if (item.eventType === "break_end") { if (openBreak === null) incomplete = true; else { breakMs += Math.max(0, item.receivedAt - openBreak); openBreak = null; } }
-  }
-  if (openIn !== null || openBreak !== null) incomplete = true;
   const pending = events.some((item: any) => item.reviewStatus === "pending");
-  const rejected = events.some((item: any) => item.reviewStatus === "rejected");
+  let incomplete = false;
+  let buckets = { totalWorkMinutes: 0, breakMinutes: 0, regularMinutes: 0, overtimeMinutes: 0 };
+  try {
+    const assignments = await ctx.db.query("shiftAssignments")
+      .withIndex("by_employee_date", (q: any) => q.eq("employeeId", event.employeeId).eq("workDate", workDate))
+      .collect();
+    const employee = await ctx.db.get(event.employeeId);
+    const shiftId = assignments.length === 1 ? assignments[0].shiftId : assignments.length === 0 ? employee?.defaultShiftId : null;
+    const shift = shiftId ? await ctx.db.get(shiftId) : null;
+    const validShift = shift && shift.organizationId === event.organizationId && shift.isActive &&
+      shift.endMinute > shift.startMinute && shift.endMinute <= 1440;
+    const shiftStartAt = validShift ? localDateTimeUtc(workDate, shift.startMinute, organization.timezone) : undefined;
+    const shiftEndAt = validShift ? localDateTimeUtc(workDate, shift.endMinute, organization.timezone) : undefined;
+    buckets = calculateShiftWorkBuckets(events, shiftStartAt, shiftEndAt);
+  } catch {
+    incomplete = true;
+  }
   const firstCheckInAt = events.find((item: any) => item.eventType === "check_in" && item.reviewStatus !== "rejected")?.receivedAt;
   const lastCheckOutAt = [...events].reverse().find((item: any) => item.eventType === "check_out" && item.reviewStatus !== "rejected")?.receivedAt;
   const values = {
     organizationId: event.organizationId, employeeId: event.employeeId, workDate, firstCheckInAt, lastCheckOutAt,
-    payableMinutes: incomplete || pending ? 0 : Math.max(0, Math.floor((workMs - breakMs) / 60000)),
-    breakMinutes: Math.floor(breakMs / 60000),
-    status: pending ? "pending_review" : rejected ? "exception" : "present",
+    payableMinutes: incomplete || pending ? 0 : buckets.regularMinutes,
+    breakMinutes: buckets.breakMinutes,
+    status: pending ? "pending_review" : events.some((item: any) => item.reviewStatus === "rejected") ? "exception" : "present",
     updatedAt: Date.now(),
   };
-  const existing = await ctx.db.query("attendanceDays").withIndex("by_employee_date", (q: any) => q.eq("employeeId", event.employeeId).eq("workDate", workDate)).first();
+  const existing = await ctx.db.query("attendanceDays")
+    .withIndex("by_employee_date", (q: any) => q.eq("employeeId", event.employeeId).eq("workDate", workDate))
+    .first();
   if (existing) await ctx.db.patch(existing._id, values); else await ctx.db.insert("attendanceDays", values);
 }
 
@@ -187,7 +197,7 @@ export const resolveOpenSession = mutation({
     const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(latest.receivedAt));
     const dayStart = localDateTimeUtc(workDate, 0, organization.timezone);
     const dayEnd = localDateTimeUtc(workDate, 1440, organization.timezone);
-    if (args.checkoutAt < latest.receivedAt || args.checkoutAt < dayStart || args.checkoutAt >= dayEnd || args.checkoutAt >= todayStart) {
+    if (args.checkoutAt <= latest.receivedAt || args.checkoutAt < dayStart || args.checkoutAt >= dayEnd || args.checkoutAt >= todayStart) {
       throw new Error("CORRECTION_TIME_OUTSIDE_ATTENDANCE_DAY");
     }
 
@@ -224,6 +234,7 @@ export const resolveOpenSession = mutation({
     if (latest.eventType === "break_start") {
       await ctx.db.insert("attendanceEvents", {
         ...base,
+        clientTimestamp: args.breakEndAt!,
         eventType: "break_end",
         receivedAt: args.breakEndAt!,
         idempotencyKey: "admin-session-correction:" + String(latest._id) + ":break-end",
