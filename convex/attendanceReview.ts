@@ -92,3 +92,168 @@ export const resolveUnclassifiedReview = mutation({
     return { resolved: true, decision: args.decision };
   },
 });
+
+
+/**
+ * Finds previous-workday sessions that would block a new employee punch.
+ * This is deliberately separate from geofence/pending-review counts.
+ */
+export const openSessions = query({
+  args: {},
+  handler: async (ctx) => {
+    const reviewer = await requireRole(ctx, ["supervisor", "admin", "superadmin"]);
+    const organization = await ctx.db.get(reviewer.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date());
+    const todayStart = localDateTimeUtc(today, 0, organization.timezone);
+    const employees = await ctx.db.query("employees")
+      .withIndex("by_org_status", q => q.eq("organizationId", reviewer.organizationId).eq("status", "active"))
+      .collect();
+
+    const sessions = await Promise.all(employees.map(async employee => {
+      const latest = await ctx.db.query("attendanceEvents")
+        .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).lt("receivedAt", todayStart))
+        .filter(q => q.neq(q.field("reviewStatus"), "rejected"))
+        .order("desc")
+        .first();
+      if (!latest || latest.eventType === "check_out") return null;
+
+      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(latest.receivedAt));
+      const start = localDateTimeUtc(workDate, 0, organization.timezone);
+      const end = localDateTimeUtc(workDate, 1440, organization.timezone);
+      const [dayEvents, location] = await Promise.all([
+        ctx.db.query("attendanceEvents")
+          .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", start).lt("receivedAt", end))
+          .collect(),
+        ctx.db.get(latest.locationId),
+      ]);
+      const pendingReview = dayEvents.some(event => event.reviewStatus === "pending");
+      return {
+        employeeId: employee._id,
+        employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
+        employeeCode: employee.employeeCode,
+        workDate,
+        latestEventId: latest._id,
+        eventType: latest.eventType,
+        receivedAt: latest.receivedAt,
+        reviewStatus: latest.reviewStatus ?? "not_required",
+        hasPendingReview: pendingReview,
+        locationName: location && location.organizationId === reviewer.organizationId ? location.name : "Unknown location",
+        locationType: latest.locationType ?? "physical",
+        reason: pendingReview ? "PENDING_REVIEW" : "MISSING_CHECKOUT",
+      };
+    }));
+
+    return sessions.filter((session): session is NonNullable<typeof session> => session !== null)
+      .sort((a, b) => a.workDate.localeCompare(b.workDate) || a.employeeName.localeCompare(b.employeeName));
+  },
+});
+
+/**
+ * Admin correction for a verified historical session that has no checkout.
+ * Original punches are retained; a system-generated checkout and audit entry
+ * are appended. The administrator must supply the verified actual time.
+ */
+export const resolveOpenSession = mutation({
+  args: {
+    employeeId: v.id("employees"),
+    expectedLastEventId: v.id("attendanceEvents"),
+    checkoutAt: v.number(),
+    breakEndAt: v.optional(v.number()),
+    note: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const reviewer = await requireRole(ctx, ["admin", "superadmin"]);
+    const employee = await ctx.db.get(args.employeeId);
+    if (!employee || employee.organizationId !== reviewer.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
+    const organization = await ctx.db.get(reviewer.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
+
+    const now = Date.now();
+    if (!Number.isFinite(args.checkoutAt) || args.checkoutAt <= 0 || args.checkoutAt > now) throw new Error("INVALID_CORRECTION_TIME");
+    const note = args.note.trim();
+    if (note.length < 3) throw new Error("CORRECTION_NOTE_REQUIRED");
+
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(now));
+    const todayStart = localDateTimeUtc(today, 0, organization.timezone);
+    const latest = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).lt("receivedAt", todayStart))
+      .filter(q => q.neq(q.field("reviewStatus"), "rejected"))
+      .order("desc")
+      .first();
+    if (!latest || latest._id !== args.expectedLastEventId) throw new Error("ATTENDANCE_SESSION_CHANGED_REFRESH");
+    if (latest.organizationId !== reviewer.organizationId || latest.eventType === "check_out") throw new Error("ATTENDANCE_SESSION_ALREADY_CLOSED");
+
+    const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(latest.receivedAt));
+    const dayStart = localDateTimeUtc(workDate, 0, organization.timezone);
+    const dayEnd = localDateTimeUtc(workDate, 1440, organization.timezone);
+    if (args.checkoutAt < latest.receivedAt || args.checkoutAt < dayStart || args.checkoutAt >= dayEnd || args.checkoutAt >= todayStart) {
+      throw new Error("CORRECTION_TIME_OUTSIDE_ATTENDANCE_DAY");
+    }
+
+    const dayEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", dayStart).lt("receivedAt", dayEnd))
+      .collect();
+    if (dayEvents.some(event => event.reviewStatus === "pending")) throw new Error("ATTENDANCE_REVIEW_MUST_BE_RESOLVED_FIRST");
+    const latestDayEvent = [...dayEvents].filter(event => event.reviewStatus !== "rejected").sort((a, b) => b.receivedAt - a.receivedAt)[0];
+    if (!latestDayEvent || latestDayEvent._id !== latest._id) throw new Error("ATTENDANCE_SESSION_CHANGED_REFRESH");
+
+    if (latest.eventType === "break_start") {
+      if (!Number.isFinite(args.breakEndAt) || args.breakEndAt! < latest.receivedAt || args.breakEndAt! >= args.checkoutAt) {
+        throw new Error("VALID_BREAK_END_TIME_REQUIRED");
+      }
+    } else if (latest.eventType !== "check_in" && latest.eventType !== "break_end") {
+      throw new Error("ATTENDANCE_SESSION_NOT_CORRECTABLE");
+    } else if (args.breakEndAt !== undefined) {
+      throw new Error("UNEXPECTED_BREAK_END_TIME");
+    }
+
+    const location = await ctx.db.get(latest.locationId);
+    if (!location || location.organizationId !== reviewer.organizationId) throw new Error("LOCATION_NOT_FOUND");
+    const locationType = latest.locationType ?? "physical";
+    const base = {
+      organizationId: reviewer.organizationId,
+      employeeId: employee._id,
+      locationId: location._id,
+      locationType,
+      clientTimestamp: args.checkoutAt,
+      systemGenerated: true,
+      systemGeneratedReason: "Administrator attendance correction: " + note,
+    };
+
+    if (latest.eventType === "break_start") {
+      await ctx.db.insert("attendanceEvents", {
+        ...base,
+        eventType: "break_end",
+        receivedAt: args.breakEndAt!,
+        idempotencyKey: "admin-session-correction:" + String(latest._id) + ":break-end",
+      });
+    }
+    const checkoutId = await ctx.db.insert("attendanceEvents", {
+      ...base,
+      eventType: "check_out",
+      receivedAt: args.checkoutAt,
+      idempotencyKey: "admin-session-correction:" + String(latest._id) + ":check-out",
+    });
+
+    await refreshDay(ctx, { ...latest, receivedAt: args.checkoutAt }, organization);
+    await ctx.db.insert("auditLogs", {
+      organizationId: reviewer.organizationId,
+      actorUserId: reviewer._id,
+      action: "attendance.admin_session_correction",
+      entityType: "attendanceEvent",
+      entityId: String(checkoutId),
+      metadata: {
+        employeeId: String(employee._id),
+        employeeCode: employee.employeeCode,
+        workDate,
+        previousEventId: String(latest._id),
+        checkoutAt: args.checkoutAt,
+        breakEndAt: args.breakEndAt ?? null,
+        note,
+      },
+      createdAt: now,
+    });
+    return { resolved: true, checkoutEventId: checkoutId, workDate };
+  },
+});
