@@ -782,7 +782,7 @@
           if (!wageRecords.length) empty(body, "No approved payslips are available yet.");
           wageRecords.forEach(record => {
             const card = document.createElement("article");
-            card.className = "bento-card" + (item.readAt === undefined ? " border-primary/30 bg-surface-container-low" : "");
+            card.className = "bento-card";
             const hasEarningsBreakdown = Array.isArray(record.earnings) || Array.isArray(record.calculationSnapshot?.earnings);
             const hasDeductionsBreakdown = Array.isArray(record.deductions) || Array.isArray(record.calculationSnapshot?.deductions);
             const earnings = Array.isArray(record.earnings) ? record.earnings : Array.isArray(record.calculationSnapshot?.earnings) ? record.calculationSnapshot.earnings : [];
@@ -873,7 +873,7 @@
         if (!notifications.length) empty(notificationList, "You have no notifications.");
         notifications.forEach(item => {
           const card = document.createElement("article");
-          card.className = "bento-card";
+          card.className = "bento-card" + (item.readAt === undefined ? " border-primary/30 bg-surface-container-low" : "");
           const title = document.createElement("p");
           title.className = "text-body-md font-body-md font-semibold text-on-surface";
           title.textContent = item.title;
