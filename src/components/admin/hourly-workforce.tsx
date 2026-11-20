@@ -21,7 +21,7 @@ export function HourlyWorkforce({ onOpenExceptions }: Props) {
   const summary = useMemo(() => ({
     regularMinutes: rows.reduce((sum, row) => sum + row.regularMinutes, 0),
     overtimeMinutes: rows.reduce((sum, row) => sum + row.approvedOvertimeMinutes, 0),
-    exceptions: rows.filter(row => row.exceptionCode).length,
+    exceptions: rows.filter(row => row.exceptionCode).length,\n    pendingReviews: rows.filter(row => row.pendingPunchReview).length,
     employees: new Set(rows.map(row => String(row.employeeId))).size,
   }), [rows]);
   const role = account?.role;
@@ -33,7 +33,7 @@ export function HourlyWorkforce({ onOpenExceptions }: Props) {
   return <section className="sec">
     <div className="page-head">
       <div><h2 className="t-h1" style={{ fontSize: 22 }}>Hourly Workforce</h2><p className="sub">Verified attendance, automatically calculated regular hours, and approved overtime.</p></div>
-      {canReviewExceptions && summary.exceptions > 0 && onOpenExceptions && <button className="btn btn-outline" type="button" onClick={onOpenExceptions}><MapPin size={16}/> Review attendance exceptions ({summary.exceptions})</button>}
+      {canReviewExceptions && summary.pendingReviews > 0 && onOpenExceptions && <button className="btn btn-outline" type="button" onClick={onOpenExceptions}><MapPin size={16}/> Review pending attendance ({summary.pendingReviews})</button>}
     </div>
     <div className="panel mt-4">
       <div className="employee-directory-toolbar">
@@ -62,7 +62,7 @@ export function HourlyWorkforce({ onOpenExceptions }: Props) {
                 <td>{row.ratePaise == null ? "Not configured" : money(row.ratePaise) + "/hr"}{row.overtimeMultiplier != null && <small>OT ×{row.overtimeMultiplier}</small>}</td>
                 <td><strong>{row.exceptionCode ? "—" : hours(row.regularMinutes)}</strong>{!row.exceptionCode && <small>{money(row.regularEarningsPaise)}</small>}</td>
                 <td><strong>{hours(row.approvedOvertimeMinutes)} approved</strong>{row.overtimeEarningsPaise != null && <small>{money(row.overtimeEarningsPaise)}</small>}{row.pendingOvertimeMinutes > 0 && <small>{hours(row.pendingOvertimeMinutes)} awaiting review</small>}</td>
-                <td>{row.exceptionCode ? <div className="col gap-1"><span className="badge badge-warning">{row.exceptionCode.replaceAll("_", " ").toLowerCase()}</span><small>{row.exceptionMessage}</small>{canReviewExceptions && onOpenExceptions && (row.pendingPunchReview || row.exceptionCode === "UNVERIFIED_ATTENDANCE") && <button type="button" className="btn btn-outline btn-sm" onClick={onOpenExceptions}>Open attendance reviews</button>}</div> : <span className="badge badge-success">Calculated</span>}</td>
+                <td>{row.exceptionCode ? <div className="col gap-1"><span className="badge badge-warning">{row.exceptionCode.replaceAll("_", " ").toLowerCase()}</span><small>{row.exceptionMessage}</small>{canReviewExceptions && onOpenExceptions && row.pendingPunchReview && <button type="button" className="btn btn-outline btn-sm" onClick={onOpenExceptions}>Open attendance reviews</button>}</div> : <span className="badge badge-success">Calculated</span>}</td>
               </tr>)}</tbody>
             </table></div>}
           <div className="panel-body"><p className="t-caption text-tertiary">Regular hours are calculated automatically from verified, paired attendance, less recorded breaks and within configured shift boundaries. Routine supervisor approval is not required. Attendance exceptions must be resolved in Attendance Reviews. Overtime remains a separate employee-confirmation and approval workflow. Payroll generation and approval are separate steps.</p></div>
