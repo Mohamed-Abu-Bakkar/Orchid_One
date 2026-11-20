@@ -28,10 +28,10 @@ class HourlyWorkforceErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false };
+  state: { hasError: boolean; error?: Error } = { hasError: false };
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -43,7 +43,7 @@ class HourlyWorkforceErrorBoundary extends Component<
       return <section className="sec">
         <div className="panel panel-body" role="alert">
           <div className="row gap-2"><AlertCircle size={20}/><strong>Hourly Workforce is temporarily unavailable</strong></div>
-          <p className="sub">The page encountered an unexpected error. Your attendance and payroll records have not been changed.</p>
+          <p className="sub">{this.state.error ? friendlyQueryError(this.state.error) : "The page encountered an unexpected error."} Your attendance and payroll records have not been changed.</p>
           <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}><RefreshCw size={15}/> Refresh page</button>
         </div>
       </section>;
@@ -52,11 +52,11 @@ class HourlyWorkforceErrorBoundary extends Component<
   }
 }
 
-export function HourlyWorkforce() {
-  return <HourlyWorkforceErrorBoundary><HourlyWorkforceContent /></HourlyWorkforceErrorBoundary>;
+export function HourlyWorkforce({ onOpenExceptions }: { onOpenExceptions?: () => void }) {
+  return <HourlyWorkforceErrorBoundary><HourlyWorkforceContent onOpenExceptions={onOpenExceptions} /></HourlyWorkforceErrorBoundary>;
 }
 
-function HourlyWorkforceContent() {
+function HourlyWorkforceContent({ onOpenExceptions }: { onOpenExceptions?: () => void }) {
   const account = useQuery(api.account.getMyAccountStatus, {});
   const [fromDate, setFromDate] = useState(() => {
     const date = new Date();
@@ -89,7 +89,7 @@ function HourlyWorkforceContent() {
   return <section className="sec">
     <div className="page-head">
       <div><h2 className="t-h1" style={{ fontSize: 22 }}>Hourly Workforce</h2><p className="sub">Verified attendance, automatically calculated regular hours, and separately approved overtime.</p></div>
-      {canReviewAttendance && summary.pendingReviews > 0 && <button className="btn btn-outline" type="button" onClick={() => window.location.assign("/admin")}><MapPin size={16}/> Pending attendance reviews ({summary.pendingReviews})</button>}
+      {canReviewAttendance && summary.pendingReviews > 0 && <button className="btn btn-outline" type="button" onClick={() => onOpenExceptions?.()}><MapPin size={16}/> Pending attendance reviews ({summary.pendingReviews})</button>}
     </div>
 
     <div className="panel mt-4">
