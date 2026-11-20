@@ -147,12 +147,12 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
 
     <div className="panel mt-4">
       <div className="panel-head">
-        <div><h3 className="t-h3">Open attendance sessions</h3><p className="t-caption text-tertiary">Previous workday sessions without a recorded checkout. These are separate from geofence review counts.</p></div>
+        <div><h3 className="t-h3">Attendance punch blockers</h3><p className="t-caption text-tertiary">Unresolved pending events and previous-workday sessions that currently prevent another employee punch. Separate from geofence totals.</p></div>
         <span className="badge badge-warning">{openSessions?.length ?? "—"} blocking</span>
       </div>
       <div className="panel-body">
         {openSessions === undefined ? <p className="sub">Checking previous attendance sessions…</p>
-          : openSessions.length === 0 ? <div className="empty-state"><CheckCircle2 size={24}/><strong>No open previous-day sessions</strong><p className="t-body-sm text-secondary">No previous attendance session is currently blocking a new-day punch.</p></div>
+          : openSessions.length === 0 ? <div className="empty-state"><CheckCircle2 size={24}/><strong>No attendance punch blockers</strong><p className="t-body-sm text-secondary">No unresolved attendance event or previous session is currently blocking a new-day punch.</p></div>
           : <>
             {correctionError && <p className="form-error" role="alert" style={{marginBottom:14}}>{correctionError}</p>}
             <div className="grid-2-equal">
