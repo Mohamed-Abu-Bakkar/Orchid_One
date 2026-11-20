@@ -594,16 +594,15 @@ export const autoCheckoutAtDayEnd = internalMutation({
 
 /** One-time, auditable repair for explicitly selected historical workdays. Internal-only. */
 export const backfillMidnightCheckouts = internalMutation({
-  args: { organizationId: v.id("organizations"), employeeCode: v.string(), workDates: v.array(v.string()) },
+  args: { employeeCode: v.string(), workDates: v.array(v.string()) },
   handler: async (ctx, args) => {
     if (!args.employeeCode.trim() || args.workDates.length < 1 || args.workDates.length > 10) throw new Error("INVALID_BACKFILL_SCOPE");
-    const organization = await ctx.db.get(args.organizationId);
-    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
-    const employees = await ctx.db.query("employees")
-      .withIndex("by_org_status", q => q.eq("organizationId", organization._id).eq("status", "active")).collect();
-    const matches = employees.filter(employee => employee.employeeCode === args.employeeCode.trim());
+    const employees = await ctx.db.query("employees").collect();
+    const matches = employees.filter(employee => employee.employeeCode === args.employeeCode.trim() && employee.status === "active");
     if (matches.length !== 1) throw new Error("EMPLOYEE_NOT_FOUND_OR_AMBIGUOUS");
     const employee = matches[0];
+    const organization = await ctx.db.get(employee.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
     const results: Array<{ workDate: string; status: string; overtimeMinutes?: number }> = [];
     for (const workDate of [...new Set(args.workDates)].sort()) {
       if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(workDate) || workDate >= getOrganizationWorkDate(Date.now(), organization.timezone)) throw new Error("INVALID_BACKFILL_DATE");
