@@ -2,7 +2,7 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity } from "./lib/auth";
-import { notifyOrganizationAdmins, notifyEmployee } from "./lib/notifications";
+import { notifyOrganizationAdmins } from "./lib/notifications";
 import { canChangeAccountStatus, canChangePrimarySuperadmin, canManageAccountRole } from "./lib/rolePolicy";
 
 export const myWorkspace = query({
