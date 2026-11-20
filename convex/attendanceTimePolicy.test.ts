@@ -21,4 +21,22 @@ describe("shift-window attendance calculation", () => {
     expect(result.regularMinutes).toBe(8*60);
     expect(result.overtimeMinutes).toBe(90);
   });
+  it("rejects a checkout while a break is still open", () => {
+    expect(() => calculateShiftWorkBuckets([
+      event("check_in", 9), event("break_start", 13), event("check_out", 18), event("break_end", 18, 15),
+    ])).toThrow("INVALID_ATTENDANCE_SEQUENCE");
+  });
+
+  it("rejects a break ending after checkout", () => {
+    expect(() => calculateShiftWorkBuckets([
+      event("check_in", 9), event("check_out", 18), event("break_end", 18, 15),
+    ])).toThrow("INVALID_ATTENDANCE_SEQUENCE");
+  });
+
+  it("rejects zero-length and reversed attendance intervals", () => {
+    expect(() => calculateShiftWorkBuckets([
+      event("check_in", 9), event("check_out", 9),
+    ])).toThrow("INVALID_ATTENDANCE_SEQUENCE");
+  });
+
 });
