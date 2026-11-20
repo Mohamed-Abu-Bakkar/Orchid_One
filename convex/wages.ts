@@ -293,13 +293,13 @@ export const hourlyAdminData = query({
           if (openIn !== null) incomplete = true;
           else openIn = event.receivedAt;
         } else if (event.eventType === "check_out") {
-          if (openIn === null || event.receivedAt <= openIn) incomplete = true;
+          if (openIn === null || openBreak !== null || event.receivedAt <= openIn) incomplete = true;
           else { attendanceMs += event.receivedAt - openIn; openIn = null; }
         } else if (event.eventType === "break_start") {
           if (openIn === null || openBreak !== null) incomplete = true;
           else openBreak = event.receivedAt;
         } else if (event.eventType === "break_end") {
-          if (openBreak === null || event.receivedAt <= openBreak) incomplete = true;
+          if (openBreak === null || openIn === null || event.receivedAt <= openBreak) incomplete = true;
           else { breakMs += event.receivedAt - openBreak; openBreak = null; }
         }
       }
