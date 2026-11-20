@@ -624,7 +624,7 @@ export const backfillMidnightCheckouts = internalMutation({
       const refreshed = await refreshAttendanceDay(ctx, employee, organization, workDate);
       const overtimeRequestId = !refreshed.pending && !refreshed.incomplete ? await createDetectedOvertime(ctx, employee, organization, workDate, refreshed.events) : null;
       await ctx.db.insert("auditLogs", { organizationId: organization._id, action: "attendance.historical_midnight_checkout", entityType: "attendanceEvent", entityId: String(checkoutId), metadata: { employeeCode: employee.employeeCode, workDate, checkoutAt: dayEnd, overtimeRequestId: overtimeRequestId ? String(overtimeRequestId) : null, correction: true }, createdAt: Date.now() });
-      results.push({ workDate, status: "checked_out", overtimeMinutes: overtimeRequestId ? (await ctx.db.get(overtimeRequestId))?.requestedMinutes : 0 });
+      results.push({ workDate, status: "checked_out", overtimeRequestCreated: Boolean(overtimeRequestId) });
     }
     return { employeeCode: employee.employeeCode, results };
   },
