@@ -55,7 +55,34 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
   if (employees === undefined) return <section className="sec"><p className="sub">Loading attendance filters…</p></section>;
 
   const timezone = register?.timezone ?? "Asia/Kolkata";
-  const invalidRange = !fromDate || !toDate || fromDate > toDate;\n  const canCorrectSessions = account?.role === "admin" || account?.role === "superadmin";\n\n  async function correctOpenSession(item: any) {\n    const id = String(item.employeeId);\n    const checkoutAt = checkoutTimes[id] ? new Date(checkoutTimes[id]).getTime() : NaN;\n    const breakEndAt = breakEndTimes[id] ? new Date(breakEndTimes[id]).getTime() : undefined;\n    const note = correctionNotes[id]?.trim() ?? "";\n    if (!Number.isFinite(checkoutAt) || note.length < 3 || (item.eventType === "break_start" && (!Number.isFinite(breakEndAt) || breakEndAt! >= checkoutAt))) {\n      setCorrectionError("Enter a verified checkout time, a valid break end time when required, and a correction note of at least 3 characters.");\n      return;\n    }\n    setCorrectionBusy(id); setCorrectionError("");\n    try {\n      await resolveOpenSession({\n        employeeId: item.employeeId,\n        expectedLastEventId: item.latestEventId,\n        checkoutAt,\n        breakEndAt: item.eventType === "break_start" ? breakEndAt : undefined,\n        note,\n      });\n      setCheckoutTimes(current => ({ ...current, [id]: "" }));\n      setBreakEndTimes(current => ({ ...current, [id]: "" }));\n      setCorrectionNotes(current => ({ ...current, [id]: "" }));\n    } catch (cause) {\n      setCorrectionError(cause instanceof Error ? cause.message : "Unable to correct the attendance session.");\n    } finally { setCorrectionBusy(null); }\n  }
+  const invalidRange = !fromDate || !toDate || fromDate > toDate;
+  const canCorrectSessions = account?.role === "admin" || account?.role === "superadmin";
+
+  async function correctOpenSession(item: any) {
+    const id = String(item.employeeId);
+    const checkoutAt = checkoutTimes[id] ? new Date(checkoutTimes[id]).getTime() : NaN;
+    const breakEndAt = breakEndTimes[id] ? new Date(breakEndTimes[id]).getTime() : undefined;
+    const note = correctionNotes[id]?.trim() ?? "";
+    if (!Number.isFinite(checkoutAt) || note.length < 3 || (item.eventType === "break_start" && (!Number.isFinite(breakEndAt) || breakEndAt! >= checkoutAt))) {
+      setCorrectionError("Enter a verified checkout time, a valid break end time when required, and a correction note of at least 3 characters.");
+      return;
+    }
+    setCorrectionBusy(id); setCorrectionError("");
+    try {
+      await resolveOpenSession({
+        employeeId: item.employeeId,
+        expectedLastEventId: item.latestEventId,
+        checkoutAt,
+        breakEndAt: item.eventType === "break_start" ? breakEndAt : undefined,
+        note,
+      });
+      setCheckoutTimes(current => ({ ...current, [id]: "" }));
+      setBreakEndTimes(current => ({ ...current, [id]: "" }));
+      setCorrectionNotes(current => ({ ...current, [id]: "" }));
+    } catch (cause) {
+      setCorrectionError(cause instanceof Error ? cause.message : "Unable to correct the attendance session.");
+    } finally { setCorrectionBusy(null); }
+  }
   function exportCsv() {
     if (!register || rows.length === 0) return;
     const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
