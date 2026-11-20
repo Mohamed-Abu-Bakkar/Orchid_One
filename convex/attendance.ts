@@ -437,6 +437,9 @@ export const adminRegister = query({
         reviewStatus: event.reviewStatus ?? "not_required",
         exceptionCode: event.exceptionCode ?? null,
         accuracyM: event.accuracyM,
+        systemGenerated: event.systemGenerated ?? false,
+        systemGeneratedReason: event.systemGeneratedReason ?? null,
+        reviewNote: event.reviewNote ?? null,
         locationName: locationMap.get(String(event.locationId)) ?? "Unknown location",
       });
     }
