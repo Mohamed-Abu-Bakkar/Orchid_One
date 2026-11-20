@@ -10,10 +10,10 @@
 - Historical repair is exposed only as an internal mutation and must be explicitly run against production for the selected employee and dates.
 
 ## Historical repair command
-After deploying Convex, obtain the Orchid organization ID from the production Convex dashboard, then run:
+After deploying Convex, run this exact, employee-code-scoped internal mutation:
 
 ```bash
-npx convex run --prod attendance:backfillMidnightCheckouts '{"organizationId":"<ORCHID_ORGANIZATION_ID>","employeeCode":"ORC-0004","workDates":["2026-11-15","2026-11-16"]}'
+npx convex run --prod attendance:backfillMidnightCheckouts '{"employeeCode":"ORC-0004","workDates":["2026-11-15","2026-11-16"]}'
 ```
 
 The mutation preserves original attendance events, skips days with pending reviews, inserts system-generated checkout events at local day end, recalculates regular attendance, creates overtime requests when verified work exists outside the shift, and records an audit entry. Inspect its returned per-date statuses before allowing payroll generation.
