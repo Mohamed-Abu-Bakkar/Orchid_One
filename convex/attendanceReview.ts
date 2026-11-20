@@ -159,7 +159,7 @@ export const openSessions = query({
       };
     }));
 
-    return sessions.filter((session): session is NonNullable<typeof session> => session !== null)
+    return sessions.flatMap(session => session === null ? [] : [session])
       .sort((a, b) => a.workDate.localeCompare(b.workDate) || a.employeeName.localeCompare(b.employeeName));
   },
 });
@@ -223,7 +223,7 @@ export const resolveOpenSession = mutation({
     if (!latestDayEvent || latestDayEvent._id !== latest._id) throw new Error("ATTENDANCE_SESSION_CHANGED_REFRESH");
 
     if (latest.eventType === "break_start") {
-      if (!Number.isFinite(args.breakEndAt) || args.breakEndAt! < latest.receivedAt || args.breakEndAt! >= args.checkoutAt) {
+      if (!Number.isFinite(args.breakEndAt) || args.breakEndAt! <= latest.receivedAt || args.breakEndAt! >= args.checkoutAt) {
         throw new Error("VALID_BREAK_END_TIME_REQUIRED");
       }
     } else if (latest.eventType !== "check_in" && latest.eventType !== "break_end") {
