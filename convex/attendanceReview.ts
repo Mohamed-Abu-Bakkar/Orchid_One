@@ -121,36 +121,41 @@ export const openSessions = query({
       .collect();
 
     const sessions = await Promise.all(employees.map(async employee => {
-      const latest = await ctx.db.query("attendanceEvents")
-        .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).lt("receivedAt", todayStart))
-        .filter(q => q.neq(q.field("reviewStatus"), "rejected"))
-        .order("desc")
-        .first();
-      if (!latest || latest.eventType === "check_out") return null;
-
-      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(latest.receivedAt));
-      const start = localDateTimeUtc(workDate, 0, organization.timezone);
-      const end = localDateTimeUtc(workDate, 1440, organization.timezone);
-      const [dayEvents, location] = await Promise.all([
+      // Mirror recordPunch's blocker rules so the admin panel explains the
+      // same pending event that prevents the employee from punching.
+      const [pendingEvents, latestPrior] = await Promise.all([
         ctx.db.query("attendanceEvents")
-          .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", start).lt("receivedAt", end))
+          .withIndex("by_employee_review_time", q => q.eq("employeeId", employee._id).eq("reviewStatus", "pending"))
           .collect(),
-        ctx.db.get(latest.locationId),
+        ctx.db.query("attendanceEvents")
+          .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).lt("receivedAt", todayStart))
+          .filter(q => q.neq(q.field("reviewStatus"), "rejected"))
+          .order("desc")
+          .first(),
       ]);
-      const pendingReview = dayEvents.some(event => event.reviewStatus === "pending");
+      const blockingPending = pendingEvents.find(event => {
+        const eventDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt));
+        return eventDate === today || event.eventType !== "check_out";
+      });
+      const hasOpenPriorSession = Boolean(latestPrior && latestPrior.eventType !== "check_out");
+      if (!blockingPending && !hasOpenPriorSession) return null;
+
+      const blocker = blockingPending ?? latestPrior!;
+      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(blocker.receivedAt));
+      const [location] = await Promise.all([ctx.db.get(blocker.locationId)]);
       return {
         employeeId: employee._id,
         employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
         employeeCode: employee.employeeCode,
         workDate,
-        latestEventId: latest._id,
-        eventType: latest.eventType,
-        receivedAt: latest.receivedAt,
-        reviewStatus: latest.reviewStatus ?? "not_required",
-        hasPendingReview: pendingReview,
+        latestEventId: blocker._id,
+        eventType: blocker.eventType,
+        receivedAt: blocker.receivedAt,
+        reviewStatus: blocker.reviewStatus ?? "not_required",
+        hasPendingReview: Boolean(blockingPending),
         locationName: location && location.organizationId === reviewer.organizationId ? location.name : "Unknown location",
-        locationType: latest.locationType ?? "physical",
-        reason: pendingReview ? "PENDING_REVIEW" : "MISSING_CHECKOUT",
+        locationType: blocker.locationType ?? "physical",
+        reason: blockingPending ? "PENDING_REVIEW" : "MISSING_CHECKOUT",
       };
     }));
 
