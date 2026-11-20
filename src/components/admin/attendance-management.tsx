@@ -146,8 +146,9 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
                     <p className="t-body-sm"><strong>Last event:</strong> {item.eventType.replace("_", " ")} · {stamp(item.receivedAt, timezone)}</p>
                     <p className="t-body-sm"><strong>Location:</strong> {item.locationName} · {item.locationType}</p>
                     <p className="t-caption text-tertiary">{item.hasPendingReview
-                      ? "Resolve the pending event in Attendance Reviews before correcting this session."
+                      ? "This unresolved event is included in the employee punch blocker. Resolve it before correcting or continuing the session."
                       : "This is the exact previous-day event that causes the next-day punch guard to block the employee."}</p>
+                    {item.hasPendingReview && <button className="section-link" type="button" onClick={onOpenExceptions}>Open attendance reviews</button>}
                     {!item.hasPendingReview && canCorrectSessions && <>
                       {item.eventType === "break_start" && <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified break end time</span><input className="input" type="datetime-local" value={breakEndTimes[id] ?? ""} onChange={e => setBreakEndTimes(current => ({...current,[id]:e.target.value}))}/></label>}
                       <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified checkout time</span><input className="input" type="datetime-local" value={checkoutTimes[id] ?? ""} onChange={e => setCheckoutTimes(current => ({...current,[id]:e.target.value}))}/></label>
