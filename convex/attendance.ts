@@ -598,8 +598,14 @@ export const backfillMidnightCheckouts = internalMutation({
   handler: async (ctx, args) => {
     if (!args.employeeCode.trim() || args.workDates.length < 1 || args.workDates.length > 10) throw new Error("INVALID_BACKFILL_SCOPE");
     const employees = await ctx.db.query("employees").collect();
-    const matches = employees.filter(employee => employee.employeeCode === args.employeeCode.trim() && employee.status === "active");
-    if (matches.length !== 1) throw new Error("EMPLOYEE_NOT_FOUND_OR_AMBIGUOUS");
+    // Historical records can belong to recently inactive employees. Match by
+    // code across all statuses, then use their actual historical event scope.
+    const matches = employees.filter(employee =>
+      employee.employeeCode.trim().toUpperCase() === args.employeeCode.trim().toUpperCase()
+    );
+    if (matches.length !== 1) {
+      throw new Error(matches.length === 0 ? "EMPLOYEE_CODE_NOT_FOUND" : "EMPLOYEE_CODE_AMBIGUOUS");
+    }
     const employee = matches[0];
     const organization = await ctx.db.get(employee.organizationId);
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
@@ -624,7 +630,7 @@ export const backfillMidnightCheckouts = internalMutation({
       const refreshed = await refreshAttendanceDay(ctx, employee, organization, workDate);
       const overtimeRequestId = !refreshed.pending && !refreshed.incomplete ? await createDetectedOvertime(ctx, employee, organization, workDate, refreshed.events) : null;
       await ctx.db.insert("auditLogs", { organizationId: organization._id, action: "attendance.historical_midnight_checkout", entityType: "attendanceEvent", entityId: String(checkoutId), metadata: { employeeCode: employee.employeeCode, workDate, checkoutAt: dayEnd, overtimeRequestId: overtimeRequestId ? String(overtimeRequestId) : null, correction: true }, createdAt: Date.now() });
-      results.push({ workDate, status: "checked_out", overtimeMinutes: overtimeRequestId ? (await ctx.db.get(overtimeRequestId))?.requestedMinutes : 0 });
+      results.push({ workDate, status: "checked_out", overtimeMinutes: overtimeRequestId ? (await ctx.db.get(overtimeRequestId) as any)?.requestedMinutes ?? 0 : 0 });
     }
     return { employeeCode: employee.employeeCode, results };
   },
