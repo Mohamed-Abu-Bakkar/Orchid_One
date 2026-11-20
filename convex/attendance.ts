@@ -611,7 +611,7 @@ export const backfillMidnightCheckouts = internalMutation({
     if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
     const results: Array<{ workDate: string; status: string; overtimeMinutes?: number }> = [];
     for (const workDate of [...new Set(args.workDates)].sort()) {
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(workDate) || workDate >= getOrganizationWorkDate(Date.now(), organization.timezone)) throw new Error("INVALID_BACKFILL_DATE");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate) || Number.isNaN(Date.parse(`${workDate}T00:00:00.000Z`)) || new Date(`${workDate}T00:00:00.000Z`).toISOString().slice(0, 10) !== workDate || workDate >= getOrganizationWorkDate(Date.now(), organization.timezone)) throw new Error("INVALID_BACKFILL_DATE");
       const dayStart = localDateTimeUtc(workDate, 0, organization.timezone);
       const dayEnd = localDateTimeUtc(nextDate(workDate), 0, organization.timezone) - 1;
       const events = await ctx.db.query("attendanceEvents")
