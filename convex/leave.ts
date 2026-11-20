@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin, requireOrganizationAdmin, requireRole } from "./lib/auth";
+import { notifyEmployee } from "./lib/notifications";
 
 const validDate = (value: string): boolean => {
  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -128,6 +129,7 @@ export const decideRequest=mutation({args:{requestId:v.id("leaveRequests"),decis
  if(balance.pending<r.requestedDays)throw Error("LEAVE_PENDING_BALANCE_MISMATCH");
  await ctx.db.patch(balance._id,{pending:Math.max(0,balance.pending-r.requestedDays),used:balance.used+(a.decision==="approved"?days:0)});
  await ctx.db.patch(r._id,{status:a.decision,reviewedBy:u._id,reviewedAt:Date.now()});
+ await notifyEmployee(ctx,u.organizationId,r.employeeId,a.decision==="approved"?"Leave request approved":"Leave request rejected",`${type.name} · ${r.fromDate} to ${r.toDate}`);
  await audit(ctx,u,"leave.request."+a.decision,"leaveRequest",String(r._id),{requestedDays:days,note:a.note?.trim()??""});
  return {status:a.decision,workingDays:days};
 }});
