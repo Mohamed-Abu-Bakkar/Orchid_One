@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { requireIdentity } from "./lib/auth";
+import { notifyOrganizationAdmins, notifyEmployee } from "./lib/notifications";
 import { canChangeAccountStatus, canChangePrimarySuperadmin, canManageAccountRole } from "./lib/rolePolicy";
 
 export const myWorkspace = query({
@@ -219,6 +220,7 @@ export const submitMyLeaveRequest = mutation({
       daySelections: args.daySelections.slice().sort((a, b) => a.date.localeCompare(b.date)),
       reason, status: "pending", createdAt: now,
     });
+    await notifyOrganizationAdmins(ctx, user.organizationId, "New leave request", `${employee.firstName} ${employee.lastName ?? ""} · ${leaveType.name} · ${args.fromDate} to ${args.toDate}`.trim());
     await ctx.db.insert("auditLogs", {
       organizationId: user.organizationId, actorUserId: user._id, action: "leave.submitted",
       entityType: "leaveRequest", entityId: String(requestId),
