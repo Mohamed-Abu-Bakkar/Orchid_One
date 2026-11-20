@@ -206,8 +206,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
     </div>
 
     <div className="panel mt-4"><div className="panel-body row gap-3">
-      <ShieldAlert size={20}/><div><strong className="t-body-sm">Review geofence exceptions separately</strong><p className="t-caption text-tertiary">Outside-geofence punches remain recorded and require an authorized supervisor or admin decision.</p></div>
-      <button className="section-link" type="button" onClick={onOpenExceptions}>Open exception review</button>
+      <ShieldAlert size={20}/><div><strong className="t-body-sm">Review attendance exceptions</strong><p className="t-caption text-tertiary">Pending attendance events and outside-geofence punches remain recorded and require an authorized review decision.</p></div>
+      <button className="section-link" type="button" onClick={onOpenExceptions}>Open attendance reviews</button>
     </div></div>
   </section>;
 }
