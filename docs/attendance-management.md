@@ -57,8 +57,8 @@ Before enabling those calculations, confirm:
 
 ## Open-session blocker review and correction
 
-- The Attendance page exposes active employees whose latest non-rejected event before the current organization-local day is not a checkout.
-- This queue is distinct from pending geofence reviews and shows the exact event, employee, work date, timestamp and location that can block a new-day punch.
+- The Attendance page exposes the same punch blockers used by `recordPunch`: qualifying pending review events and active employees whose latest non-rejected event before the current organization-local day is not a checkout.
+- This queue is distinct from the geofence KPI and shows the exact blocking event, employee, work date, timestamp and location that can prevent another punch.
 - A pending event must be resolved through the attendance review workflow first; the session-correction action is disabled while any event on that workday remains pending.
 - Admin and Super Admin roles may append a verified historical checkout. Supervisors can view the blocker but cannot apply a correction.
 - If the latest event is an open break, the administrator must provide both the verified break-end time and checkout time.
