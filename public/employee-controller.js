@@ -782,7 +782,7 @@
           if (!wageRecords.length) empty(body, "No approved payslips are available yet.");
           wageRecords.forEach(record => {
             const card = document.createElement("article");
-            card.className = "bento-card";
+            card.className = "bento-card" + (item.readAt === undefined ? " border-primary/30 bg-surface-container-low" : "");
             const hasEarningsBreakdown = Array.isArray(record.earnings) || Array.isArray(record.calculationSnapshot?.earnings);
             const hasDeductionsBreakdown = Array.isArray(record.deductions) || Array.isArray(record.calculationSnapshot?.deductions);
             const earnings = Array.isArray(record.earnings) ? record.earnings : Array.isArray(record.calculationSnapshot?.earnings) ? record.calculationSnapshot.earnings : [];
@@ -866,6 +866,10 @@
       if (notificationList) {
         notificationList.replaceChildren();
         const notifications = workspace.notifications ?? [];
+        const unreadCount = notifications.filter(item => item.readAt === undefined).length;
+        text("#notifUnreadCount", unreadCount ? unreadCount + " unread updates" : "You’re all caught up");
+        const unreadDot = document.getElementById("notificationUnreadDot");
+        if (unreadDot) unreadDot.classList.toggle("hidden", unreadCount === 0);
         if (!notifications.length) empty(notificationList, "You have no notifications.");
         notifications.forEach(item => {
           const card = document.createElement("article");
@@ -879,7 +883,21 @@
           const time = document.createElement("p");
           time.className = "text-label-sm font-label-sm text-on-surface-variant mt-2";
           time.textContent = fmtDate(item.createdAt);
-          card.append(title, body, time);
+          const actions = document.createElement("div");
+          actions.className = "mt-3 flex items-center justify-between";
+          const status = document.createElement("span");
+          status.className = "text-[10px] font-semibold text-on-surface-variant";
+          status.textContent = item.readAt === undefined ? "UNREAD" : "READ";
+          actions.append(status);
+          if (item.readAt === undefined) {
+            const readButton = document.createElement("button");
+            readButton.type = "button";
+            readButton.className = "rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-semibold text-primary";
+            readButton.textContent = "Mark as read";
+            readButton.addEventListener("click", () => window.parent.postMessage({ type: "ORCHID_NOTIFICATION_ACTION", action: "mark-read", notificationId: item._id }, window.location.origin));
+            actions.append(readButton);
+          }
+          card.append(title, body, time, actions);
           notificationList.append(card);
         });
       }
