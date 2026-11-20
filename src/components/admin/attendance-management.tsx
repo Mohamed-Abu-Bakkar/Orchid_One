@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { Activity, CalendarDays, Clock3, Download, MapPin, Search, ShieldAlert } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, Clock3, Download, MapPin, Search, ShieldAlert } from "lucide-react";
 
 function localToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
@@ -35,6 +35,14 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
   const [employeeId, setEmployeeId] = useState("");
   const [search, setSearch] = useState("");
   const employees = useQuery(api.employee.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
+  const openSessions = useQuery(api.attendanceReview.openSessions, {});
+  const resolveOpenSession = useMutation(api.attendanceReview.resolveOpenSession);
+  const [checkoutTimes, setCheckoutTimes] = useState<Record<string, string>>({});
+  const [breakEndTimes, setBreakEndTimes] = useState<Record<string, string>>({});
+  const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
+  const [correctionBusy, setCorrectionBusy] = useState<string | null>(null);
+  const [correctionError, setCorrectionError] = useState("");
   const register = useQuery(api.attendance.adminRegister, fromDate && toDate && fromDate <= toDate
     ? { fromDate, toDate, employeeId: employeeId ? employeeId as any : undefined }
     : "skip");
@@ -47,7 +55,7 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
   if (employees === undefined) return <section className="sec"><p className="sub">Loading attendance filters…</p></section>;
 
   const timezone = register?.timezone ?? "Asia/Kolkata";
-  const invalidRange = !fromDate || !toDate || fromDate > toDate;
+  const invalidRange = !fromDate || !toDate || fromDate > toDate;\n  const canCorrectSessions = account?.role === "admin" || account?.role === "superadmin";\n\n  async function correctOpenSession(item: any) {\n    const id = String(item.employeeId);\n    const checkoutAt = checkoutTimes[id] ? new Date(checkoutTimes[id]).getTime() : NaN;\n    const breakEndAt = breakEndTimes[id] ? new Date(breakEndTimes[id]).getTime() : undefined;\n    const note = correctionNotes[id]?.trim() ?? "";\n    if (!Number.isFinite(checkoutAt) || note.length < 3 || (item.eventType === "break_start" && (!Number.isFinite(breakEndAt) || breakEndAt! >= checkoutAt))) {\n      setCorrectionError("Enter a verified checkout time, a valid break end time when required, and a correction note of at least 3 characters.");\n      return;\n    }\n    setCorrectionBusy(id); setCorrectionError("");\n    try {\n      await resolveOpenSession({\n        employeeId: item.employeeId,\n        expectedLastEventId: item.latestEventId,\n        checkoutAt,\n        breakEndAt: item.eventType === "break_start" ? breakEndAt : undefined,\n        note,\n      });\n      setCheckoutTimes(current => ({ ...current, [id]: "" }));\n      setBreakEndTimes(current => ({ ...current, [id]: "" }));\n      setCorrectionNotes(current => ({ ...current, [id]: "" }));\n    } catch (cause) {\n      setCorrectionError(cause instanceof Error ? cause.message : "Unable to correct the attendance session.");\n    } finally { setCorrectionBusy(null); }\n  }
   function exportCsv() {
     if (!register || rows.length === 0) return;
     const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
@@ -84,7 +92,7 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
         ["Attendance days", register?.recordedDays ?? "—"],
         ["Recorded events", register?.totalEvents ?? "—"],
         ["Pending reviews", register?.pendingReviews ?? "—"],
-        ["Outside geofence", register?.outsideGeofenceEvents ?? "—"],
+        ["Outside geofence", register?.outsideGeofenceEvents ?? "—"],\n        ["Open prior sessions", openSessions === undefined ? "—" : openSessions.length],
       ].map(([label, value]) => <div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}
     </div>
 
