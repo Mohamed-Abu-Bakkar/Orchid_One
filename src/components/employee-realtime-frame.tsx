@@ -23,6 +23,20 @@ export function EmployeeRealtimeFrame() {
     );
   }, [frameReady, workspace, policies, work]);
 
+  useEffect(() => {
+    const handleNotificationAction = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
+      const message = event.data;
+      if (message?.type !== "ORCHID_NOTIFICATION_ACTION") return;
+      if (message.action === "mark-read" && typeof message.notificationId === "string") {
+        void markNotificationRead({ notificationId: message.notificationId as any });
+      } else if (message.action === "mark-all-read") {
+        void markAllNotificationsRead({});
+      }
+    };
+    window.addEventListener("message", handleNotificationAction);
+    return () => window.removeEventListener("message", handleNotificationAction);
+  }, [markNotificationRead, markAllNotificationsRead]);
   return (
     <iframe
       ref={frameRef}
