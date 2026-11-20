@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin, requireRole, requireOrganizationAdmin } from "./lib/auth";
+import { calculateShiftWorkBuckets } from "./attendanceTimePolicy";
 
 const componentCategory = v.union(v.literal("earning"), v.literal("deduction"));
 const compensationLine = v.object({
@@ -323,16 +324,18 @@ export const submitHourlyReview = mutation({
     const events = await ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", start).lt("receivedAt", next)).collect();
     if (!events.length || events.some(event => event.reviewStatus === "pending")) throw new Error("ATTENDANCE_MISSING_OR_PENDING_REVIEW");
     events.sort((a,b) => a.receivedAt - b.receivedAt);
-    let openIn: number | null = null, openBreak: number | null = null, attendanceMs = 0, breakMs = 0;
-    for (const event of events) {
-      if (event.eventType === "check_in") { if (openIn !== null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); openIn = event.receivedAt; }
-      else if (event.eventType === "check_out") { if (openIn === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); attendanceMs += event.receivedAt - openIn; openIn = null; }
-      else if (event.eventType === "break_start") { if (openBreak !== null || openIn === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); openBreak = event.receivedAt; }
-      else if (event.eventType === "break_end") { if (openBreak === null) throw new Error("INVALID_ATTENDANCE_SEQUENCE"); breakMs += event.receivedAt - openBreak; openBreak = null; }
-    }
-    if (openIn !== null || openBreak !== null) throw new Error("INCOMPLETE_ATTENDANCE_SEQUENCE");
-    const recordedBreakMinutes = Math.floor(breakMs / 60000);
-    const recordedWorkMinutes = Math.max(0, Math.floor(attendanceMs / 60000) - recordedBreakMinutes);
+    const assignments = await ctx.db.query("shiftAssignments")
+      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", args.workDate)).collect();
+    const shiftId = assignments.length === 1 ? assignments[0].shiftId : assignments.length === 0 ? employee.defaultShiftId : null;
+    const shift = shiftId ? await ctx.db.get(shiftId) : null;
+    const validShift = shift && shift.organizationId === employee.organizationId && shift.isActive &&
+      shift.endMinute > shift.startMinute && shift.startMinute >= 0 && shift.endMinute <= 1440;
+    const shiftStartAt = validShift ? dateStartUtc(args.workDate, org.timezone) + (shift.startMinute * 60000) : undefined;
+    const shiftEndAt = validShift ? dateStartUtc(args.workDate, org.timezone) + (shift.endMinute * 60000) : undefined;
+    const buckets = calculateShiftWorkBuckets(events, shiftStartAt, shiftEndAt);
+    const recordedBreakMinutes = buckets.breakMinutes;
+    const recordedWorkMinutes = buckets.totalWorkMinutes - recordedBreakMinutes;
+    if (args.regularMinutes > buckets.regularMinutes) throw new Error("REGULAR_HOURS_EXCEED_SCHEDULED_SHIFT");
     if (args.regularMinutes > recordedWorkMinutes) throw new Error("PAYABLE_HOURS_EXCEED_RECORDED_WORK");
     const applicableRate = await ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).lte("effectiveFrom", args.workDate)).order("desc").first();
     if (!applicableRate || applicableRate.organizationId !== user.organizationId || applicableRate.employmentType !== "hourly" || (applicableRate.effectiveTo && applicableRate.effectiveTo < args.workDate)) throw new Error("HOURLY_RATE_NOT_CONFIGURED");
