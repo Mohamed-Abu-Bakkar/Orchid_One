@@ -261,7 +261,7 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 <div class="flex items-center gap-2">
 <button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2 relative" onclick="openNotifications()">
 <span class="material-symbols-outlined">notifications</span>
-<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E4572E] border border-surface"></span>
+<span id="notificationUnreadDot" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E4572E] border border-surface hidden"></span>
 </button>
 <button type="button" class="w-9 h-9 rounded-full border border-outline-variant/40 bg-surface-container-low text-primary flex items-center justify-center" aria-label="Profile"><span class="material-symbols-outlined">account_circle</span></button>
 </div>
@@ -773,10 +773,10 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 </button>
 <div class="flex flex-col">
 <span class="text-title-md font-title-md font-bold text-on-surface leading-tight">Notifications</span>
-<span class="text-label-sm font-label-sm text-on-surface-variant">3 new updates</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant" id="notifUnreadCount">Live updates</span>
 </div>
 </div>
-<button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="toast('All notifications marked as read')">
+<button class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2" onclick="window.parent.postMessage({type:'ORCHID_NOTIFICATION_ACTION',action:'mark-all-read'},window.location.origin)">
 <span class="material-symbols-outlined">done_all</span>
 </button>
 </header>
@@ -1219,7 +1219,7 @@ Submit Request
         function closeRequests() { goBack(); }
         function openPerformance() { goTo('analyticsScreen'); }
         function closePerformance() { goBack(); }
-        function openNotifications() { pushScreen('notifScreen'); renderNotifications('all'); }
+        function openNotifications() { pushScreen('notifScreen'); renderNotifications(); }
         function closeNotifications() { goBack(); }
         function openNewRequest() { pushScreen('newReqScreen'); window.prepareNewRequest?.(); }
         function closeNewRequest() { goBack(); }
@@ -1324,39 +1324,9 @@ Submit Request
             document.getElementById('pdCheckIcon').textContent = 'verified';
             toast('Confirmation recorded — thanks for reading!');
         }
-        const NOTIFICATIONS_DATA = [
-            { type: 'leave', icon: 'event_available', title: 'Leave approved', body: 'Your Casual Leave (19–20 Aug) has been approved.', time: '10 min ago', cat: 'leave' },
-            { type: 'wage', icon: 'payments', title: 'Weekly wage released', body: '₹5,475 for Week 33 has been credited to your account.', time: '2 hrs ago', cat: 'wage' },
-            { type: 'overtime', icon: 'schedule', title: 'Overtime request approved', body: 'Your 2 hrs overtime on 16 Aug was approved.', time: '5 hrs ago', cat: 'overtime' },
-            { type: 'attendance', icon: 'fingerprint', title: 'Check-in reminder', body: 'Don\'t forget to check in today before 10:00 AM.', time: 'Yesterday', cat: 'announcement' },
-            { type: 'announcement', icon: 'celebration', title: 'Independence Day holiday', body: 'Office closed 15 August on account of Independence Day.', time: 'Yesterday', cat: 'announcement' },
-            { type: 'system', icon: 'settings', title: 'Geofence updated', body: 'The attendance area for the main campus was widened by 200 m.', time: '2 days ago', cat: 'announcement' },
-            { type: 'birthday', icon: 'cake', title: 'Birthday wishes', body: 'Meena S turns 31 today. Send your wishes!', time: 'Today', cat: 'announcement' }
-        ];
-        function renderNotifications(cat) {
-            const tabs = document.querySelectorAll('#notifTabs button');
-            tabs.forEach(t => {
-                t.classList.toggle('text-primary', t.dataset.nt === cat);
-                t.classList.toggle('bg-surface', t.dataset.nt === cat);
-                t.classList.toggle('shadow-sm', t.dataset.nt === cat);
-                t.classList.toggle('text-on-surface-variant', t.dataset.nt !== cat);
-                t.onclick = () => renderNotifications(t.dataset.nt);
-            });
-            const icons = { event_available: 'event_available', payments: 'payments', schedule: 'schedule', fingerprint: 'fingerprint', celebration: 'celebration', settings: 'settings', cake: 'cake' };
-            const colors = { leave: 'bg-secondary-fixed text-secondary', wage: 'bg-[#e6f4ea] text-[#1E8E4E]', overtime: 'bg-[#fdf1e1] text-[#B26A00]', attendance: 'bg-[#e6f4ea] text-[#1E8E4E]', announcement: 'bg-surface-container-highest text-on-surface-variant', system: 'bg-surface-container-highest text-on-surface-variant', birthday: 'bg-[#fde8e8] text-[#B3261E]' };
-            const list = cat === 'all' ? NOTIFICATIONS_DATA : NOTIFICATIONS_DATA.filter(n => n.cat === cat);
-            document.getElementById('notifList').innerHTML = list.map((n, i) => `
-                <div class="flex items-start gap-3 p-3 ${i < 3 ? 'bg-surface-container-low' : 'bg-surface'} rounded-lg border ${i < 3 ? 'border-primary/10' : 'border-outline-variant/50'}">
-                    <div class="w-10 h-10 rounded-full ${colors[n.type]} flex items-center justify-center flex-shrink-0">
-                        <span class="material-symbols-outlined text-[20px]">${icons[n.icon]}</span>
-                    </div>
-                    <div class="flex flex-col flex-1 min-w-0">
-                        <p class="text-body-md font-body-md font-semibold text-on-surface">${n.title}</p>
-                        <p class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">${n.body}</p>
-                        <p class="text-[10px] text-on-surface-variant mt-1 font-tabular-nums">${n.time}</p>
-                    </div>
-                    ${i < 3 ? '<span class="w-2 h-2 rounded-full bg-[#E4572E] flex-shrink-0 mt-1"></span>' : ''}
-                </div>`).join('') || '<p class="text-body-md font-body-md text-on-surface-variant text-center py-8">No notifications in this category.</p>';
+        function renderNotifications() {
+            const list = document.getElementById('notifList');
+            if (list) list.innerHTML = '<p class="text-body-md font-body-md text-on-surface-variant text-center py-8">Loading your notifications…</p>';
         }
         function submitNewRequest() {
             toast('Employee request submission is not available yet.');

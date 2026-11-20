@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 
 export function EmployeeRealtimeFrame() {
@@ -11,6 +11,8 @@ export function EmployeeRealtimeFrame() {
   const policies = useQuery(api.policies.listPublishedForEmployee, {});
   const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const work = useQuery(api.teamsWork.myWorkDashboard, { workDate });
+  const markNotificationRead = useMutation(api.notifications.markRead);
+  const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
 
   useEffect(() => {
     if (!frameReady || workspace === undefined || policies === undefined || work === undefined) return;
@@ -20,6 +22,20 @@ export function EmployeeRealtimeFrame() {
     );
   }, [frameReady, workspace, policies, work]);
 
+  useEffect(() => {
+    const handleNotificationAction = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
+      const message = event.data;
+      if (message?.type !== "ORCHID_NOTIFICATION_ACTION") return;
+      if (message.action === "mark-read" && typeof message.notificationId === "string") {
+        void markNotificationRead({ notificationId: message.notificationId as any });
+      } else if (message.action === "mark-all-read") {
+        void markAllNotificationsRead({});
+      }
+    };
+    window.addEventListener("message", handleNotificationAction);
+    return () => window.removeEventListener("message", handleNotificationAction);
+  }, [markNotificationRead, markAllNotificationsRead]);
   return (
     <iframe
       ref={frameRef}
