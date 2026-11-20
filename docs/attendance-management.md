@@ -8,7 +8,7 @@ The admin Attendance page reads attendance records from the organization's Conve
 - Optional employee filter and text search.
 - Employee/day grouping based on the organization's configured timezone.
 - Existing persisted `attendanceDays` summaries are included, including their stored status, payable minutes, break minutes and correction note. These are displayed as stored; this module does not recalculate them.
-- Actual check-in, check-out, break-start and break-end event history.
+- Actual check-in, check-out, break-start and break-end event history, including system-generated correction markers and audit reasons.
 - First recorded check-in and last recorded check-out timestamps.
 - Scheduled date-specific shifts where present.
 - Geofence pass/fail and pending/rejected review counts.
@@ -53,3 +53,28 @@ Before enabling those calculations, confirm:
 - Supervisor and superadmin: may view the organization register; employee role cannot.
 - CSV: exports the currently filtered rows and uses proper CSV quoting.
 - Persisted `attendanceDays` with no punch events: still appear as a stored daily summary.
+
+
+## Open-session blocker review and correction
+
+- The Attendance page exposes the same punch blockers used by `recordPunch`: qualifying pending review events and active employees whose latest non-rejected event before the current organization-local day is not a checkout.
+- This queue is distinct from the geofence KPI and shows the exact blocking event, employee, work date, timestamp and location that can prevent another punch.
+- A pending event must be resolved through the attendance review workflow first; the session-correction action is disabled while any event on that workday remains pending.
+- Admin and Super Admin roles may append a verified historical checkout. Supervisors can view the blocker but cannot apply a correction.
+- If the latest event is an open break, the administrator must provide both the verified break-end time and checkout time.
+- Corrections append system-generated attendance events and an audit log. Existing source events are never edited or deleted.
+- Checkout time must be in the same organization-local workday, after the last recorded event and no later than the current time. The mutation rechecks the latest event to prevent stale or concurrent corrections.
+- Attendance-day summaries are recalculated using the existing shift work-bucket policy.
+- The administrator must provide a reason and use a time verified with the employee or an authorized attendance record. The UI does not guess a checkout time.
+
+## Additional QA
+
+- A previous-day check-in with no checkout appears in the open-session panel.
+- A previous-day session whose latest non-rejected event is checkout does not appear.
+- Pending reviews are shown as blockers but cannot be bypassed by the correction action.
+- A supervisor can inspect open sessions but cannot submit corrections.
+- An admin can correct a check-in or break-end session using a verified checkout time.
+- An open break requires a verified break-end time earlier than checkout.
+- Times outside the original organization-local workday, before the last event, or in the future are rejected.
+- A stale event ID is rejected if another punch or correction changed the session after the panel loaded.
+- Correction creates immutable system-generated event(s), recalculates the day using shift policy, and writes an audit log.

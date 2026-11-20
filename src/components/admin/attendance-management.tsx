@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { Activity, CalendarDays, Clock3, Download, MapPin, Search, ShieldAlert } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, Clock3, Download, MapPin, Search, ShieldAlert } from "lucide-react";
 
 function localToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
@@ -27,6 +27,27 @@ function stamp(value: number, timeZone: string) {
   }).format(new Date(value));
 }
 
+function dateTimeInputInZone(value: string, timeZone: string) {
+  const [date, time] = value.split("T");
+  if (!date || !time) return NaN;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const target = Date.UTC(year, month - 1, day, hour, minute);
+  let guess = target;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date(guess));
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    const represented = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute));
+    const difference = represented - target;
+    if (!difference) break;
+    guess -= difference;
+  }
+  return guess;
+}
+
 
 export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: () => void }) {
   const today = localToday();
@@ -35,6 +56,14 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
   const [employeeId, setEmployeeId] = useState("");
   const [search, setSearch] = useState("");
   const employees = useQuery(api.employee.listForAdmin, {});
+  const account = useQuery(api.account.getMyAccountStatus, {});
+  const openSessions = useQuery(api.attendanceReview.openSessions, {});
+  const resolveOpenSession = useMutation(api.attendanceReview.resolveOpenSession);
+  const [checkoutTimes, setCheckoutTimes] = useState<Record<string, string>>({});
+  const [breakEndTimes, setBreakEndTimes] = useState<Record<string, string>>({});
+  const [correctionNotes, setCorrectionNotes] = useState<Record<string, string>>({});
+  const [correctionBusy, setCorrectionBusy] = useState<string | null>(null);
+  const [correctionError, setCorrectionError] = useState("");
   const register = useQuery(api.attendance.adminRegister, fromDate && toDate && fromDate <= toDate
     ? { fromDate, toDate, employeeId: employeeId ? employeeId as any : undefined }
     : "skip");
@@ -48,6 +77,33 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
 
   const timezone = register?.timezone ?? "Asia/Kolkata";
   const invalidRange = !fromDate || !toDate || fromDate > toDate;
+  const canCorrectSessions = account?.role === "admin" || account?.role === "superadmin";
+
+  async function correctOpenSession(item: any) {
+    const id = String(item.employeeId);
+    const checkoutAt = checkoutTimes[id] ? dateTimeInputInZone(checkoutTimes[id], timezone) : NaN;
+    const breakEndAt = breakEndTimes[id] ? dateTimeInputInZone(breakEndTimes[id], timezone) : undefined;
+    const note = correctionNotes[id]?.trim() ?? "";
+    if (!Number.isFinite(checkoutAt) || note.length < 3 || (item.eventType === "break_start" && (!Number.isFinite(breakEndAt) || breakEndAt! >= checkoutAt))) {
+      setCorrectionError("Enter a verified checkout time, a valid break end time when required, and a correction note of at least 3 characters.");
+      return;
+    }
+    setCorrectionBusy(id); setCorrectionError("");
+    try {
+      await resolveOpenSession({
+        employeeId: item.employeeId,
+        expectedLastEventId: item.latestEventId,
+        checkoutAt,
+        breakEndAt: item.eventType === "break_start" ? breakEndAt : undefined,
+        note,
+      });
+      setCheckoutTimes(current => ({ ...current, [id]: "" }));
+      setBreakEndTimes(current => ({ ...current, [id]: "" }));
+      setCorrectionNotes(current => ({ ...current, [id]: "" }));
+    } catch (cause) {
+      setCorrectionError(cause instanceof Error ? cause.message : "Unable to correct the attendance session.");
+    } finally { setCorrectionBusy(null); }
+  }
   function exportCsv() {
     if (!register || rows.length === 0) return;
     const quote = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
@@ -88,6 +144,47 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
       ].map(([label, value]) => <div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}
     </div>
 
+
+    <div className="panel mt-4">
+      <div className="panel-head">
+        <div><h3 className="t-h3">Attendance punch blockers</h3><p className="t-caption text-tertiary">Unresolved pending events and previous-workday sessions that currently prevent another employee punch. Separate from geofence totals.</p></div>
+        <span className="badge badge-warning">{openSessions?.length ?? "—"} blocking</span>
+      </div>
+      <div className="panel-body">
+        {openSessions === undefined ? <p className="sub">Checking previous attendance sessions…</p>
+          : openSessions.length === 0 ? <div className="empty-state"><CheckCircle2 size={24}/><strong>No attendance punch blockers</strong><p className="t-body-sm text-secondary">No unresolved attendance event or previous session is currently blocking a new-day punch.</p></div>
+          : <>
+            {correctionError && <p className="form-error" role="alert" style={{marginBottom:14}}>{correctionError}</p>}
+            <div className="grid-2-equal">
+              {openSessions.map((item: any) => {
+                const id = String(item.employeeId);
+                return <article className="panel" key={item.latestEventId}>
+                  <div className="panel-head">
+                    <div><strong>{item.employeeName}</strong><p className="t-caption text-tertiary">{item.employeeCode} · {item.workDate}</p></div>
+                    <span className="badge badge-warning">{item.hasPendingReview ? "Review pending" : "Checkout missing"}</span>
+                  </div>
+                  <div className="panel-body">
+                    <p className="t-body-sm"><strong>Last event:</strong> {item.eventType.replace("_", " ")} · {stamp(item.receivedAt, timezone)}</p>
+                    <p className="t-body-sm"><strong>Location:</strong> {item.locationName} · {item.locationType}</p>
+                    <p className="t-caption text-tertiary">{item.hasPendingReview
+                      ? "This unresolved event is included in the employee punch blocker. Resolve it before correcting or continuing the session."
+                      : "This is the exact previous-day event that causes the next-day punch guard to block the employee."}</p>
+                    {item.hasPendingReview && <button className="section-link" type="button" onClick={onOpenExceptions}>Open attendance reviews</button>}
+                    {!item.hasPendingReview && canCorrectSessions && <>
+                      {item.eventType === "break_start" && <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified break end time · {timezone}</span><input className="input" type="datetime-local" value={breakEndTimes[id] ?? ""} onChange={e => setBreakEndTimes(current => ({...current,[id]:e.target.value}))}/></label>}
+                      <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified checkout time · {timezone}</span><input className="input" type="datetime-local" value={checkoutTimes[id] ?? ""} onChange={e => setCheckoutTimes(current => ({...current,[id]:e.target.value}))}/></label>
+                      <label className="policy-field" style={{display:"block",marginTop:12}}><span>Correction reason</span><textarea className="input" rows={2} value={correctionNotes[id] ?? ""} onChange={e => setCorrectionNotes(current => ({...current,[id]:e.target.value}))} placeholder="Record the source used to verify the checkout time"/></label>
+                      <p className="t-caption text-tertiary">Only enter a time verified by the employee or an authorized attendance record. The original punches remain unchanged; the correction is audited.</p>
+                      <button className="btn btn-primary" type="button" disabled={correctionBusy !== null} onClick={() => void correctOpenSession(item)}>{correctionBusy === id ? "Saving correction…" : "Record verified checkout"}</button>
+                    </>}
+                    {!item.hasPendingReview && !canCorrectSessions && <p className="t-caption text-tertiary">An Admin or Super Admin must record the verified checkout correction.</p>}
+                  </div>
+                </article>;
+              })}
+            </div>
+          </>}
+      </div>
+    </div>
     <div className="panel">
       <div className="employee-directory-toolbar">
         <label className="policy-field"><span>From date</span><input className="input" type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)}/></label>
@@ -119,9 +216,11 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
                   <td>{row.outsideGeofenceEvents ? <span className="badge badge-warning"><MapPin size={12}/> {row.outsideGeofenceEvents} exception(s)</span> : <span className="badge badge-success">Passed</span>}</td>
                   <td>{row.pendingReviews ? <span className="badge badge-warning">{row.pendingReviews} pending</span> : row.rejectedEvents ? <span className="badge badge-warning">{row.rejectedEvents} rejected</span> : <span className="badge badge-neutral">{row.status === "present" ? "Recorded" : "Events only"}</span>}</td>
                   <td><details><summary className="section-link">Event history</summary><div className="attendance-event-history">{row.events.map((event: any) => <div className="attendance-event-row" key={event._id}>
-                    <div><strong>{event.eventType.replace("_", " ")}</strong><small>{stamp(event.receivedAt, timezone)}</small></div>
+                    <div><strong>{event.eventType.replace("_", " ")}</strong><small>{stamp(event.receivedAt, timezone)}</small>{event.systemGenerated && <span className="badge badge-neutral">System generated</span>}</div>
                     <span className={"badge "+(event.locationType === "remote" || event.geofencePassed === true ? "badge-success" : "badge-warning")}>{event.locationType === "remote" ? "Remote · no geofence" : event.geofencePassed ? "Inside geofence" : event.reviewStatus.replace("_", " ")}</span>
                     <small>{event.locationName} · {event.accuracyM != null ? `GPS ±${Math.round(event.accuracyM)}m` : "GPS unavailable"}</small>
+                    {event.systemGeneratedReason && <small>Correction: {event.systemGeneratedReason}</small>}
+                    {event.reviewNote && <small>Review note: {event.reviewNote}</small>}
                   </div>)}</div></details></td>
                 </tr>)}</tbody>
               </table></div>}
@@ -130,8 +229,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
     </div>
 
     <div className="panel mt-4"><div className="panel-body row gap-3">
-      <ShieldAlert size={20}/><div><strong className="t-body-sm">Review geofence exceptions separately</strong><p className="t-caption text-tertiary">Outside-geofence punches remain recorded and require an authorized supervisor or admin decision.</p></div>
-      <button className="section-link" type="button" onClick={onOpenExceptions}>Open exception review</button>
+      <ShieldAlert size={20}/><div><strong className="t-body-sm">Review attendance exceptions</strong><p className="t-caption text-tertiary">Pending attendance events and outside-geofence punches remain recorded and require an authorized review decision.</p></div>
+      <button className="section-link" type="button" onClick={onOpenExceptions}>Open attendance reviews</button>
     </div></div>
   </section>;
 }
