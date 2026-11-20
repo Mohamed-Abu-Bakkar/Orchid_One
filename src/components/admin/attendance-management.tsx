@@ -92,10 +92,50 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
         ["Attendance days", register?.recordedDays ?? "—"],
         ["Recorded events", register?.totalEvents ?? "—"],
         ["Pending reviews", register?.pendingReviews ?? "—"],
-        ["Outside geofence", register?.outsideGeofenceEvents ?? "—"],\n        ["Open prior sessions", openSessions === undefined ? "—" : openSessions.length],
+        ["Outside geofence", register?.outsideGeofenceEvents ?? "—"],
       ].map(([label, value]) => <div className="kpi card" key={label}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}
     </div>
 
+
+    <div className="panel mt-4">
+      <div className="panel-head">
+        <div><h3 className="t-h3">Open attendance sessions</h3><p className="t-caption text-tertiary">Previous workday sessions without a recorded checkout. These are separate from geofence review counts.</p></div>
+        <span className="badge badge-warning">{openSessions?.length ?? "—"} blocking</span>
+      </div>
+      <div className="panel-body">
+        {openSessions === undefined ? <p className="sub">Checking previous attendance sessions…</p>
+          : openSessions.length === 0 ? <div className="empty-state"><CheckCircle2 size={24}/><strong>No open previous-day sessions</strong><p className="t-body-sm text-secondary">No previous attendance session is currently blocking a new-day punch.</p></div>
+          : <>
+            {correctionError && <p className="form-error" role="alert" style={{marginBottom:14}}>{correctionError}</p>}
+            <div className="grid-2-equal">
+              {openSessions.map((item: any) => {
+                const id = String(item.employeeId);
+                return <article className="panel" key={item.latestEventId}>
+                  <div className="panel-head">
+                    <div><strong>{item.employeeName}</strong><p className="t-caption text-tertiary">{item.employeeCode} · {item.workDate}</p></div>
+                    <span className="badge badge-warning">{item.hasPendingReview ? "Review pending" : "Checkout missing"}</span>
+                  </div>
+                  <div className="panel-body">
+                    <p className="t-body-sm"><strong>Last event:</strong> {item.eventType.replace("_", " ")} · {stamp(item.receivedAt, timezone)}</p>
+                    <p className="t-body-sm"><strong>Location:</strong> {item.locationName} · {item.locationType}</p>
+                    <p className="t-caption text-tertiary">{item.hasPendingReview
+                      ? "Resolve the pending event in Attendance Reviews before correcting this session."
+                      : "This is the exact previous-day event that causes the next-day punch guard to block the employee."}</p>
+                    {!item.hasPendingReview && canCorrectSessions && <>
+                      {item.eventType === "break_start" && <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified break end time</span><input className="input" type="datetime-local" value={breakEndTimes[id] ?? ""} onChange={e => setBreakEndTimes(current => ({...current,[id]:e.target.value}))}/></label>}
+                      <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified checkout time</span><input className="input" type="datetime-local" value={checkoutTimes[id] ?? ""} onChange={e => setCheckoutTimes(current => ({...current,[id]:e.target.value}))}/></label>
+                      <label className="policy-field" style={{display:"block",marginTop:12}}><span>Correction reason</span><textarea className="input" rows={2} value={correctionNotes[id] ?? ""} onChange={e => setCorrectionNotes(current => ({...current,[id]:e.target.value}))} placeholder="Record the source used to verify the checkout time"/></label>
+                      <p className="t-caption text-tertiary">Only enter a time verified by the employee or an authorized attendance record. The original punches remain unchanged; the correction is audited.</p>
+                      <button className="btn btn-primary" type="button" disabled={correctionBusy !== null} onClick={() => void correctOpenSession(item)}>{correctionBusy === id ? "Saving correction…" : "Record verified checkout"}</button>
+                    </>}
+                    {!item.hasPendingReview && !canCorrectSessions && <p className="t-caption text-tertiary">An Admin or Super Admin must record the verified checkout correction.</p>}
+                  </div>
+                </article>;
+              })}
+            </div>
+          </>}
+      </div>
+    </div>
     <div className="panel">
       <div className="employee-directory-toolbar">
         <label className="policy-field"><span>From date</span><input className="input" type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)}/></label>
