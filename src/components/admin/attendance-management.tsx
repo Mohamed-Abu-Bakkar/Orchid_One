@@ -27,6 +27,27 @@ function stamp(value: number, timeZone: string) {
   }).format(new Date(value));
 }
 
+function dateTimeInputInZone(value: string, timeZone: string) {
+  const [date, time] = value.split("T");
+  if (!date || !time) return NaN;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const target = Date.UTC(year, month - 1, day, hour, minute);
+  let guess = target;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date(guess));
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    const represented = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute));
+    const difference = represented - target;
+    if (!difference) break;
+    guess -= difference;
+  }
+  return guess;
+}
+
 
 export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: () => void }) {
   const today = localToday();
@@ -60,8 +81,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
 
   async function correctOpenSession(item: any) {
     const id = String(item.employeeId);
-    const checkoutAt = checkoutTimes[id] ? new Date(checkoutTimes[id]).getTime() : NaN;
-    const breakEndAt = breakEndTimes[id] ? new Date(breakEndTimes[id]).getTime() : undefined;
+    const checkoutAt = checkoutTimes[id] ? dateTimeInputInZone(checkoutTimes[id], timezone) : NaN;
+    const breakEndAt = breakEndTimes[id] ? dateTimeInputInZone(breakEndTimes[id], timezone) : undefined;
     const note = correctionNotes[id]?.trim() ?? "";
     if (!Number.isFinite(checkoutAt) || note.length < 3 || (item.eventType === "break_start" && (!Number.isFinite(breakEndAt) || breakEndAt! >= checkoutAt))) {
       setCorrectionError("Enter a verified checkout time, a valid break end time when required, and a correction note of at least 3 characters.");
@@ -150,8 +171,8 @@ export function AttendanceManagement({ onOpenExceptions }: { onOpenExceptions: (
                       : "This is the exact previous-day event that causes the next-day punch guard to block the employee."}</p>
                     {item.hasPendingReview && <button className="section-link" type="button" onClick={onOpenExceptions}>Open attendance reviews</button>}
                     {!item.hasPendingReview && canCorrectSessions && <>
-                      {item.eventType === "break_start" && <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified break end time</span><input className="input" type="datetime-local" value={breakEndTimes[id] ?? ""} onChange={e => setBreakEndTimes(current => ({...current,[id]:e.target.value}))}/></label>}
-                      <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified checkout time</span><input className="input" type="datetime-local" value={checkoutTimes[id] ?? ""} onChange={e => setCheckoutTimes(current => ({...current,[id]:e.target.value}))}/></label>
+                      {item.eventType === "break_start" && <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified break end time · {timezone}</span><input className="input" type="datetime-local" value={breakEndTimes[id] ?? ""} onChange={e => setBreakEndTimes(current => ({...current,[id]:e.target.value}))}/></label>}
+                      <label className="policy-field" style={{display:"block",marginTop:12}}><span>Verified checkout time · {timezone}</span><input className="input" type="datetime-local" value={checkoutTimes[id] ?? ""} onChange={e => setCheckoutTimes(current => ({...current,[id]:e.target.value}))}/></label>
                       <label className="policy-field" style={{display:"block",marginTop:12}}><span>Correction reason</span><textarea className="input" rows={2} value={correctionNotes[id] ?? ""} onChange={e => setCorrectionNotes(current => ({...current,[id]:e.target.value}))} placeholder="Record the source used to verify the checkout time"/></label>
                       <p className="t-caption text-tertiary">Only enter a time verified by the employee or an authorized attendance record. The original punches remain unchanged; the correction is audited.</p>
                       <button className="btn btn-primary" type="button" disabled={correctionBusy !== null} onClick={() => void correctOpenSession(item)}>{correctionBusy === id ? "Saving correction…" : "Record verified checkout"}</button>
