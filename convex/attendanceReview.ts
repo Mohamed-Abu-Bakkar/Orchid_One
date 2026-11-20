@@ -199,6 +199,15 @@ export const resolveOpenSession = mutation({
     if (!latest || latest._id !== args.expectedLastEventId) throw new Error("ATTENDANCE_SESSION_CHANGED_REFRESH");
     if (latest.organizationId !== reviewer.organizationId || latest.eventType === "check_out") throw new Error("ATTENDANCE_SESSION_ALREADY_CLOSED");
 
+    const pendingEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_review_time", q => q.eq("employeeId", employee._id).eq("reviewStatus", "pending"))
+      .collect();
+    const blockingPending = pendingEvents.some(event => {
+      const eventDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(event.receivedAt));
+      return eventDate === today || event.eventType !== "check_out";
+    });
+    if (blockingPending) throw new Error("ATTENDANCE_REVIEW_MUST_BE_RESOLVED_FIRST");
+
     const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(latest.receivedAt));
     const dayStart = localDateTimeUtc(workDate, 0, organization.timezone);
     const dayEnd = localDateTimeUtc(workDate, 1440, organization.timezone);
