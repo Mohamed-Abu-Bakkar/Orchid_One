@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
+import { requireIdentity, requireMuhurthamManager } from "./lib/auth";
 
 const timing = v.object({ startTime: v.string(), endTime: v.string() });
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -20,7 +20,7 @@ function validate(args: { date: string; timings: { startTime: string; endTime: s
 export const listForAdmin = query({
   args: { fromDate: v.string(), toDate: v.string() },
   handler: async (ctx, args) => {
-    const admin = await requireOrganizationAdmin(ctx);
+    const admin = await requireMuhurthamManager(ctx);
     if (!datePattern.test(args.fromDate) || !datePattern.test(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_DATE_RANGE");
     return ctx.db.query("muhurthamDates")
       .withIndex("by_org_date", q => q.eq("organizationId", admin.organizationId).gte("date", args.fromDate).lte("date", args.toDate))
@@ -51,7 +51,7 @@ export const save = mutation({
     dateId: v.optional(v.id("muhurthamDates")),
   },
   handler: async (ctx, args) => {
-    const admin = await requireOrganizationAdmin(ctx);
+    const admin = await requireMuhurthamManager(ctx);
     validate(args);
     const tamilMonth = args.tamilMonth?.trim() || undefined;
     const tamilDay = args.tamilDay?.trim() || undefined;
@@ -77,7 +77,7 @@ export const save = mutation({
 export const remove = mutation({
   args: { dateId: v.id("muhurthamDates") },
   handler: async (ctx, { dateId }) => {
-    const admin = await requireOrganizationAdmin(ctx);
+    const admin = await requireMuhurthamManager(ctx);
     const record = await ctx.db.get(dateId);
     if (!record || record.organizationId !== admin.organizationId) throw new Error("MUHURTHAM_NOT_FOUND");
     await ctx.db.delete(dateId);

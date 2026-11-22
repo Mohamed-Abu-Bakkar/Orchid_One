@@ -32,6 +32,11 @@ export async function requireOrganizationAdmin(ctx: QueryCtx | MutationCtx) {
   return requireRole(ctx, ["superadmin", "admin"]);
 }
 
+/** Muhurtham calendar management is delegated to supervisors as well as admins. */
+export async function requireMuhurthamManager(ctx: QueryCtx | MutationCtx) {
+  return requireRole(ctx, ["superadmin", "admin", "supervisor"]);
+}
+
 /** Platform-owner-only access. Never grant this implicitly to organization admins. */
 export async function requireSuperadmin(ctx: QueryCtx | MutationCtx) {
   return requireRole(ctx, ["superadmin"]);
