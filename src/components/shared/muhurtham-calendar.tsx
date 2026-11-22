@@ -48,7 +48,7 @@ export function AdminMuhurthamCalendar() {
   const deleteRecord = async (item: RecordItem) => { if (!window.confirm("Delete this Muhurtham entry? This cannot be undone.")) return; try { await remove({ dateId: item._id as any }); setSelected(""); setEditing(null); } catch { setError("Unable to delete this entry."); } };
   return <section className="sec muhurtham-calendar">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Tamil Muhurtham Calendar</h2><p className="sub">Manage auspicious dates and their timings for Orchid Flowers.</p></div><div className="page-actions"><button className="btn btn-primary" onClick={() => openNew(selected || new Date().toISOString().slice(0,10))}>+ Add Muhurtham</button></div></div>
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)] gap-5">
+    <div className="muhurtham-admin-grid">
       <div className="panel p-4">
         <div className="flex items-center justify-between gap-3 mb-4"><button className="btn btn-outline" onClick={() => setCursor(new Date(year,month-1,1))}>Previous</button><h3 className="t-h3">{monthLabel(year,month)}</h3><button className="btn btn-outline" onClick={() => setCursor(new Date(year,month+1,1))}>Next</button></div>
         <div className="grid grid-cols-7 gap-1 text-center mb-2">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(day=><span key={day} className="text-xs text-secondary font-semibold py-2">{day}</span>)}</div>
