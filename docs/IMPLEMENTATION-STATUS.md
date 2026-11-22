@@ -61,3 +61,5 @@ The `admin` role currently has the same application permissions as `superadmin`.
 - Added the Tamil Calendar screen to the admin navigation and a protected employee calendar route linked from the active legacy employee home screen.
 - Both panels read the same Convex records. No astrology API or third-party service is used. Calendar dates/timings are manually entered and must be verified by Orchid Flowers.
 - Verification limitation: source changes were committed to `main`, but build, typecheck, Convex schema deployment and browser tests have not been run from this environment. The feature is not production-verified until those checks and Convex deployment are completed.
+
+- Release authorization: production deployment commit requested on 2026-11-22; release trigger commit follows the completed Muhurtham calendar source commits.
