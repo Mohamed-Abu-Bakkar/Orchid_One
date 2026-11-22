@@ -1,1 +1,72 @@
 .muhurtham-calendar .grid{display:grid}.muhurtham-calendar .grid-cols-7{grid-template-columns:repeat(7,minmax(0,1fr))}.muhurtham-calendar .grid-cols-1{grid-template-columns:1fr}.muhurtham-calendar .gap-1{gap:4px}.muhurtham-calendar .gap-2{gap:8px}.muhurtham-calendar .gap-3{gap:12px}.muhurtham-calendar .gap-4{gap:16px}.muhurtham-calendar .gap-5{gap:20px}.muhurtham-calendar .flex{display:flex}.muhurtham-calendar .flex-col{flex-direction:column}.muhurtham-calendar .flex-wrap{flex-wrap:wrap}.muhurtham-calendar .flex-1{flex:1}.muhurtham-calendar .items-center{align-items:center}.muhurtham-calendar .items-end{align-items:flex-end}.muhurtham-calendar .justify-between{justify-content:space-between}.muhurtham-calendar .justify-end{justify-content:flex-end}.muhurtham-calendar .text-center{text-align:center}.muhurtham-calendar .text-left{text-align:left}.muhurtham-calendar .whitespace-pre-wrap{white-space:pre-wrap}.muhurtham-calendar .min-h-14{min-height:56px}.muhurtham-calendar .min-h-16{min-height:64px}.muhurtham-calendar .min-h-20{min-height:80px}.muhurtham-calendar .mb-2{margin-bottom:8px}.muhurtham-calendar .mb-3{margin-bottom:12px}.muhurtham-calendar .mb-4{margin-bottom:16px}.muhurtham-calendar .mt-3{margin-top:12px}.muhurtham-calendar .mt-4{margin-top:16px}.muhurtham-calendar .mt-5{margin-top:20px}.muhurtham-calendar .p-1{padding:4px}.muhurtham-calendar .p-4{padding:16px}.muhurtham-calendar .py-1{padding-top:4px;padding-bottom:4px}.muhurtham-calendar .py-2{padding-top:8px;padding-bottom:8px}.muhurtham-calendar .py-0\.5{padding-top:2px;padding-bottom:2px}.muhurtham-calendar .px-1\.5{padding-left:6px;padding-right:6px}.muhurtham-calendar .rounded-lg{border-radius:10px}.muhurtham-calendar .rounded-full{border-radius:999px}.muhurtham-calendar .border{border:1px solid var(--outline-variant,#d1c2ce)}.muhurtham-calendar .border-primary{border-color:var(--primary,#4a1254)}.muhurtham-calendar .border-green-300{border-color:#86efac}.muhurtham-calendar .border-outline-variant\/50{border-color:#d1c2ce80}.muhurtham-calendar .bg-secondary-fixed{background:#f2daff}.muhurtham-calendar .bg-green-50{background:#f0fdf4}.muhurtham-calendar .bg-green-100{background:#dcfce7}.muhurtham-calendar .bg-amber-100{background:#fef3c7}.muhurtham-calendar .text-green-800{color:#166534}.muhurtham-calendar .text-amber-800{color:#92400e}.muhurtham-calendar .text-red-600{color:#dc2626}.muhurtham-calendar .text-secondary{color:var(--text-secondary,#6b626b)}.muhurtham-calendar .text-xs{font-size:12px}.muhurtham-calendar .text-sm{font-size:14px}.muhurtham-calendar .text-\[9px\]{font-size:9px}.muhurtham-calendar .font-semibold{font-weight:600}.muhurtham-calendar .font-bold{font-weight:700}.muhurtham-calendar .space-y-2>*+*{margin-top:8px}.muhurtham-calendar .space-y-3>*+*{margin-top:12px}.muhurtham-calendar button:disabled{cursor:not-allowed;opacity:.55}.muhurtham-calendar input,.muhurtham-calendar select,.muhurtham-calendar textarea{width:100%;border:1px solid var(--outline-variant,#d1c2ce);border-radius:8px;padding:9px;background:white;color:inherit}.muhurtham-calendar .page-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}.muhurtham-calendar .panel{background:white;border:1px solid #e6e0e7;border-radius:12px;box-shadow:0 1px 3px #00000008}.muhurtham-calendar .badge{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:12px}.muhurtham-calendar .badge-success{background:#dcfce7;color:#166534}.muhurtham-calendar .badge-neutral{background:#f3f0f3;color:#5b5360}.muhurtham-calendar .muhurtham-admin-grid{display:grid;grid-template-columns:1fr;gap:20px}@media(min-width:1280px){.muhurtham-calendar .muhurtham-admin-grid{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr)}}@media(max-width:640px){.muhurtham-calendar .page-head{align-items:flex-start;flex-direction:column}.muhurtham-calendar .min-h-16{min-height:54px}}
+
+
+/* Employee calendar — aligned with the legacy Orchid One mobile dashboard */
+.employee-muhurtham{--orchid-primary:#4a1254;--orchid-primary-container:#632b6c;--orchid-secondary:#6f5385;--orchid-ink:#1b1c1c;--orchid-muted:#6b626b;--orchid-border:#e7dfe8;--orchid-surface:#fcf9f8;--orchid-soft:#f6f3f7;min-height:100dvh;max-width:430px;margin:0 auto;background:var(--orchid-surface);color:var(--orchid-ink);font-family:Inter,Arial,sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom));}
+.employee-muhurtham *{box-sizing:border-box}
+.employee-muhurtham__header{height:64px;position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:0 16px;background:rgba(252,249,248,.96);border-bottom:1px solid rgba(209,194,206,.45);box-shadow:0 2px 8px rgba(74,18,84,.04);backdrop-filter:blur(12px)}
+.employee-muhurtham__back,.employee-muhurtham__monthbar button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--orchid-border);border-radius:12px;background:#fff;color:var(--orchid-primary);text-decoration:none}
+.employee-muhurtham__brand{display:flex;flex:1;flex-direction:column;gap:2px}
+.employee-muhurtham__brand span{font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800;color:var(--orchid-primary);line-height:1.1}
+.employee-muhurtham__brand small{font-size:11px;color:var(--orchid-muted)}
+.employee-muhurtham__brand-icon{font-size:22px;color:var(--orchid-secondary)}
+.employee-muhurtham__content{display:flex;flex-direction:column;gap:14px;padding:20px 16px 24px}
+.employee-muhurtham__intro{padding:3px 2px 2px}
+.employee-muhurtham__eyebrow{margin:0 0 6px;color:var(--orchid-secondary);font-size:10px;font-weight:800;letter-spacing:.13em}
+.employee-muhurtham__intro h1{margin:0;color:var(--orchid-primary);font-family:Manrope,Inter,sans-serif;font-size:26px;font-weight:800;letter-spacing:-.04em;line-height:1.2}
+.employee-muhurtham__intro>p:last-child{margin:6px 0 0;color:var(--orchid-muted);font-size:13px;line-height:1.5}
+.employee-muhurtham__summary{display:flex;align-items:center;gap:12px;padding:14px;background:linear-gradient(110deg,#f2daff 0%,#fbf4fc 100%);border:1px solid #ead8ef;border-radius:14px}
+.employee-muhurtham__summary-icon{width:42px;height:42px;display:grid;place-items:center;flex-shrink:0;border-radius:12px;background:#fff;color:var(--orchid-primary)}
+.employee-muhurtham__summary-icon .material-symbols-outlined{font-size:22px}
+.employee-muhurtham__summary>div:nth-child(2){display:flex;flex:1;flex-direction:column;gap:1px}
+.employee-muhurtham__summary strong{font-family:Manrope,Inter,sans-serif;font-size:21px;line-height:1.2;color:var(--orchid-primary)}
+.employee-muhurtham__summary>div:nth-child(2) span{font-size:11px;color:#66566b}
+.employee-muhurtham__summary-note{padding:4px 8px;border-radius:999px;background:#fff;color:var(--orchid-secondary);font-size:10px;font-weight:700}
+.employee-muhurtham__calendar-card,.employee-muhurtham__details{padding:16px;background:#fff;border:1px solid var(--orchid-border);border-radius:15px;box-shadow:0 3px 12px rgba(74,18,84,.035)}
+.employee-muhurtham__monthbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.employee-muhurtham__monthbar>div{flex:1;text-align:center}
+.employee-muhurtham__monthbar h2{margin:0;color:var(--orchid-primary);font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}
+.employee-muhurtham__monthbar>div span{display:block;margin-top:3px;color:var(--orchid-muted);font-size:10px}
+.employee-muhurtham__monthbar button{width:34px;height:34px;cursor:pointer}
+.employee-muhurtham__weekdays,.employee-muhurtham__days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.employee-muhurtham__weekdays{margin-bottom:7px}
+.employee-muhurtham__weekdays span{text-align:center;color:#8a7d8b;font-size:10px;font-weight:700;padding:5px 0}
+.employee-muhurtham__blank{min-height:43px}
+.employee-muhurtham__day{position:relative;min-width:0;min-height:43px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;border:1px solid transparent;border-radius:10px;background:transparent;color:#302a31;font:600 12px Inter,Arial,sans-serif;cursor:default}
+.employee-muhurtham__day:disabled{opacity:1}
+.employee-muhurtham__day.is-muhurtham{background:#f3e7f5;border-color:#ead8ef;color:var(--orchid-primary);cursor:pointer;font-weight:800}
+.employee-muhurtham__day.is-muhurtham:hover{background:#ead5ef}
+.employee-muhurtham__day.is-selected{background:var(--orchid-primary);border-color:var(--orchid-primary);color:#fff;box-shadow:0 3px 8px rgba(74,18,84,.2)}
+.employee-muhurtham__day.is-today:not(.is-selected){outline:1px solid var(--orchid-secondary);outline-offset:-2px}
+.employee-muhurtham__day i,.employee-muhurtham__legend i{width:5px;height:5px;display:block;border-radius:50%;background:#7b3e87}
+.employee-muhurtham__day.is-selected i{background:#fff}
+.employee-muhurtham__legend{display:flex;align-items:center;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid #f0ebf1}
+.employee-muhurtham__legend span{display:flex;align-items:center;gap:6px;color:var(--orchid-muted);font-size:10px}
+.employee-muhurtham__legend .is-today-dot{width:8px;height:8px;background:transparent;border:1px solid var(--orchid-secondary)}
+.employee-muhurtham__details{min-height:132px}
+.employee-muhurtham__details-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.employee-muhurtham__details-top h2{margin:0;color:var(--orchid-primary);font-family:Manrope,Inter,sans-serif;font-size:17px;font-weight:800}
+.employee-muhurtham__published{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:#eaf5ed;color:#287443;font-size:10px;font-weight:700;white-space:nowrap}
+.employee-muhurtham__published i{width:6px;height:6px;border-radius:50%;background:#32965a}
+.employee-muhurtham__tamil{margin:10px 0 0;color:var(--orchid-secondary);font-size:12px;font-weight:700}
+.employee-muhurtham__slots{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+.employee-muhurtham__slot{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eee6f0;border-radius:11px;background:#fcf9fd}
+.employee-muhurtham__slot>.material-symbols-outlined{color:var(--orchid-secondary);font-size:19px}
+.employee-muhurtham__slot>div{display:flex;flex-direction:column;gap:3px}
+.employee-muhurtham__slot small{color:var(--orchid-muted);font-size:9px;font-weight:800;letter-spacing:.08em}
+.employee-muhurtham__slot strong{color:var(--orchid-ink);font-size:13px}
+.employee-muhurtham__muted,.employee-muhurtham__notes{margin:12px 0 0;color:var(--orchid-muted);font-size:12px;line-height:1.55}
+.employee-muhurtham__notes{padding-top:10px;border-top:1px solid #f0ebf1;white-space:pre-wrap}
+.employee-muhurtham__empty{min-height:100px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:6px}
+.employee-muhurtham__empty>.material-symbols-outlined{color:#a88caf;font-size:25px}
+.employee-muhurtham__empty strong{color:var(--orchid-primary);font-family:Manrope,Inter,sans-serif;font-size:13px}
+.employee-muhurtham__empty p{max-width:245px;margin:0;color:var(--orchid-muted);font-size:11px;line-height:1.5}
+.employee-muhurtham__footnote{display:flex;align-items:flex-start;gap:7px;margin:0 2px;color:#817783;font-size:10px;line-height:1.5}
+.employee-muhurtham__footnote .material-symbols-outlined{font-size:15px}
+.employee-muhurtham__bottom-nav{position:fixed;z-index:30;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,430px);display:flex;justify-content:space-around;padding:9px 16px calc(9px + env(safe-area-inset-bottom));background:rgba(252,249,248,.97);border-top:1px solid var(--orchid-border);box-shadow:0 -3px 12px rgba(74,18,84,.05);backdrop-filter:blur(12px)}
+.employee-muhurtham__bottom-nav a{min-width:90px;display:flex;align-items:center;flex-direction:column;gap:3px;padding:3px 12px;border-radius:10px;color:var(--orchid-muted);text-decoration:none}
+.employee-muhurtham__bottom-nav a[aria-current="page"]{color:var(--orchid-primary);background:#f2e8f4}
+.employee-muhurtham__bottom-nav a .material-symbols-outlined{font-size:21px}
+.employee-muhurtham__bottom-nav small{font-size:10px;font-weight:700}
+@media(min-width:600px){.employee-muhurtham{border-left:1px solid #eee8ef;border-right:1px solid #eee8ef;box-shadow:0 0 24px rgba(74,18,84,.04)}}
+@media(max-width:360px){.employee-muhurtham__content{padding:16px 12px}.employee-muhurtham__calendar-card,.employee-muhurtham__details{padding:12px}.employee-muhurtham__weekdays,.employee-muhurtham__days{gap:3px}.employee-muhurtham__day{min-height:39px}}
