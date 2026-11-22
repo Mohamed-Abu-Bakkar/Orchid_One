@@ -13,5 +13,5 @@ export default async function EmployeeMuhurthamPage() {
   const request = new NextRequest(new URL("/employee/calendar", `${protocol}://${host}`), { headers: requestHeaders });
   const guard = await employeeDashboardGuard(request, "/employee/calendar");
   if (guard) redirect(guard.headers.get("location") ?? "/login?next=/employee/calendar");
-  return <main className="min-h-screen bg-surface p-4 md:p-8"><EmployeeMuhurthamCalendar /></main>;
+  return <main className="min-h-screen bg-surface"><EmployeeMuhurthamCalendar /></main>;
 }
