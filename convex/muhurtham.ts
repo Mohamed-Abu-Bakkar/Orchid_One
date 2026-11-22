@@ -3,8 +3,8 @@ import { v } from "convex/values";
 import { requireIdentity, requireOrganizationAdmin } from "./lib/auth";
 
 const timing = v.object({ startTime: v.string(), endTime: v.string() });
-const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
-const timePattern = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function validate(args: { date: string; timings: { startTime: string; endTime: string }[]; tamilMonth?: string; tamilDay?: string; notes?: string }) {
   if (!datePattern.test(args.date)) throw new Error("INVALID_DATE");
