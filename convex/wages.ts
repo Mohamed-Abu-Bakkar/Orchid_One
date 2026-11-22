@@ -162,9 +162,9 @@ export const updateEmployeeCompensation = mutation({
   },
 });
 
-// Hourly wage configuration and automatic daily payable-hours calculation.
+// Hourly wage configuration and daily payable-hours review.
 function validDate(value: string) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(value + "T00:00:00.000Z");
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
@@ -173,16 +173,12 @@ function dateStartUtc(value: string, timeZone: string) {
   const [year, month, day] = value.split("-").map(Number);
   let guess = Date.UTC(year, month - 1, day);
   for (let attempt = 0; attempt < 4; attempt++) {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
-    }).formatToParts(new Date(guess));
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23" }).formatToParts(new Date(guess));
     const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-    const represented = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day),
-      Number(values.hour), Number(values.minute), Number(values.second));
-    const difference = represented - Date.UTC(year, month - 1, day);
-    if (!difference) break;
-    guess -= difference;
+    const represented = Date.UTC(Number(values.year), Number(values.month)-1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
+    const diff = represented - Date.UTC(year, month-1, day);
+    if (!diff) break;
+    guess -= diff;
   }
   return guess;
 }
@@ -190,242 +186,93 @@ function dateStartUtc(value: string, timeZone: string) {
 export const hourlyAdminData = query({
   args: { fromDate: v.string(), toDate: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireRole(ctx, ["supervisor", "admin", "superadmin"]);
-    if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) {
-      throw new Error("INVALID_WAGE_DATE_RANGE");
-    }
-    const dayCount = (Date.parse(args.toDate + "T00:00:00Z") - Date.parse(args.fromDate + "T00:00:00Z")) / 86400000;
-    if (dayCount > 30) throw new Error("WAGE_RANGE_LIMIT_31_DAYS");
-
-    const organization = await ctx.db.get(user.organizationId);
-    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
-
-    const activeEmployees = await ctx.db.query("employees")
-      .withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active"))
-      .collect();
-    const employees = activeEmployees.filter(employee => employee.employmentType === "hourly");
-    const [rateSets, events, overtimeRequests, assignments, shifts] = await Promise.all([
-      Promise.all(employees.map(employee =>
-        ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id)).collect()
-      )),
-      ctx.db.query("attendanceEvents")
-        .withIndex("by_org_time", q => q.eq("organizationId", user.organizationId)
-          .gte("receivedAt", dateStartUtc(args.fromDate, organization.timezone))
-          .lt("receivedAt", dateStartUtc(
-            new Date(Date.parse(args.toDate + "T00:00:00Z") + 86400000).toISOString().slice(0, 10),
-            organization.timezone,
-          )))
-        .take(5001),
-      ctx.db.query("overtimeRequests")
-        .withIndex("by_org_date", q => q.eq("organizationId", user.organizationId)
-          .gte("workDate", args.fromDate).lte("workDate", args.toDate))
-        .take(5001),
-      ctx.db.query("shiftAssignments")
-        .withIndex("by_org_date", q => q.eq("organizationId", user.organizationId)
-          .gte("workDate", args.fromDate).lte("workDate", args.toDate))
-        .collect(),
-      ctx.db.query("shifts").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
+    const user = await requireAdmin(ctx);
+    if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_WAGE_DATE_RANGE");
+    if ((Date.parse(args.toDate + "T00:00:00Z") - Date.parse(args.fromDate + "T00:00:00Z")) / 86400000 > 30) throw new Error("WAGE_RANGE_LIMIT_31_DAYS");
+    const org = await ctx.db.get(user.organizationId);
+    if (!org) throw new Error("ORGANIZATION_NOT_FOUND");
+    const hourlyEmployees = await ctx.db.query("employees").withIndex("by_org_status", q => q.eq("organizationId", user.organizationId).eq("status", "active")).collect();
+    const employees = hourlyEmployees.filter(e => e.employmentType === "hourly");
+    const [rateSets, reviews, events, overtimeRequests] = await Promise.all([
+      Promise.all(employees.map(employee => ctx.db.query("wageRates").withIndex("by_employee_effective", q => q.eq("employeeId", employee._id)).collect())),
+      ctx.db.query("hourlyWageReviews").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).take(5001),
+      ctx.db.query("attendanceEvents").withIndex("by_org_time", q => q.eq("organizationId", user.organizationId).gte("receivedAt", dateStartUtc(args.fromDate, org.timezone)).lt("receivedAt", dateStartUtc(new Date(Date.parse(args.toDate + "T00:00:00Z") + 86400000).toISOString().slice(0,10), org.timezone))).take(5001),
+      ctx.db.query("overtimeRequests").withIndex("by_org_date", q => q.eq("organizationId", user.organizationId).gte("workDate", args.fromDate).lte("workDate", args.toDate)).take(5001),
     ]);
-
-    const truncated = events.length > 5000 || overtimeRequests.length > 5000;
-    // Never present partial calculations as authoritative payroll evidence.
-    if (truncated) {
-      return { employees: [], rows: [], truncated: true, timezone: organization.timezone };
-    }
-
-    const employeeMap = new Map(employees.map(employee => [String(employee._id), employee]));
-    const rates = rateSets.flat().filter(rate =>
-      rate.organizationId === user.organizationId &&
-      rate.employmentType === "hourly" &&
-      rate.employeeId &&
-      employeeMap.has(String(rate.employeeId))
-    );
-    const latestRates = new Map<string, typeof rates[number]>();
-    for (const rate of rates) {
+    const employeeMap = new Map(employees.map(e => [String(e._id), e]));
+    const employeeRates = rateSets.flat().filter(rate => rate.organizationId === user.organizationId && rate.employmentType === "hourly" && rate.employeeId && employeeMap.has(String(rate.employeeId)));
+    const latestRates = new Map<string, typeof employeeRates[number]>();
+    for (const rate of employeeRates) {
       const key = String(rate.employeeId);
       const current = latestRates.get(key);
-      if (rate.effectiveFrom <= args.toDate && (!rate.effectiveTo || rate.effectiveTo >= args.fromDate) &&
-          (!current || rate.effectiveFrom > current.effectiveFrom)) latestRates.set(key, rate);
+      if ((!current || rate.effectiveFrom > current.effectiveFrom) && rate.effectiveFrom <= args.toDate && (!rate.effectiveTo || rate.effectiveTo >= args.fromDate)) latestRates.set(key, rate);
     }
-
-    const eventGroups = new Map<string, typeof events>();
+    const eventGroups = new Map<string, any[]>();
     for (const event of events) {
       if (!employeeMap.has(String(event.employeeId))) continue;
-      const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone })
-        .format(new Date(event.receivedAt));
-      if (workDate < args.fromDate || workDate > args.toDate) continue;
-      const key = String(event.employeeId) + ":" + workDate;
+      const date = new Intl.DateTimeFormat("en-CA", { timeZone: org.timezone }).format(new Date(event.receivedAt));
+      if (date < args.fromDate || date > args.toDate) continue;
+      const key = String(event.employeeId) + ":" + date;
       const group = eventGroups.get(key) ?? [];
       group.push(event);
       eventGroups.set(key, group);
     }
-
+    const reviewMap = new Map(reviews.map(review => [String(review.employeeId) + ":" + review.workDate, review]));
     const overtimeMap = new Map<string, typeof overtimeRequests>();
-    for (const request of overtimeRequests) {
-      const key = String(request.employeeId) + ":" + request.workDate;
-      const group = overtimeMap.get(key) ?? [];
-      group.push(request);
-      overtimeMap.set(key, group);
-    }
-    const assignmentMap = new Map<string, typeof assignments>();
-    for (const assignment of assignments) {
-      const key = String(assignment.employeeId) + ":" + assignment.workDate;
-      const group = assignmentMap.get(key) ?? [];
-      group.push(assignment);
-      assignmentMap.set(key, group);
-    }
-    const shiftMap = new Map(shifts.map(shift => [String(shift._id), shift]));
-
-    const rows = [];
+    for (const request of overtimeRequests) { const key = String(request.employeeId) + ":" + request.workDate; const list = overtimeMap.get(key) ?? []; list.push(request); overtimeMap.set(key, list); }
+    const rows: any[] = [];
     for (const [key, dayEvents] of eventGroups) {
       const [employeeId, workDate] = key.split(":");
       const employee = employeeMap.get(employeeId);
       if (!employee) continue;
-      dayEvents.sort((a, b) => a.receivedAt - b.receivedAt);
-
-      let attendanceMs = 0;
-      let breakMs = 0;
-      let openIn: number | null = null;
-      let openBreak: number | null = null;
-      let incomplete = false;
+      dayEvents.sort((a,b) => a.receivedAt - b.receivedAt);
+      let openIn: number | null = null, openBreak: number | null = null;
+      let attendanceMs = 0, breakMs = 0, incomplete = false, pendingPunchReview = false;
       for (const event of dayEvents) {
+        if (event.reviewStatus === "pending") pendingPunchReview = true;
         if (event.eventType === "check_in") {
           if (openIn !== null) incomplete = true;
           else openIn = event.receivedAt;
         } else if (event.eventType === "check_out") {
-          if (openIn === null || openBreak !== null || event.receivedAt <= openIn) incomplete = true;
-          else { attendanceMs += event.receivedAt - openIn; openIn = null; }
+          if (openIn === null) incomplete = true;
+          else { attendanceMs += Math.max(0, event.receivedAt - openIn); openIn = null; }
         } else if (event.eventType === "break_start") {
-          if (openIn === null || openBreak !== null) incomplete = true;
+          if (openBreak !== null) incomplete = true;
           else openBreak = event.receivedAt;
         } else if (event.eventType === "break_end") {
-          if (openBreak === null || openIn === null || event.receivedAt <= openBreak) incomplete = true;
-          else { breakMs += event.receivedAt - openBreak; openBreak = null; }
+          if (openBreak === null) incomplete = true;
+          else { breakMs += Math.max(0, event.receivedAt - openBreak); openBreak = null; }
         }
       }
       if (openIn !== null || openBreak !== null) incomplete = true;
-
       const attendanceMinutes = Math.floor(attendanceMs / 60000);
       const breakMinutes = Math.floor(breakMs / 60000);
-      const recordedWorkMinutes = Math.max(0, attendanceMinutes - breakMinutes);
-      const pendingPunchReview = dayEvents.some(event => event.reviewStatus === "pending");
-      const rejectedPunch = dayEvents.some(event => event.reviewStatus === "rejected");
-      const unverifiedPunch = dayEvents.some(event =>
-        event.reviewStatus !== "approved" &&
-        event.systemGenerated !== true &&
-        event.locationType !== "remote" &&
-        event.geofencePassed !== true
-      );
-      const dayOvertime = overtimeMap.get(key) ?? [];
-      const approvedOvertimeMinutes = dayOvertime
-        .filter(request => request.status === "approved")
-        .reduce((sum, request) => sum + (request.approvedMinutes ?? 0), 0);
-      const pendingOvertimeMinutes = dayOvertime
-        .filter(request => request.status === "pending" || request.status === "awaiting_employee_confirmation")
-        .reduce((sum, request) => sum + request.requestedMinutes, 0);
-
-      const dayRates = rates.filter(rate =>
-        String(rate.employeeId) === employeeId &&
-        rate.effectiveFrom <= workDate &&
-        (!rate.effectiveTo || rate.effectiveTo >= workDate)
-      ).sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
-      const rate = dayRates[0];
-      const dayAssignments = assignmentMap.get(key) ?? [];
-      const shiftId = dayAssignments.length === 1
-        ? dayAssignments[0].shiftId
-        : dayAssignments.length === 0 ? employee.defaultShiftId : null;
-      const shift = shiftId ? shiftMap.get(String(shiftId)) : undefined;
-
-      let exceptionCode: string | null = null;
-      let exceptionMessage: string | null = null;
-      let regularMinutes = 0;
-      if (pendingPunchReview) {
-        exceptionCode = "PUNCH_REVIEW_PENDING";
-        exceptionMessage = "Attendance review is pending. Resolve the punch review before payroll calculation.";
-      } else if (rejectedPunch) {
-        exceptionCode = "PUNCH_REJECTED";
-        exceptionMessage = "One or more attendance punches were rejected. Review the attendance record.";
-      } else if (incomplete) {
-        exceptionCode = "INCOMPLETE_PUNCHES";
-        exceptionMessage = "A check-in, check-out, or break pair is incomplete or out of sequence.";
-      } else if (dayAssignments.length > 1) {
-        exceptionCode = "MULTIPLE_SHIFTS";
-        exceptionMessage = "Multiple shifts are assigned for this employee on this date. Resolve the schedule conflict.";
-      } else if (shiftId && (!shift || shift.organizationId !== user.organizationId || !shift.isActive)) {
-        exceptionCode = "INVALID_SHIFT";
-        exceptionMessage = "The assigned shift is missing or inactive. Correct the shift assignment.";
-      } else if (shift && (shift.startMinute < 0 || shift.endMinute > 1440 || shift.endMinute <= shift.startMinute)) {
-        exceptionCode = "UNSUPPORTED_SHIFT";
-        exceptionMessage = "The shift configuration is invalid or overnight. Automatic regular-hour calculation is paused.";
-      } else if (unverifiedPunch) {
-        exceptionCode = "UNVERIFIED_ATTENDANCE";
-        exceptionMessage = "Attendance evidence is not fully verified. Review the geofence or punch status.";
-      } else {
-        try {
-          const shiftStartAt = shift ? dateStartUtc(workDate, organization.timezone) + shift.startMinute * 60000 : undefined;
-          const shiftEndAt = shift ? dateStartUtc(workDate, organization.timezone) + shift.endMinute * 60000 : undefined;
-          const buckets = calculateShiftWorkBuckets(dayEvents, shiftStartAt, shiftEndAt);
-          regularMinutes = buckets.regularMinutes;
-        } catch {
-          exceptionCode = "INVALID_ATTENDANCE_SEQUENCE";
-          exceptionMessage = "Attendance events do not form a valid check-in, break, and check-out sequence.";
-        }
-      }
-      if (!exceptionCode && regularMinutes > 0 && !rate) {
-        exceptionCode = "HOURLY_RATE_MISSING";
-        exceptionMessage = "No effective hourly wage rate is configured for this work date.";
-        regularMinutes = 0;
-      }
-
-      const firstCheckInAt = dayEvents.find(event => event.eventType === "check_in")?.receivedAt ?? null;
-      const lastCheckOutAt = [...dayEvents].reverse().find(event => event.eventType === "check_out")?.receivedAt ?? null;
+      const review = reviewMap.get(key);
+      const dayOvertimeRequests = overtimeMap.get(key) ?? [];
+      const approvedOvertimeMinutes = dayOvertimeRequests.filter(request => request.status === "approved").reduce((sum, request) => sum + (request.approvedMinutes ?? 0), 0);
+      const pendingOvertimeMinutes = dayOvertimeRequests.filter(request => request.status === "pending").reduce((sum, request) => sum + request.requestedMinutes, 0);
+      const rate = employeeRates.filter(item => String(item.employeeId) === employeeId && item.effectiveFrom <= workDate && (!item.effectiveTo || item.effectiveTo >= workDate)).sort((a,b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
+      const regularMinutes = review?.status === "approved" ? review.approvedRegularMinutes ?? 0 : 0;
+      const overtimeMinutes = approvedOvertimeMinutes;
       rows.push({
-        employeeId: employee._id,
-        employeeCode: employee.employeeCode,
+        employeeId: employee._id, employeeCode: employee.employeeCode,
         employeeName: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
-        departmentId: employee.departmentId,
-        workDate,
-        attendanceMinutes,
-        breakMinutes,
-        recordedWorkMinutes,
-        firstCheckInAt,
-        lastCheckOutAt,
-        incomplete,
-        pendingPunchReview,
-        rejectedPunch,
-        approvedOvertimeMinutes,
-        pendingOvertimeMinutes,
-        overtimeRequestCount: dayOvertime.length,
-        regularMinutes,
-        exceptionCode,
-        exceptionMessage,
-        ratePaise: rate?.amountPaise ?? null,
-        overtimeMultiplier: rate?.overtimeMultiplier ?? null,
-        regularEarningsPaise: rate ? Math.round(regularMinutes * rate.amountPaise / 60) : null,
-        overtimeEarningsPaise: rate ? dayOvertime
-          .filter(request => request.status === "approved")
-          .reduce((sum, request) => sum + Math.round((request.approvedMinutes ?? 0) *
-            (request.rateSnapshotPaise ?? rate.amountPaise) / 60 * (request.appliedMultiplier ?? 1)), 0) : null,
+        departmentId: employee.departmentId, workDate, attendanceMinutes, breakMinutes, firstCheckInAt: dayEvents.find(event => event.eventType === "check_in")?.receivedAt ?? null, lastCheckOutAt: [...dayEvents].reverse().find(event => event.eventType === "check_out")?.receivedAt ?? null,
+        recordedWorkMinutes: Math.max(0, attendanceMinutes - breakMinutes),
+        incomplete, pendingPunchReview, approvedOvertimeMinutes, pendingOvertimeMinutes, overtimeRequestCount: dayOvertimeRequests.length,
+        review: review ? { _id: review._id, status: review.status, suggestedRegularMinutes: review.suggestedRegularMinutes, suggestedOvertimeMinutes: review.suggestedOvertimeMinutes, supervisorReason: review.supervisorReason, approvedRegularMinutes: review.approvedRegularMinutes, approvedOvertimeMinutes: review.approvedOvertimeMinutes, reviewerNote: review.reviewerNote } : null,
+        ratePaise: rate?.amountPaise ?? null, overtimeMultiplier: rate?.overtimeMultiplier ?? null,
+        regularEarningsPaise: rate && review?.status === "approved" ? Math.round(regularMinutes * rate.amountPaise / 60) : null,
+        overtimeEarningsPaise: rate ? dayOvertimeRequests.filter(request => request.status === "approved").reduce((sum, request) => sum + Math.round((request.approvedMinutes ?? 0) * (request.rateSnapshotPaise ?? rate.amountPaise) / 60 * (request.appliedMultiplier ?? 1)), 0) : null,
       });
     }
-
-    const departments = await Promise.all([...new Set(employees.map(employee => employee.departmentId))].map(id => ctx.db.get(id)));
-    const departmentNames = new Map(departments.filter(Boolean).map(department => [String(department!._id), department!.name]));
+    const departments = await Promise.all([...new Set(employees.map(e => e.departmentId))].map(id => ctx.db.get(id)));
+    const names = new Map(departments.filter(Boolean).map(d => [String(d!._id), d!.name]));
     return {
-      employees: employees.map(employee => ({
-        _id: employee._id,
-        employeeCode: employee.employeeCode,
-        name: [employee.firstName, employee.lastName].filter(Boolean).join(" "),
-        departmentName: departmentNames.get(String(employee.departmentId)) ?? "—",
-        rate: latestRates.get(String(employee._id)) ? {
-          amountPaise: latestRates.get(String(employee._id))!.amountPaise,
-          overtimeMultiplier: latestRates.get(String(employee._id))!.overtimeMultiplier,
-          effectiveFrom: latestRates.get(String(employee._id))!.effectiveFrom,
-        } : null,
-      })),
-      rows: rows.sort((a, b) => b.workDate.localeCompare(a.workDate) || a.employeeName.localeCompare(b.employeeName)),
-      truncated: false,
-      timezone: organization.timezone,
+      employees: employees.map(employee => ({ _id: employee._id, employeeCode: employee.employeeCode, name: [employee.firstName, employee.lastName].filter(Boolean).join(" "), departmentName: names.get(String(employee.departmentId)) ?? "—", rate: latestRates.get(String(employee._id)) ? { amountPaise: latestRates.get(String(employee._id))!.amountPaise, overtimeMultiplier: latestRates.get(String(employee._id))!.overtimeMultiplier, effectiveFrom: latestRates.get(String(employee._id))!.effectiveFrom } : null })),
+      rows: rows.sort((a,b) => b.workDate.localeCompare(a.workDate) || a.employeeName.localeCompare(b.employeeName)),
+      truncated: events.length > 5000 || reviews.length > 5000 || overtimeRequests.length > 5000,
+      timezone: org.timezone,
     };
   },
 });
