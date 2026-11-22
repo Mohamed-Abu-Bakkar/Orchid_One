@@ -79,7 +79,59 @@ export function EmployeeMuhurthamCalendar() {
   const year=cursor.getFullYear(),month=cursor.getMonth(),range=monthRange(year,month);
   const records=useQuery(api.muhurtham.listPublished,range) as RecordItem[]|undefined;
   const byDate=useMemo(()=>new Map((records??[]).map(item=>[item.date,item])),[records]);
-  const days=new Date(Date.UTC(year,month+1,0)).getUTCDate(),leading=new Date(Date.UTC(year,month,1)).getUTCDay();
+  const days=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+  const leading=new Date(Date.UTC(year,month,1)).getUTCDay();
   const chosen=selected?byDate.get(selected):undefined;
-  return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Tamil Muhurtham Calendar</h2><p className="sub">Published Muhurtham dates and timings.</p></div></div><div className="panel p-4"><div className="flex items-center justify-between gap-3 mb-4"><button className="btn btn-outline" onClick={()=>setCursor(new Date(year,month-1,1))}>Previous</button><h3 className="t-h3">{monthLabel(year,month)}</h3><button className="btn btn-outline" onClick={()=>setCursor(new Date(year,month+1,1))}>Next</button></div><div className="grid grid-cols-7 gap-1 text-center mb-2">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(day=><span key={day} className="text-xs text-secondary py-2">{day}</span>)}</div><div className="grid grid-cols-7 gap-1">{Array.from({length:leading},(_,i)=><span key={"blank"+i}/>)}{Array.from({length:days},(_,i)=>{const value=key(year,month,i+1);const item=byDate.get(value);return <button key={value} disabled={!item} onClick={()=>setSelected(value)} className={`min-h-14 rounded-lg border p-1 flex flex-col items-center justify-center gap-1 ${selected===value?"border-primary bg-secondary-fixed":item?"border-green-300 bg-green-50":"border-outline-variant/30"} `}><span className="text-sm">{i+1}</span>{item&&<span className="text-[9px] text-green-800 font-semibold">Muhurtham</span>}</button>})}</div></div><div className="panel p-4 mt-4"><h3 className="t-h3 mb-2">{chosen?dateLabel(chosen.date):"Select a highlighted date"}</h3>{chosen?<div className="space-y-2">{chosen.tamilMonth&&<p className="text-sm">{chosen.tamilMonth}{chosen.tamilDay?" · "+chosen.tamilDay:""}</p>}{chosen.timings.length?chosen.timings.map((slot,i)=><p className="text-sm" key={i}>{slot.startTime} – {slot.endTime}</p>):<p className="text-sm text-secondary">Timings have not been provided.</p>}{chosen.notes&&<p className="text-sm whitespace-pre-wrap">{chosen.notes}</p>}</div>:<p className="text-sm text-secondary">Only dates published by Orchid Flowers administrators are displayed.</p>}</div></section>;
+  const today=key(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
+  const publishedCount=records?.length ?? 0;
+  const changeMonth=(offset:number)=>{setCursor(new Date(year,month+offset,1));setSelected("");};
+  return <section className="employee-muhurtham" aria-labelledby="employee-muhurtham-title">
+    <header className="employee-muhurtham__header">
+      <a className="employee-muhurtham__back" href="/employee" aria-label="Back to employee home"><span className="material-symbols-outlined">arrow_back</span></a>
+      <div className="employee-muhurtham__brand"><span>Orchid One</span><small>Employee · Calendar</small></div>
+      <span className="material-symbols-outlined employee-muhurtham__brand-icon" aria-hidden="true">calendar_month</span>
+    </header>
+    <div className="employee-muhurtham__content">
+      <div className="employee-muhurtham__intro">
+        <p className="employee-muhurtham__eyebrow">ORCHID FLOWERS</p>
+        <h1 id="employee-muhurtham-title">Tamil Calendar</h1>
+        <p>Find the published Muhurtham dates for the month.</p>
+      </div>
+      <div className="employee-muhurtham__summary">
+        <div className="employee-muhurtham__summary-icon"><span className="material-symbols-outlined">event_available</span></div>
+        <div><strong>{records===undefined?"—":publishedCount}</strong><span>{records===undefined?"Loading dates":"Muhurtham dates this month"}</span></div>
+        <span className="employee-muhurtham__summary-note">Published</span>
+      </div>
+      <section className="employee-muhurtham__calendar-card" aria-label="Monthly Muhurtham calendar">
+        <div className="employee-muhurtham__monthbar">
+          <button type="button" onClick={()=>changeMonth(-1)} aria-label="Previous month"><span className="material-symbols-outlined">chevron_left</span></button>
+          <div><h2>{monthLabel(year,month)}</h2><span>Choose a highlighted date</span></div>
+          <button type="button" onClick={()=>changeMonth(1)} aria-label="Next month"><span className="material-symbols-outlined">chevron_right</span></button>
+        </div>
+        <div className="employee-muhurtham__weekdays" aria-hidden="true">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(day=><span key={day}>{day}</span>)}</div>
+        <div className="employee-muhurtham__days">
+          {Array.from({length:leading},(_,i)=><span key={"blank-"+i} className="employee-muhurtham__blank" aria-hidden="true"/>)}
+          {Array.from({length:days},(_,i)=>{
+            const value=key(year,month,i+1),item=byDate.get(value),isSelected=selected===value,isToday=value===today;
+            return <button key={value} type="button" disabled={!item} onClick={()=>setSelected(value)} aria-pressed={isSelected} aria-label={item?dateLabel(value)+", Muhurtham":dateLabel(value)} className={["employee-muhurtham__day",item?"is-muhurtham":"",isSelected?"is-selected":"",isToday?"is-today":""].filter(Boolean).join(" ")}>
+              <span>{i+1}</span>{item&&<i aria-hidden="true"/>}
+            </button>;
+          })}
+        </div>
+        <div className="employee-muhurtham__legend"><span><i/> Muhurtham day</span><span><i className="is-today-dot"/> Today</span></div>
+      </section>
+      <section className="employee-muhurtham__details" aria-live="polite">
+        {chosen?<><div className="employee-muhurtham__details-top"><div><span className="employee-muhurtham__eyebrow">SELECTED DATE</span><h2>{dateLabel(chosen.date)}</h2></div><span className="employee-muhurtham__published"><i/> Published</span></div>
+          {(chosen.tamilMonth||chosen.tamilDay)&&<p className="employee-muhurtham__tamil">{[chosen.tamilMonth,chosen.tamilDay].filter(Boolean).join(" · ")}</p>}
+          {chosen.timings.length>0?<div className="employee-muhurtham__slots">{chosen.timings.map((slot,i)=><div className="employee-muhurtham__slot" key={i}><span className="material-symbols-outlined">schedule</span><div><small>TIME SLOT {i+1}</small><strong>{slot.startTime} – {slot.endTime}</strong></div></div>)}</div>:<p className="employee-muhurtham__muted">Timings have not been provided.</p>}
+          {chosen.notes&&<p className="employee-muhurtham__notes">{chosen.notes}</p>}
+        </>:<div className="employee-muhurtham__empty"><span className="material-symbols-outlined">touch_app</span><strong>{records===undefined?"Loading calendar…":"Select a highlighted date"}</strong><p>{records===undefined?"Published dates will appear here.":"Choose a marked day to view its Muhurtham timings and details."}</p></div>}
+      </section>
+      <p className="employee-muhurtham__footnote"><span className="material-symbols-outlined">info</span> Only dates published by Orchid Flowers administrators are shown.</p>
+    </div>
+    <nav className="employee-muhurtham__bottom-nav" aria-label="Employee navigation">
+      <a href="/employee"><span className="material-symbols-outlined">home</span><small>Home</small></a>
+      <a href="/employee/calendar" aria-current="page"><span className="material-symbols-outlined">calendar_month</span><small>Calendar</small></a>
+    </nav>
+  </section>;
 }
