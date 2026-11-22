@@ -26,6 +26,7 @@ import type * as leave from "../leave.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_rolePolicy from "../lib/rolePolicy.js";
 import type * as locations from "../locations.js";
+import type * as muhurtham from "../muhurtham.js";
 import type * as overtime from "../overtime.js";
 import type * as notifications from "../notifications.js";
 import type * as payroll from "../payroll.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/rolePolicy": typeof lib_rolePolicy;
   locations: typeof locations;
+  muhurtham: typeof muhurtham;
   overtime: typeof overtime;
   notifications: typeof notifications;
   payroll: typeof payroll;
