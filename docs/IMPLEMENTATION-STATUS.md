@@ -52,3 +52,12 @@ Configure identity provider, Convex deployment, private document storage, secret
 ## Temporary administrator role
 
 The `admin` role currently has the same application permissions as `superadmin`. Both roles are organization-wide administrators, including account and role management. `superadmin` remains a distinct role for future hierarchy and granular permission design. Backend authorization is enforced in Convex; UI visibility is not treated as a security boundary.
+
+
+
+## Tamil Muhurtham calendar
+- Added an organization-scoped `muhurthamDates` Convex table with a unique-by-organization/date application rule, Tamil month/day metadata, multiple time slots, notes, publication status and creator/updater references.
+- Added authenticated Convex queries and mutations. Organization admins can create, edit, publish, save drafts and delete entries; employee queries expose published entries only. Mutations validate dates, time formats, time ordering and field lengths, and write audit log entries.
+- Added the Tamil Calendar screen to the admin navigation and a protected employee calendar route linked from the active legacy employee home screen.
+- Both panels read the same Convex records. No astrology API or third-party service is used. Calendar dates/timings are manually entered and must be verified by Orchid Flowers.
+- Verification limitation: source changes were committed to `main`, but build, typecheck, Convex schema deployment and browser tests have not been run from this environment. The feature is not production-verified until those checks and Convex deployment are completed.
