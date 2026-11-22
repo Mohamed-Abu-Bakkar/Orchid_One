@@ -1,4 +1,5 @@
 "use client";
+import "@/styles/muhurtham-calendar.css";
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
@@ -40,12 +41,12 @@ export function AdminMuhurthamCalendar() {
     try {
       const validSlots = timings.filter(slot => slot.startTime || slot.endTime);
       await save({ date, tamilMonth: tamilMonth.trim() || undefined, tamilDay: tamilDay.trim() || undefined, notes: notes.trim() || undefined, timings: validSlots, status, dateId: editing ? editing._id as any : undefined });
-      setSelected(date); setEditing(null);
+      setSelected(date); setEditing(null); setDate("");
     } catch (err) { setError(err instanceof Error ? err.message.replaceAll("_", " ").toLowerCase() : "Unable to save this date."); }
     finally { setSaving(false); }
   };
   const deleteRecord = async (item: RecordItem) => { if (!window.confirm("Delete this Muhurtham entry? This cannot be undone.")) return; try { await remove({ dateId: item._id as any }); setSelected(""); setEditing(null); } catch { setError("Unable to delete this entry."); } };
-  return <section className="sec">
+  return <section className="sec muhurtham-calendar">
     <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Tamil Muhurtham Calendar</h2><p className="sub">Manage auspicious dates and their timings for Orchid Flowers.</p></div><div className="page-actions"><button className="btn btn-primary" onClick={() => openNew(selected || new Date().toISOString().slice(0,10))}>+ Add Muhurtham</button></div></div>
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)] gap-5">
       <div className="panel p-4">
