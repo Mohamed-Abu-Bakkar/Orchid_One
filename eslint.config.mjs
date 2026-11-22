@@ -1,22 +1,52 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
-const compat = new FlatCompat({
-  baseDirectory: dirname(fileURLToPath(import.meta.url)),
-});
+const require = createRequire(import.meta.url);
+const nextConfigPath = require.resolve("eslint-config-next");
+const nextRequire = createRequire(nextConfigPath);
+
+const nextPlugin = nextRequire("@next/eslint-plugin-next");
+const tsParser = nextRequire("@typescript-eslint/parser");
+const tsPlugin = nextRequire("@typescript-eslint/eslint-plugin");
+const reactPlugin = nextRequire("eslint-plugin-react");
 
 const eslintConfig = [
   {
     ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    plugins: {
+      "@next/next": nextPlugin,
+      react: reactPlugin,
+    },
     rules: {
-      // Existing repository-wide lint debt is warnings; new code should avoid these patterns.
-      "@typescript-eslint/no-explicit-any": "warn",
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
       "react/no-unescaped-entities": "warn",
       "prefer-const": "warn",
+    },
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
+  },
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        sourceType: "module",
+        ecmaVersion: "latest",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
+    rules: {
+      ...tsPlugin.configs.recommended.rules,
+      // Existing repository-wide lint debt is warnings; new code should avoid this pattern.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 ];
