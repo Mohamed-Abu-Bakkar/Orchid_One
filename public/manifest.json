@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Orchid One",
-  "short_name": "Orchid",
+  "name": "ORCHID ONE",
+  "short_name": "ORCHID ONE",
   "description": "Orchid Flowers workforce and human resource management",
   "start_url": "/",
   "scope": "/",
@@ -11,12 +11,12 @@
   "theme_color": "#5a285f",
   "icons": [
     {
-      "src": "assets/android/launchericon-192x192.png",
+      "src": "/assets/android/launchericon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "assets/android/launchericon-512x512.png",
+      "src": "/assets/android/launchericon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
