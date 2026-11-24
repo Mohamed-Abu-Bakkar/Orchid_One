@@ -318,6 +318,10 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 <!-- Quick Actions -->
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mt-1">Quick actions</p>
 <div class="grid grid-cols-2 gap-2">
+<button class="bg-surface hover:bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-colors" onclick="openMyWork()">
+<span class="material-symbols-outlined text-primary">assignment</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">My Work</span>
+</button>
 <button class="bg-surface hover:bg-surface-container-low border border-outline-variant/50 rounded-lg p-3 flex flex-col items-center justify-center gap-2 transition-colors" onclick="openPayslips()">
 <span class="material-symbols-outlined text-secondary">receipt_long</span>
 <span class="text-label-sm font-label-sm text-on-surface-variant">Payslips</span>
@@ -396,13 +400,29 @@ body { display:block !important; min-height:100dvh; overflow-x:hidden; }
 </div>
 </div>
 <!-- My Work Screen -->
-<div class="fixed inset-x-0 top-0 bottom-0 z-[91] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="myWorkScreen">
+<div class="fixed inset-x-0 top-0 bottom-0 z-[91] bg-[#fbf9fb] hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="myWorkScreen">
 <div class="flex flex-col h-full">
-<header class="flex items-center gap-3 px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40"><button class="rounded-full p-2" onclick="closeMyWork()" aria-label="Back"><span class="material-symbols-outlined">arrow_back</span></button><div><p class="text-title-md font-semibold text-on-surface">My Work</p><p id="myWorkSummary" class="text-label-sm text-on-surface-variant">Assigned tasks</p></div></header>
-<div class="flex-1 overflow-y-auto p-4">
-<section><h2 class="text-label-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Current & upcoming</h2><div id="myWorkList"><p class="text-body-sm text-on-surface-variant text-center py-6">Loading assignments…</p></div></section>
-<section class="mt-5"><h2 class="text-label-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Previous work</h2><div id="myWorkHistory"><p class="text-body-sm text-on-surface-variant text-center py-6">Loading history…</p></div></section>
-<p class="text-[11px] text-on-surface-variant text-center py-4">Completed work is confirmed by your supervisor after review.</p>
+<header class="flex items-center gap-3 px-4 h-16 bg-[#fbf9fb] border-b border-[#e9e1e9] shrink-0">
+<button class="rounded-full p-2 hover:bg-[#f1eaf2]" onclick="closeMyWork()" aria-label="Back"><span class="material-symbols-outlined text-[#4a1254]">arrow_back</span></button>
+<div class="min-w-0"><p class="text-[18px] leading-5 font-bold text-[#2e2430]">My Work</p><p id="myWorkSummary" class="text-[11px] text-[#786d7a] mt-0.5">Your assignments and progress</p></div>
+</header>
+<div class="flex-1 overflow-y-auto px-4 pt-4 pb-6">
+<section class="rounded-2xl p-4 text-white shadow-sm bg-gradient-to-br from-[#5a1b64] to-[#3e1048]">
+<div class="flex items-center justify-between gap-3"><div><p class="text-[11px] font-semibold tracking-[.12em] uppercase text-white/70">Your workspace</p><h2 class="text-[19px] font-bold mt-1">Make progress, every day.</h2></div><span class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center"><span class="material-symbols-outlined text-[25px]">assignment_turned_in</span></span></div>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<div class="rounded-xl bg-white/10 px-3 py-2.5"><p id="myWorkActiveCount" class="text-[22px] font-bold tabular-nums">—</p><p class="text-[10px] text-white/75">Active assignments</p></div>
+<div class="rounded-xl bg-white/10 px-3 py-2.5"><p id="myWorkHistoryCount" class="text-[22px] font-bold tabular-nums">—</p><p class="text-[10px] text-white/75">Completed / reviewed</p></div>
+</div>
+</section>
+<section class="mt-5">
+<div class="flex items-end justify-between mb-3"><div><p class="text-[10px] font-bold tracking-[.12em] uppercase text-[#8a788d]">Stay on track</p><h2 class="text-[16px] font-bold text-[#302633] mt-0.5">Current assignments</h2></div><span class="text-[10px] text-[#887b89]">Take action below</span></div>
+<div id="myWorkList" class="flex flex-col gap-3"><p class="text-sm text-[#827584] text-center py-7">Loading assignments…</p></div>
+</section>
+<section class="mt-6">
+<div class="mb-3"><p class="text-[10px] font-bold tracking-[.12em] uppercase text-[#8a788d]">Your activity</p><h2 class="text-[16px] font-bold text-[#302633] mt-0.5">Previous work</h2></div>
+<div id="myWorkHistory" class="flex flex-col gap-2"><p class="text-sm text-[#827584] text-center py-6">Loading history…</p></div>
+</section>
+<p class="text-[10px] text-[#958a97] text-center py-5">Completed work is confirmed by your supervisor after review.</p>
 </div></div></div>
 <!-- My Schedule Screen -->
 <div class="fixed inset-x-0 top-0 bottom-0 z-[91] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="scheduleScreen">

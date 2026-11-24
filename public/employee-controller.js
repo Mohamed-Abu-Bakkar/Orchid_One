@@ -221,53 +221,82 @@
     root.replaceChildren();
     historyRoot.replaceChildren();
     const work = window.__orchidWork || {};
-    const active = work.assignments || [];
-    const history = work.history || [];
+    const active = Array.isArray(work.assignments) ? work.assignments : [];
+    const history = Array.isArray(work.history) ? work.history : [];
     if (counts) counts.textContent = active.length + " active · " + history.length + " in history";
+    const activeCount = document.getElementById("myWorkActiveCount");
+    const historyCount = document.getElementById("myWorkHistoryCount");
+    if (activeCount) activeCount.textContent = String(active.length);
+    if (historyCount) historyCount.textContent = String(history.length);
+
+    const statusLabel = value => ({
+      not_started: "Not started",
+      in_progress: "In progress",
+      submitted_for_review: "In review",
+      completed: "Completed",
+      approved: "Approved",
+      rejected: "Needs update"
+    }[value] || String(value || "Not started").replaceAll("_", " "));
     const renderTask = (task, target, isHistory) => {
+      const statusValue = String(task.status || "not_started");
       const card = document.createElement("article");
-      card.className = "rounded-xl border border-outline-variant/50 bg-surface p-4 mb-3";
+      card.className = "rounded-2xl border border-[#e9e1e9] bg-white p-4 shadow-[0_2px_8px_rgba(48,28,52,.045)]";
       const top = document.createElement("div");
       top.className = "flex items-start justify-between gap-3";
       const title = document.createElement("h3");
-      title.className = "text-body-lg font-semibold text-on-surface";
-      title.textContent = task.title;
+      title.className = "text-[14px] leading-5 font-bold text-[#302633]";
+      title.textContent = task.title || "Assigned task";
       const status = document.createElement("span");
-      status.className = "text-[10px] rounded-full px-2 py-1 bg-surface-container text-on-surface-variant whitespace-nowrap";
-      status.textContent = String(task.status || "not_started").replaceAll("_", " ");
+      const statusTone = statusValue === "completed" || statusValue === "approved"
+        ? "bg-[#e8f5ec] text-[#247044]"
+        : statusValue === "in_progress" ? "bg-[#eaf1ff] text-[#315b9b]"
+        : statusValue === "submitted_for_review" ? "bg-[#f2eafa] text-[#673b78]"
+        : statusValue === "rejected" ? "bg-[#fff0ed] text-[#a44332]"
+        : "bg-[#f4f0f5] text-[#756779]";
+      status.className = "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold " + statusTone;
+      status.textContent = statusLabel(statusValue);
       top.append(title, status);
-      const meta = document.createElement("p");
-      meta.className = "text-label-sm text-on-surface-variant mt-2";
-      meta.textContent = [task.category, task.priority, scheduleDateLabel(task.workDate, { day: "2-digit", month: "short", year: "numeric" })].filter(Boolean).join(" · ");
-      card.append(top, meta);
+      card.append(top);
+
+      const meta = document.createElement("div");
+      meta.className = "mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-[#827584]";
+      [task.category, task.priority ? String(task.priority).replaceAll("_", " ") + " priority" : "", task.workDate ? scheduleDateLabel(task.workDate, { day: "2-digit", month: "short", year: "numeric" }) : ""]
+        .filter(Boolean).forEach((value, index) => {
+          if (index) {
+            const separator = document.createElement("span"); separator.textContent = "·"; meta.append(separator);
+          }
+          const part = document.createElement("span"); part.textContent = value; meta.append(part);
+        });
+      card.append(meta);
       if (task.description) {
         const description = document.createElement("p");
-        description.className = "text-body-sm text-on-surface-variant mt-3 whitespace-pre-wrap";
+        description.className = "text-[12px] leading-[1.6] text-[#716675] mt-3 whitespace-pre-wrap";
         description.textContent = task.description;
         card.append(description);
       }
       if (task.reviewNote) {
         const note = document.createElement("p");
-        note.className = "text-body-sm text-amber-700 bg-amber-50 rounded-lg p-2 mt-3";
+        note.className = "text-[11px] leading-relaxed text-[#80531b] bg-[#fff7e8] border border-[#f4e4c5] rounded-xl p-3 mt-3";
         note.textContent = "Supervisor note: " + task.reviewNote;
         card.append(note);
       }
-      if (!isHistory && task.status === "not_started") {
-        const start = document.createElement("button");
-        start.type = "button"; start.className = "w-full mt-4 rounded-lg bg-primary text-white py-2.5 font-semibold";
-        start.textContent = "Start Work";
-        start.addEventListener("click", () => updateMyWork(task.progressId, "in_progress", start));
-        card.append(start);
-      } else if (!isHistory && task.status === "in_progress") {
-        const submit = document.createElement("button");
-        submit.type = "button"; submit.className = "w-full mt-4 rounded-lg bg-primary text-white py-2.5 font-semibold";
-        submit.textContent = "Submit for Review";
-        submit.addEventListener("click", () => updateMyWork(task.progressId, "submitted_for_review", submit));
-        card.append(submit);
-      } else if (task.status === "submitted_for_review") {
+      if (!isHistory && (statusValue === "not_started" || statusValue === "in_progress")) {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "w-full mt-4 rounded-xl bg-[#4a1254] hover:bg-[#3d0e46] text-white text-[12px] font-bold py-3 transition-colors disabled:opacity-60";
+        if (statusValue === "not_started") {
+          action.textContent = "Start work";
+          action.addEventListener("click", () => updateMyWork(task.progressId, "in_progress", action));
+        } else {
+          action.textContent = "Submit for review";
+          action.addEventListener("click", () => updateMyWork(task.progressId, "submitted_for_review", action));
+        }
+        card.append(action);
+      } else if (!isHistory && statusValue === "submitted_for_review") {
         const info = document.createElement("p");
-        info.className = "text-label-sm text-primary mt-3";
-        info.textContent = "Submitted. Waiting for supervisor review.";
+        info.className = "flex items-center gap-2 text-[11px] font-semibold text-[#673b78] mt-3 pt-3 border-t border-[#f0e9f1]";
+        const icon = document.createElement("span"); icon.className = "material-symbols-outlined text-[17px]"; icon.textContent = "hourglass_top";
+        info.append(icon, document.createTextNode("Submitted · Waiting for supervisor review"));
         card.append(info);
       }
       target.append(card);
