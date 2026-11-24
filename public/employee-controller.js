@@ -1263,6 +1263,7 @@
     const days = selects.reduce((sum, select) => sum + (select.value === "full" ? 1 : select.value ? 0.5 : 0), 0);
     const total = document.getElementById("leaveSelectionTotal");
     if (total) total.textContent = days + (days === 1 ? " leave day selected" : " leave days selected");
+    updateSelectedLeaveBalance();
   };
 
   const updateSelectedLeaveBalance = () => {
