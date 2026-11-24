@@ -31,6 +31,21 @@ export const listPendingForAdmin=query({args:{},handler:async(ctx)=>{
   return {...doc,employeeName:employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Employee",employeeCode:employee?.employeeCode??"",departmentName:department?.name??"",url,replacingFileName:previous?.originalFileName??null};
  }));
 }});
+export const listOrganizationDocuments=query({args:{},handler:async(ctx)=>{
+ const admin=await requireOrganizationAdmin(ctx);
+ const statuses=["pending","verified","rejected","replaced"] as const;
+ const groups=await Promise.all(statuses.map(status=>ctx.db.query("employeeDocuments").withIndex("by_org_status",q=>q.eq("organizationId",admin.organizationId).eq("reviewStatus",status)).order("desc").collect()));
+ const rows=groups.flat().sort((a,b)=>b.uploadedAt-a.uploadedAt);
+ return Promise.all(rows.map(async doc=>{
+  const employee=await ctx.db.get(doc.employeeId);
+  const [department,url,uploader,reviewer,supervisor]=await Promise.all([
+   employee?ctx.db.get(employee.departmentId):null,
+   doc.reviewStatus==="replaced"?Promise.resolve(null):ctx.storage.getUrl(doc.storageId),
+   ctx.db.get(doc.uploadedBy),doc.reviewedBy?ctx.db.get(doc.reviewedBy):null,doc.supervisorReviewedBy?ctx.db.get(doc.supervisorReviewedBy):null
+  ]);
+  return {...doc,employeeName:employee?[employee.firstName,employee.lastName].filter(Boolean).join(" "):"Employee",employeeCode:employee?.employeeCode??"",departmentName:department?.name??"",url,uploaderName:uploader?.fullName??uploader?.email??"Employee",reviewerName:reviewer?.fullName??reviewer?.email??null,supervisorName:supervisor?.fullName??supervisor?.email??null};
+ }));
+}});
 export const recommendDocument=mutation({args:{documentId:v.id("employeeDocuments"),decision:v.union(v.literal("verified"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,args)=>{
  const reviewer=await requireRole(ctx,["supervisor"]),doc=await ctx.db.get(args.documentId);if(!doc||doc.organizationId!==reviewer.organizationId)throw Error("DOCUMENT_NOT_FOUND");
  if(doc.reviewStatus!=="pending")throw Error("DOCUMENT_ALREADY_REVIEWED");
@@ -40,7 +55,7 @@ export const recommendDocument=mutation({args:{documentId:v.id("employeeDocument
  return {recommended:true};
 }});
 export const reviewDocument=mutation({args:{documentId:v.id("employeeDocuments"),decision:v.union(v.literal("verified"),v.literal("rejected")),note:v.optional(v.string())},handler:async(ctx,args)=>{
- const admin=await requireRole(ctx,["superadmin"]),doc=await ctx.db.get(args.documentId);if(!doc||doc.organizationId!==admin.organizationId)throw Error("DOCUMENT_NOT_FOUND");
+ const admin=await requireRole(ctx,["superadmin","admin"]),doc=await ctx.db.get(args.documentId);if(!doc||doc.organizationId!==admin.organizationId)throw Error("DOCUMENT_NOT_FOUND");
  if(doc.reviewStatus!=="pending")throw Error("DOCUMENT_ALREADY_REVIEWED");if(!doc.supervisorRecommendation)throw Error("SUPERVISOR_REVIEW_REQUIRED");
  const now=Date.now(),note=args.note?.trim();if(args.decision==="rejected"&&!note)throw Error("REJECTION_REASON_REQUIRED");
  if(args.decision==="verified"&&doc.replacesDocumentId){
@@ -52,6 +67,12 @@ export const reviewDocument=mutation({args:{documentId:v.id("employeeDocuments")
  await ctx.db.patch(doc._id,{reviewStatus:args.decision,reviewedBy:admin._id,reviewedAt:now,reviewNote:note||undefined});
  await ctx.db.insert("auditLogs",{organizationId:admin.organizationId,actorUserId:admin._id,action:"employee.document."+args.decision,entityType:"employeeDocument",entityId:String(doc._id),metadata:{documentType:doc.documentType,employeeId:String(doc.employeeId),note:note??null,replacedDocumentId:doc.replacesDocumentId?String(doc.replacesDocumentId):null},createdAt:now});
  return {success:true};
+}});
+export const getAdminDocumentFileUrl=query({args:{documentId:v.id("employeeDocuments")},handler:async(ctx,args)=>{
+ const admin=await requireOrganizationAdmin(ctx);
+ const doc=await ctx.db.get(args.documentId);
+ if(!doc||doc.organizationId!==admin.organizationId||doc.reviewStatus==="replaced")throw Error("DOCUMENT_NOT_FOUND");
+ return ctx.storage.getUrl(doc.storageId);
 }});
 export const getMyDocumentFileUrl=query({args:{documentId:v.id("employeeDocuments")},handler:async(ctx,args)=>{
  const user=await requireIdentity(ctx);if(!user.employeeId)throw Error("FORBIDDEN");
