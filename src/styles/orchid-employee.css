@@ -1,3 +1,6 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Inter:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
+
 .orchid-employee-app .material-symbols-outlined,
 .orchid-employee-app .material-symbols-rounded,
 .orchid-employee-app .material-symbols-sharp {
@@ -18,8 +21,6 @@
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
 
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Inter:wght@400;500&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 /* Employee mobile experience migrated from OrchidHRM/employee_mobileApp.html */
 .orchid-employee-app{--oe-primary:#4a1254;--oe-primary-container:#632b6c;--oe-secondary:#6f5385;--oe-surface:#fcf9f8;--oe-ink:#1b1c1c;--oe-muted:#756b77;--oe-border:#e5dce5;min-height:100dvh;background:var(--oe-surface);color:var(--oe-ink);font-family:Inter,Arial,sans-serif;padding-bottom:calc(78px + env(safe-area-inset-bottom))}
 .employee-loading{min-height:100dvh;display:grid;place-content:center;justify-items:center;gap:14px;background:#fcf9f8;color:#756b77;font:13px Inter,Arial,sans-serif}
