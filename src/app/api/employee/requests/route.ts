@@ -48,7 +48,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "INVALID_REQUEST_TYPE" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "REQUEST_SUBMISSION_FAILED";
-    console.error("[employee request api]", error);
-    return NextResponse.json({ error: message }, { status: 400 });
+    const code = message.match(/Error:\\s*([A-Z][A-Z0-9_]+)/)?.[1]
+      ?? message.match(/^([A-Z][A-Z0-9_]+)$/)?.[1]
+      ?? "REQUEST_SUBMISSION_FAILED";
+    console.error("[employee request api]", { code, message });
+    return NextResponse.json({ error: code }, {
+      status: code === "UNAUTHENTICATED" ? 401 : 400,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }

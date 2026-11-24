@@ -398,6 +398,8 @@
       if (leaveTypeSelect) {
         leaveTypeSelect.replaceChildren(new Option("Select leave type", ""));
         (workspace.leaveTypes || []).forEach(type => leaveTypeSelect.add(new Option(type.name, type.id)));
+        leaveTypeSelect.onchange = updateSelectedLeaveBalance;
+        updateSelectedLeaveBalance();
       }
       const performanceIdentity = document.getElementById("performanceEmployeeIdentity");
       if (performanceIdentity) performanceIdentity.textContent = "Employee · " + safe(p.employeeCode);
@@ -1262,6 +1264,35 @@
     const total = document.getElementById("leaveSelectionTotal");
     if (total) total.textContent = days + (days === 1 ? " leave day selected" : " leave days selected");
   };
+
+  const updateSelectedLeaveBalance = () => {
+    const root = document.getElementById("selectedLeaveBalance");
+    const select = document.getElementById("reqLeaveType");
+    if (!root || !select) return;
+    const balance = (window.__orchidWorkspace?.leaveBalances || [])
+      .find(item => String(item.leaveTypeId) === String(select.value));
+    root.className = "mt-2 rounded-lg border px-3 py-2 text-label-sm";
+    if (!select.value) {
+      root.classList.add("hidden");
+      root.textContent = "";
+      return;
+    }
+    root.classList.remove("hidden");
+    if (!balance) {
+      root.classList.add("border-amber-200", "bg-amber-50", "text-amber-800");
+      root.textContent = "Leave balance is not configured. Please contact HR before submitting.";
+      return;
+    }
+    const allocated = Number(balance.allocated) || 0;
+    const used = Number(balance.used) || 0;
+    const pending = Number(balance.pending) || 0;
+    const available = Math.max(0, allocated - used - pending);
+    root.classList.add(available > 0 ? "border-[#d9eadf]" : "border-amber-200",
+      available > 0 ? "bg-[#f3faf5]" : "bg-amber-50",
+      available > 0 ? "text-[#246b43]" : "text-amber-800");
+    root.textContent = "Available " + available + " of " + allocated + " days · " +
+      used + " used · " + pending + " pending";
+  };
   let selectedEmployeeRequestType = "leave";
   window.prepareNewRequest = () => {
     selectedEmployeeRequestType = "leave";
@@ -1292,7 +1323,18 @@
   window.submitNewRequest = async () => {
     const button = document.getElementById("submitEmployeeRequest");
     const message = document.getElementById("requestFormMessage");
-    const say = value => { if (message) message.textContent = value; };
+    const say = value => {
+      if (!message) return;
+      message.textContent = value;
+      message.classList.toggle("text-error", Boolean(value));
+      message.classList.toggle("text-on-surface-variant", !value);
+      message.classList.toggle("rounded-lg", Boolean(value));
+      message.classList.toggle("bg-red-50", Boolean(value));
+      message.classList.toggle("border", Boolean(value));
+      message.classList.toggle("border-red-200", Boolean(value));
+      message.classList.toggle("px-3", Boolean(value));
+      message.classList.toggle("py-2.5", Boolean(value));
+    };
     const reason = document.getElementById("reqReason")?.value?.trim() || "";
     if (!reason) { say("Please enter a reason for your request."); return; }
     if (reason.length > 1000) { say("Reason must be 1,000 characters or fewer."); return; }
