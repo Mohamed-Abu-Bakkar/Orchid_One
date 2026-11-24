@@ -1326,8 +1326,12 @@ Submit Request
             toast('Confirmation recorded — thanks for reading!');
         }
         function renderNotifications() {
+            if (typeof window.renderNotifications === 'function') {
+                window.renderNotifications('all');
+                return;
+            }
             const list = document.getElementById('notifList');
-            if (list) list.innerHTML = '<p class="text-body-md font-body-md text-on-surface-variant text-center py-8">Loading your notifications…</p>';
+            if (list) list.innerHTML = '<p class="text-body-md text-on-surface-variant text-center py-8">Loading notifications…</p>';
         }
         function submitNewRequest() {
             toast('Employee request submission is not available yet.');

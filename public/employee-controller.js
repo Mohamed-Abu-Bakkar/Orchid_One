@@ -320,6 +320,83 @@
         finally{button.disabled=false;button.textContent="Upload for review";}
       };
 
+  let activeNotificationFilter = "all";
+  window.renderNotifications = (filter = activeNotificationFilter) => {
+    activeNotificationFilter = filter;
+    const list = document.getElementById("notifList");
+    if (!list) return;
+    const workspace = window.__orchidWorkspace;
+    const tabs = [...document.querySelectorAll("#notifTabs [data-nt]")];
+    if (!workspace) {
+      list.replaceChildren();
+      const message = document.createElement("p");
+      message.className = "text-body-md text-on-surface-variant text-center py-8";
+      message.textContent = "Notifications are taking longer than expected. Please try again.";
+      list.append(message);
+      return;
+    }
+    const notifications = Array.isArray(workspace.notifications) ? workspace.notifications : [];
+    const unreadCount = notifications.filter(item => item.readAt == null).length;
+    text("#notifUnreadCount", unreadCount ? unreadCount + " unread updates" : "You’re all caught up");
+    const unreadDot = document.getElementById("notificationUnreadDot");
+    if (unreadDot) unreadDot.classList.toggle("hidden", unreadCount === 0);
+    const categoryFor = item => {
+      const value = (String(item.title || "") + " " + String(item.body || "")).toLowerCase();
+      if (/leave|holiday|time off/.test(value)) return "leave";
+      if (/wage|payroll|salary|payslip/.test(value)) return "wage";
+      if (/overtime/.test(value)) return "overtime";
+      return "announcement";
+    };
+    const filtered = notifications.filter(item => filter === "all" || categoryFor(item) === filter)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    tabs.forEach(tab => {
+      const selected = tab.dataset.nt === filter;
+      tab.classList.toggle("bg-surface", selected);
+      tab.classList.toggle("shadow-sm", selected);
+      tab.classList.toggle("text-primary", selected);
+      tab.classList.toggle("font-semibold", selected);
+      tab.classList.toggle("text-on-surface-variant", !selected);
+      tab.setAttribute("aria-pressed", String(selected));
+      tab.onclick = () => window.renderNotifications(tab.dataset.nt);
+    });
+    list.replaceChildren();
+    if (!filtered.length) {
+      const message = document.createElement("p");
+      message.className = "text-body-md text-on-surface-variant text-center py-10";
+      message.textContent = notifications.length ? "No " + (filter === "announcement" ? "alert" : filter) + " notifications yet." : "You have no notifications.";
+      list.append(message);
+      return;
+    }
+    filtered.forEach(item => {
+      const unread = item.readAt == null;
+      const card = document.createElement("article");
+      card.className = "rounded-xl border p-4 " + (unread ? "border-primary/25 bg-white shadow-sm" : "border-outline-variant/50 bg-surface");
+      const top = document.createElement("div"); top.className = "flex items-start justify-between gap-3";
+      const copy = document.createElement("div"); copy.className = "min-w-0 flex-1";
+      const title = document.createElement("h3"); title.className = "text-body-md font-semibold text-on-surface"; title.textContent = item.title || "Notification";
+      const body = document.createElement("p"); body.className = "text-label-sm text-on-surface-variant mt-1 leading-relaxed"; body.textContent = item.body || "";
+      copy.append(title, body);
+      const status = document.createElement("span");
+      status.className = "shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold " + (unread ? "bg-primary/10 text-primary" : "bg-surface-container text-on-surface-variant");
+      status.textContent = unread ? "NEW" : "READ"; top.append(copy, status);
+      const footer = document.createElement("div"); footer.className = "mt-3 flex items-center justify-between gap-3";
+      const time = document.createElement("time"); time.className = "text-[11px] text-on-surface-variant";
+      time.textContent = item.createdAt ? new Intl.DateTimeFormat("en-IN", {day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(item.createdAt)) : "";
+      footer.append(time);
+      if (unread && item._id) {
+        const button = document.createElement("button"); button.type = "button";
+        button.className = "rounded-lg border border-outline-variant px-3 py-2 text-xs font-semibold text-primary disabled:opacity-50";
+        button.textContent = "Mark as read";
+        button.addEventListener("click", () => {
+          button.disabled = true; button.textContent = "Updating…";
+          window.parent.postMessage({type:"ORCHID_NOTIFICATION_ACTION",action:"mark-read",notificationId:item._id},window.location.origin);
+        });
+        footer.append(button);
+      }
+      card.append(top, footer); list.append(card);
+    });
+  };
+
   async function hydrate(prefetchedPayload) {
     if (window.__orchidHydrating) return;
     window.__orchidHydrating = true;
@@ -864,45 +941,7 @@
         }
       }
 
-      const notificationList = document.getElementById("notifList");
-      if (notificationList) {
-        notificationList.replaceChildren();
-        const notifications = workspace.notifications ?? [];
-        const unreadCount = notifications.filter(item => item.readAt === undefined).length;
-        text("#notifUnreadCount", unreadCount ? unreadCount + " unread updates" : "You’re all caught up");
-        const unreadDot = document.getElementById("notificationUnreadDot");
-        if (unreadDot) unreadDot.classList.toggle("hidden", unreadCount === 0);
-        if (!notifications.length) empty(notificationList, "You have no notifications.");
-        notifications.forEach(item => {
-          const card = document.createElement("article");
-          card.className = "bento-card" + (item.readAt === undefined ? " border-primary/30 bg-surface-container-low" : "");
-          const title = document.createElement("p");
-          title.className = "text-body-md font-body-md font-semibold text-on-surface";
-          title.textContent = item.title;
-          const body = document.createElement("p");
-          body.className = "text-label-sm font-label-sm text-on-surface-variant mt-1";
-          body.textContent = item.body;
-          const time = document.createElement("p");
-          time.className = "text-label-sm font-label-sm text-on-surface-variant mt-2";
-          time.textContent = fmtDate(item.createdAt);
-          const actions = document.createElement("div");
-          actions.className = "mt-3 flex items-center justify-between";
-          const status = document.createElement("span");
-          status.className = "text-[10px] font-semibold text-on-surface-variant";
-          status.textContent = item.readAt === undefined ? "UNREAD" : "READ";
-          actions.append(status);
-          if (item.readAt === undefined) {
-            const readButton = document.createElement("button");
-            readButton.type = "button";
-            readButton.className = "rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-semibold text-primary";
-            readButton.textContent = "Mark as read";
-            readButton.addEventListener("click", () => window.parent.postMessage({ type: "ORCHID_NOTIFICATION_ACTION", action: "mark-read", notificationId: item._id }, window.location.origin));
-            actions.append(readButton);
-          }
-          card.append(title, body, time, actions);
-          notificationList.append(card);
-        });
-      }
+      window.renderNotifications?.();
 
       window.__orchidPolicies = Array.isArray(policies) ? policies : [];
       const policyList = document.getElementById("polList");
