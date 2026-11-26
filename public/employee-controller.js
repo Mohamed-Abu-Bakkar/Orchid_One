@@ -1217,6 +1217,7 @@
         if (message) { message.textContent = "Your profile has been updated."; message.className = "text-label-sm text-[#176b36]"; }
         if (button) { button.disabled = false; button.textContent = "Save changes"; }
         window.__orchidWorkspaceSnapshot = null;
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
         toast("Profile updated successfully.");
       } else {
         if (message) { message.textContent = profileErrorMessage(event.data.error); message.className = "text-label-sm text-red-700"; }
