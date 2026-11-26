@@ -426,6 +426,63 @@
     });
   };
 
+  function showDateOfBirthPrompt() {
+    if (document.getElementById("orchidDobPrompt")) return;
+    const overlay = document.createElement("div");
+    overlay.id = "orchidDobPrompt";
+    overlay.className = "fixed inset-0 z-[200] flex items-center justify-center bg-[#211525]/65 p-4";
+    overlay.setAttribute("role", "presentation");
+    const dialog = document.createElement("section");
+    dialog.className = "w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-labelledby", "orchidDobTitle");
+    const heading = document.createElement("h2");
+    heading.id = "orchidDobTitle";
+    heading.className = "text-xl font-bold text-[#38223e]";
+    heading.textContent = "Complete your employee profile";
+    const description = document.createElement("p");
+    description.className = "mt-2 text-sm leading-6 text-[#756879]";
+    description.textContent = "Your date of birth is missing from your employee record. Please enter it to continue to your workspace.";
+    const form = document.createElement("form");
+    form.className = "mt-5 flex flex-col gap-3";
+    const label = document.createElement("label");
+    label.className = "flex flex-col gap-2 text-sm font-semibold text-[#4b3b50]";
+    label.textContent = "Date of birth";
+    const input = document.createElement("input");
+    input.type = "date";
+    input.name = "dateOfBirth";
+    input.required = true;
+    input.min = "1900-01-01";
+    input.max = new Date().toISOString().slice(0, 10);
+    input.className = "w-full rounded-xl border border-[#d9cddd] bg-white px-3 py-3 text-base text-[#302633]";
+    input.setAttribute("aria-label", "Date of birth");
+    label.append(input);
+    const note = document.createElement("p");
+    note.className = "text-xs leading-5 text-[#887b89]";
+    note.textContent = "This information is saved to your employee record and can only be submitted once through this prompt.";
+    const error = document.createElement("p");
+    error.className = "hidden text-sm text-red-700";
+    error.setAttribute("role", "alert");
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.className = "mt-1 rounded-xl bg-[#5a285f] px-4 py-3 font-semibold text-white disabled:opacity-60";
+    button.textContent = "Save and continue";
+    form.append(label, note, error, button);
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      button.disabled = true;
+      button.textContent = "Saving…";
+      error.classList.add("hidden");
+      window.parent.postMessage({ type: "ORCHID_NOTIFICATION_ACTION", action: "submit-date-of-birth", dateOfBirth: input.value }, window.location.origin);
+    });
+    dialog.append(heading, description, form);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    input.focus();
+  }
+
   async function hydrate(prefetchedPayload) {
     if (window.__orchidHydrating) return;
     window.__orchidHydrating = true;
@@ -1110,6 +1167,21 @@
     if (event.source !== window.parent || event.origin !== window.location.origin) return;
     if (event.data?.type === "ORCHID_EMPLOYEE_WORKSPACE") {
       window.__orchidApplyRealtimePayload(event.data.payload);
+    } else if (event.data?.type === "ORCHID_DATE_OF_BIRTH_RESULT") {
+      const prompt = document.getElementById("orchidDobPrompt");
+      if (event.data.success) {
+        if (window.__orchidWorkspace?.profile) window.__orchidWorkspace.profile.dateOfBirth = true;
+        prompt?.remove();
+        toast("Date of birth saved. Welcome to Orchid One.");
+      } else {
+        const error = prompt?.querySelector('[role="alert"]');
+        const button = prompt?.querySelector('button[type="submit"]');
+        if (error) {
+          error.textContent = event.data.error === "INVALID_DATE_OF_BIRTH" ? "Enter a valid date of birth that is not in the future." : "Unable to save your date of birth. Please try again.";
+          error.classList.remove("hidden");
+        }
+        if (button) { button.disabled = false; button.textContent = "Save and continue"; }
+      }
     }
   });
   document.addEventListener("focusout", () => {
