@@ -33,7 +33,7 @@ const groups = [
     { group: "People", items: [["employees", "Employees", Users], ["onboarding", "Onboarding", GraduationCap], ["documents", "Documents", Folder]] },
     { group: "Workforce", items: [["attendance", "Attendance", Activity], ["attendance-exceptions", "Attendance Reviews", MapPin], ["hourly", "Hourly Workforce", Clock3], ["overtime", "Overtime", Zap], ["wages", "Wage Management", Wallet], ["payroll", "Payroll", Wallet], ["shifts", "Shifts & Schedules", CalendarDays], ["teams-work", "Work Assignment", CheckCircle2]] },
     { group: "Employee Experience", items: [["leave", "Leave", CalendarDays], ["performance", "Performance", Star]] },
-    { group: "Organization", items: [["organization", "Departments", Building2], ["locations", "Locations", MapPin], ["policies", "Policies", BookOpen], ["holidays", "Holidays", CalendarDays], ["muhurtham", "Muhurtham Calendar", CalendarDays]] },
+    { group: "Organization", items: [["locations", "Locations", MapPin], ["policies", "Policies", BookOpen], ["muhurtham", "Muhurtham Calendar", CalendarDays]] },
     { group: "Reports", items: [["reports", "Reports", ChartNoAxesCombined]] },
     { group: "Settings", items: [["users", "User Management", Users], ["settings", "Organization Settings", Settings]] }
 ];
