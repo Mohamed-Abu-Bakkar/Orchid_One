@@ -330,6 +330,99 @@ export const saveMyDocument = mutation({
  * Admin directory: returns every employee status for the caller's organization.
  * Personal and compensation-sensitive fields are intentionally excluded.
  */
+/** Full employee record for the organization admin's Employee 360 view. */
+export const getProfileForAdmin = query({
+  args: { employeeId: v.id("employees") },
+  handler: async (ctx, { employeeId }) => {
+    const admin = await requireIdentity(ctx);
+    if (admin.role !== "superadmin" && admin.role !== "admin") throw new Error("FORBIDDEN");
+    const employee = await ctx.db.get(employeeId);
+    if (!employee || employee.organizationId !== admin.organizationId) throw new Error("EMPLOYEE_NOT_FOUND");
+
+    const now = Date.now();
+    const startAt = now - 90 * 24 * 60 * 60 * 1000;
+    const startDate = new Date(startAt).toISOString().slice(0, 10);
+    const year = new Date(now).getFullYear();
+    const [department, location, defaultShift, accounts, attendanceDays, attendanceEvents, leaveRequests, leaveBalances, overtimeRequests, documents, workProgress, feedback, wageRecords] = await Promise.all([
+      ctx.db.get(employee.departmentId),
+      ctx.db.get(employee.locationId),
+      employee.defaultShiftId ? ctx.db.get(employee.defaultShiftId) : null,
+      ctx.db.query("users").withIndex("by_org_employee", q => q.eq("organizationId", admin.organizationId).eq("employeeId", employeeId)).collect(),
+      ctx.db.query("attendanceDays").withIndex("by_employee_date", q => q.eq("employeeId", employeeId).gte("workDate", startDate)).collect(),
+      ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employeeId).gte("receivedAt", startAt)).order("desc").take(100),
+      ctx.db.query("leaveRequests").withIndex("by_employee", q => q.eq("employeeId", employeeId)).order("desc").take(100),
+      ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employeeId).eq("periodYear", year)).collect(),
+      ctx.db.query("overtimeRequests").withIndex("by_employee", q => q.eq("employeeId", employeeId)).order("desc").take(50),
+      ctx.db.query("employeeDocuments").withIndex("by_employee", q => q.eq("employeeId", employeeId)).order("desc").take(50),
+      ctx.db.query("workAssignmentProgress").withIndex("by_employee_date", q => q.eq("employeeId", employeeId).gte("workDate", startDate)).order("desc").take(200),
+      ctx.db.query("dailyEmployeeFeedback").withIndex("by_employee_date", q => q.eq("employeeId", employeeId).gte("workDate", startDate)).order("desc").take(90),
+      ctx.db.query("wageRecords").withIndex("by_employee", q => q.eq("employeeId", employeeId)).order("desc").take(24),
+    ]);
+
+    const [reportingManager, approver, leaveBalancesWithTypes, progressWithAssignments, wageRecordsWithPeriods] = await Promise.all([
+      employee.reportingEmployeeId ? ctx.db.get(employee.reportingEmployeeId) : null,
+      employee.approverEmployeeId ? ctx.db.get(employee.approverEmployeeId) : null,
+      Promise.all(leaveBalances.map(async balance => ({ ...balance, leaveTypeName: (await ctx.db.get(balance.leaveTypeId))?.name ?? "Leave" }))),
+      Promise.all(workProgress.map(async item => {
+        const assignment = await ctx.db.get(item.assignmentId);
+        return { ...item, title: assignment?.title ?? "Work assignment", category: assignment?.category ?? "General", priority: assignment?.priority ?? "normal" };
+      })),
+      Promise.all(wageRecords.filter(record => record.status === "approved" || record.status === "locked").map(async record => {
+        const period = await ctx.db.get(record.wagePeriodId);
+        return { ...record, period: period ? { fromDate: period.fromDate, toDate: period.toDate, periodType: period.periodType } : null };
+      })),
+    ]);
+
+    const presentDays = attendanceDays.filter(day => day.status === "present" || day.status === "late").length;
+    const exceptionDays = attendanceDays.filter(day => day.status === "exception" || day.status === "pending_review").length;
+    const totalPayableMinutes = attendanceDays.reduce((sum, day) => sum + day.payableMinutes, 0);
+    const completedTasks = progressWithAssignments.filter(item => item.status === "completed").length;
+    const feedbackAverage = feedback.length ? Math.round((feedback.reduce((sum, item) => sum + item.selfRating, 0) / feedback.length) * 10) / 10 : null;
+
+    return {
+      profile: {
+        _id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName,
+        lastName: employee.lastName ?? "", email: employee.email ?? "", phone: employee.phone,
+        designation: employee.designation, employmentType: employee.employmentType, status: employee.status,
+        joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null,
+        emergencyContact: employee.emergencyContact ?? null,
+        departmentName: department?.name ?? "Unassigned", locationName: location?.name ?? "Unassigned",
+        locationAddress: location?.address ?? "", defaultShiftName: defaultShift?.name ?? "Not assigned",
+        reportingManager: reportingManager ? [reportingManager.firstName, reportingManager.lastName].filter(Boolean).join(" ") : null,
+        approver: approver ? [approver.firstName, approver.lastName].filter(Boolean).join(" ") : null,
+        createdAt: employee.createdAt, updatedAt: employee.updatedAt,
+      },
+      accounts: accounts.map(account => ({ role: account.role, status: account.accountStatus ?? "active", email: account.email ?? "", isActive: account.isActive, createdAt: account.createdAt })),
+      period: { startDate, endDate: new Date(now).toISOString().slice(0, 10), days: 90 },
+      analytics: {
+        attendanceDays: attendanceDays.length, presentDays, exceptionDays,
+        attendanceRate: attendanceDays.length ? Math.round(presentDays / attendanceDays.length * 100) : null,
+        payableHours: Math.round(totalPayableMinutes / 60 * 10) / 10,
+        leaveRequests: leaveRequests.length,
+        approvedLeaveDays: leaveRequests.filter(item => item.status === "approved").reduce((sum, item) => sum + item.requestedDays, 0),
+        pendingLeaveRequests: leaveRequests.filter(item => item.status === "pending").length,
+        overtimeRequests: overtimeRequests.length,
+        completedTasks, totalTasks: progressWithAssignments.length,
+        taskCompletionRate: progressWithAssignments.length ? Math.round(completedTasks / progressWithAssignments.length * 100) : null,
+        feedbackEntries: feedback.length, averageSelfRating: feedbackAverage,
+      },
+      attendanceDays: attendanceDays.sort((a, b) => b.workDate.localeCompare(a.workDate)).slice(0, 45),
+      attendanceEvents: attendanceEvents.slice(0, 30).map(event => ({
+        _id: event._id, eventType: event.eventType, receivedAt: event.receivedAt,
+        locationType: event.locationType ?? "physical", geofencePassed: event.geofencePassed ?? null,
+        reviewStatus: event.reviewStatus ?? "not_required", exceptionCode: event.exceptionCode ?? null,
+      })),
+      leaveRequests: await Promise.all(leaveRequests.map(async item => ({ ...item, leaveTypeName: (await ctx.db.get(item.leaveTypeId))?.name ?? "Leave" }))),
+      leaveBalances: leaveBalancesWithTypes,
+      overtimeRequests,
+      documents: documents.map(item => ({ _id: item._id, documentType: item.documentType, documentCategory: item.documentCategory ?? "Other", originalFileName: item.originalFileName, mimeType: item.mimeType, uploadedAt: item.uploadedAt, reviewStatus: item.reviewStatus, reviewedAt: item.reviewedAt ?? null, reviewNote: item.reviewNote ?? null })),
+      workProgress: progressWithAssignments,
+      feedback: feedback.map(item => ({ _id: item._id, workDate: item.workDate, completedWork: item.completedWork, achievements: item.achievements, challenges: item.challenges, selfRating: item.selfRating, nextDayPlan: item.nextDayPlan, additionalFeedback: item.additionalFeedback ?? null, submittedAt: item.submittedAt })),
+      wageRecords: wageRecordsWithPeriods,
+    };
+  },
+});
+
 export const listForAdmin = query({
   args: {},
   handler: async (ctx) => {
