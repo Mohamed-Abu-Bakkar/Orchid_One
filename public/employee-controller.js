@@ -1226,7 +1226,6 @@
     } else if (event.data?.type === "ORCHID_DATE_OF_BIRTH_RESULT") {
       const prompt = document.getElementById("orchidDobPrompt");
       if (event.data.success) {
-        if (window.__orchidWorkspace?.profile) window.__orchidWorkspace.profile.dateOfBirth = true;
         prompt?.remove();
         toast("Date of birth saved. Welcome to Orchid One.");
       } else {
