@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { requireIdentity, requireMuhurthamManager } from "./lib/auth";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function validate(args: { date: string; notes?: string }) {
   if (!datePattern.test(args.date)) throw new Error("INVALID_DATE");
