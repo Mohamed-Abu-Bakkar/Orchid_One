@@ -468,7 +468,7 @@ export const listAccountsForLinking = query({
 
 /** Creates an employee and optionally links an already registered account atomically. */
 function validateDateOfBirth(value: string) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) throw new Error("INVALID_DATE_OF_BIRTH");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("INVALID_DATE_OF_BIRTH");
   const [year, month, day] = value.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error("INVALID_DATE_OF_BIRTH");
@@ -510,6 +510,7 @@ export const createForAdmin = mutation({
     employmentType: v.union(v.literal("permanent"), v.literal("hourly"), v.literal("daily"), v.literal("contract")),
     status: v.union(v.literal("active"), v.literal("inactive"), v.literal("pending"), v.literal("archived")),
     joiningDate: v.string(),
+    dateOfBirth: v.string(),
     departmentId: v.id("departments"),
     locationId: v.id("locations"),
     defaultShiftId: v.optional(v.id("shifts")),
@@ -566,6 +567,7 @@ export const createForAdmin = mutation({
       employmentType: args.employmentType,
       status: args.status,
       joiningDate: args.joiningDate,
+      dateOfBirth: args.dateOfBirth,
       createdAt: now,
       updatedAt: now,
     });
