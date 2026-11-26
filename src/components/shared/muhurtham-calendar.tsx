@@ -5,8 +5,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 
-type Slot = { startTime: string; endTime: string };
-type RecordItem = { _id: string; date: string; tamilMonth?: string; tamilDay?: string; timings: Slot[]; notes?: string; status: "draft" | "published" | "archived" };
+type RecordItem = { _id: string; date: string; notes?: string; status: "draft" | "published" | "archived" };
 const pad = (value: number) => String(value).padStart(2, "0");
 const key = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
 const monthRange = (year: number, month: number) => ({ fromDate: key(year, month, 1), toDate: key(year, month, new Date(Date.UTC(year, month + 1, 0)).getUTCDate()) });
@@ -18,10 +17,7 @@ export function AdminMuhurthamCalendar() {
   const [selected, setSelected] = useState("");
   const [editing, setEditing] = useState<RecordItem | null>(null);
   const [date, setDate] = useState("");
-  const [tamilMonth, setTamilMonth] = useState("");
-  const [tamilDay, setTamilDay] = useState("");
   const [notes, setNotes] = useState("");
-  const [timings, setTimings] = useState<Slot[]>([{ startTime: "", endTime: "" }]);
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,20 +30,19 @@ export function AdminMuhurthamCalendar() {
   const selectedRecord = selected ? byDate.get(selected) : undefined;
   const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const leading = new Date(Date.UTC(year, month, 1)).getUTCDay();
-  const openNew = (value: string) => { setEditing(null); setDate(value); setTamilMonth(""); setTamilDay(""); setNotes(""); setTimings([{ startTime: "", endTime: "" }]); setStatus("draft"); setError(""); };
-  const openEdit = (item: RecordItem) => { setEditing(item); setDate(item.date); setTamilMonth(item.tamilMonth ?? ""); setTamilDay(item.tamilDay ?? ""); setNotes(item.notes ?? ""); setTimings(item.timings.length ? item.timings.map(slot => ({...slot})) : [{startTime:"",endTime:""}]); setStatus(item.status === "published" ? "published" : "draft"); setError(""); };
+  const openNew = (value: string) => { setEditing(null); setDate(value); setNotes(""); setStatus("draft"); setError(""); };
+  const openEdit = (item: RecordItem) => { setEditing(item); setDate(item.date); setNotes(item.notes ?? ""); setStatus(item.status === "published" ? "published" : "draft"); setError(""); };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true); setError("");
     try {
-      const validSlots = timings.filter(slot => slot.startTime || slot.endTime);
-      await save({ date, tamilMonth: tamilMonth.trim() || undefined, tamilDay: tamilDay.trim() || undefined, notes: notes.trim() || undefined, timings: validSlots, status, dateId: editing ? editing._id as any : undefined });
+      await save({ date, notes: notes.trim() || undefined, status, dateId: editing ? editing._id as any : undefined });
       setSelected(date); setEditing(null); setDate("");
     } catch (err) { setError(err instanceof Error ? err.message.replaceAll("_", " ").toLowerCase() : "Unable to save this date."); }
     finally { setSaving(false); }
   };
   const deleteRecord = async (item: RecordItem) => { if (!window.confirm("Delete this Muhurtham entry? This cannot be undone.")) return; try { await remove({ dateId: item._id as any }); setSelected(""); setEditing(null); } catch { setError("Unable to delete this entry."); } };
   return <section className="sec muhurtham-calendar">
-    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Tamil Muhurtham Calendar</h2><p className="sub">Manage auspicious dates and their timings for Orchid Flowers.</p></div><div className="page-actions"><button className="btn btn-primary" onClick={() => openNew(selected || new Date().toISOString().slice(0,10))}>+ Add Muhurtham</button></div></div>
+    <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Muhurtham Calendar</h2><p className="sub">Manage and publish Muhurtham dates for Orchid Flowers.</p></div><div className="page-actions"><button className="btn btn-primary" onClick={() => openNew(selected || new Date().toISOString().slice(0,10))}>+ Add Muhurtham</button></div></div>
     <div className="muhurtham-admin-grid">
       <div className="panel p-4">
         <div className="flex items-center justify-between gap-3 mb-4"><button className="btn btn-outline" onClick={() => setCursor(new Date(year,month-1,1))}>Previous</button><h3 className="t-h3">{monthLabel(year,month)}</h3><button className="btn btn-outline" onClick={() => setCursor(new Date(year,month+1,1))}>Next</button></div>
@@ -57,19 +52,16 @@ export function AdminMuhurthamCalendar() {
       </div>
       <div className="panel p-4">
         <h3 className="t-h3 mb-3">{selected ? dateLabel(selected) : "Select a date"}</h3>
-        {selectedRecord ? <div className="space-y-3"><span className={`badge ${selectedRecord.status==="published"?"badge-success":"badge-neutral"}`}>{selectedRecord.status}</span>{selectedRecord.tamilMonth&&<p className="text-sm">Tamil month: <strong>{selectedRecord.tamilMonth}</strong>{selectedRecord.tamilDay? " · Day "+selectedRecord.tamilDay:""}</p>}<div>{selectedRecord.timings.length?selectedRecord.timings.map((slot,i)=><p key={i} className="text-sm py-1">{slot.startTime} – {slot.endTime}</p>):<p className="text-sm text-secondary">No timings provided.</p>}</div>{selectedRecord.notes&&<p className="text-sm whitespace-pre-wrap">{selectedRecord.notes}</p>}<div className="flex flex-wrap gap-2"><button className="btn btn-primary" onClick={()=>openEdit(selectedRecord)}>Edit</button><button className="btn btn-outline" onClick={()=>void deleteRecord(selectedRecord)}>Delete</button></div></div>:selected?<p className="text-sm text-secondary">No Muhurtham entry for this date.</p>:<p className="text-sm text-secondary">Choose a date to view or manage its entry.</p>}
+        {selectedRecord ? <div className="space-y-3"><span className={`badge ${selectedRecord.status==="published"?"badge-success":"badge-neutral"}`}>{selectedRecord.status}</span>{selectedRecord.notes&&<p className="text-sm whitespace-pre-wrap">{selectedRecord.notes}</p>}<div className="flex flex-wrap gap-2"><button className="btn btn-primary" onClick={()=>openEdit(selectedRecord)}>Edit</button><button className="btn btn-outline" onClick={()=>void deleteRecord(selectedRecord)}>Delete</button></div></div>:selected?<p className="text-sm text-secondary">No Muhurtham entry for this date.</p>:<p className="text-sm text-secondary">Choose a date to view or manage its entry.</p>}
       </div>
     </div>
     {(editing || date) && <div className="panel p-4 mt-5"><div className="flex justify-between items-center mb-4"><h3 className="t-h3">{editing?"Edit Muhurtham":"Add Muhurtham date"}</h3><button className="btn btn-outline" onClick={()=>{setEditing(null);setDate("");setError("");}}>Close</button></div><form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <label className="text-sm flex flex-col gap-1">Date<input required type="date" className="input" value={date} onChange={e=>setDate(e.target.value)}/></label>
-      <label className="text-sm flex flex-col gap-1">Tamil month<input className="input" value={tamilMonth} onChange={e=>setTamilMonth(e.target.value)} maxLength={40} placeholder="e.g. Thai"/></label>
-      <label className="text-sm flex flex-col gap-1">Tamil day<input className="input" value={tamilDay} onChange={e=>setTamilDay(e.target.value)} maxLength={40} placeholder="Tamil day"/></label>
       <label className="text-sm flex flex-col gap-1">Publication status<select className="input" value={status} onChange={e=>setStatus(e.target.value as "draft"|"published")}><option value="draft">Draft</option><option value="published">Published</option></select></label>
-      <div className="md:col-span-2"><div className="flex items-center justify-between mb-2"><span className="text-sm font-semibold">Auspicious time slots</span><button type="button" className="btn btn-outline" disabled={timings.length>=8} onClick={()=>setTimings([...timings,{startTime:"",endTime:""}])}>Add time slot</button></div>{timings.map((slot,index)=><div key={index} className="flex items-end gap-2 mb-2"><label className="flex-1 text-xs">From<input type="time" className="input" value={slot.startTime} onChange={e=>setTimings(timings.map((s,i)=>i===index?{...s,startTime:e.target.value}:s))}/></label><label className="flex-1 text-xs">To<input type="time" className="input" value={slot.endTime} onChange={e=>setTimings(timings.map((s,i)=>i===index?{...s,endTime:e.target.value}:s))}/></label><button type="button" className="btn btn-outline" onClick={()=>setTimings(timings.filter((_,i)=>i!==index))}>Remove</button></div>)}</div>
       <label className="md:col-span-2 text-sm flex flex-col gap-1">Notes<textarea className="input min-h-20" value={notes} onChange={e=>setNotes(e.target.value)} maxLength={1000}/></label>
       {error&&<p className="md:col-span-2 text-sm text-red-600" role="alert">{error}</p>}<div className="md:col-span-2 flex justify-end"><button className="btn btn-primary" disabled={saving}>{saving?"Saving…":"Save Muhurtham"}</button></div>
     </form></div>}
-    <p className="text-xs text-secondary mt-3">Dates and timings are entered and verified by Orchid Flowers administrators. No astrology provider is used.</p>
+    <p className="text-xs text-secondary mt-3">Muhurtham dates are entered and published by Orchid Flowers administrators.</p>
   </section>;
 }
 
@@ -94,7 +86,7 @@ export function EmployeeMuhurthamCalendar() {
     <div className="employee-muhurtham__content">
       <div className="employee-muhurtham__intro">
         <p className="employee-muhurtham__eyebrow">ORCHID FLOWERS</p>
-        <h1 id="employee-muhurtham-title">Tamil Calendar</h1>
+        <h1 id="employee-muhurtham-title">Muhurtham Calendar</h1>
         <p>Find the published Muhurtham dates for the month.</p>
       </div>
       <div className="employee-muhurtham__summary">
@@ -122,10 +114,8 @@ export function EmployeeMuhurthamCalendar() {
       </section>
       <section className="employee-muhurtham__details" aria-live="polite">
         {chosen?<><div className="employee-muhurtham__details-top"><div><span className="employee-muhurtham__eyebrow">SELECTED DATE</span><h2>{dateLabel(chosen.date)}</h2></div><span className="employee-muhurtham__published"><i/> Published</span></div>
-          {(chosen.tamilMonth||chosen.tamilDay)&&<p className="employee-muhurtham__tamil">{[chosen.tamilMonth,chosen.tamilDay].filter(Boolean).join(" · ")}</p>}
-          {chosen.timings.length>0?<div className="employee-muhurtham__slots">{chosen.timings.map((slot,i)=><div className="employee-muhurtham__slot" key={i}><span className="material-symbols-outlined">schedule</span><div><small>TIME SLOT {i+1}</small><strong>{slot.startTime} – {slot.endTime}</strong></div></div>)}</div>:<p className="employee-muhurtham__muted">Timings have not been provided.</p>}
           {chosen.notes&&<p className="employee-muhurtham__notes">{chosen.notes}</p>}
-        </>:<div className="employee-muhurtham__empty"><span className="material-symbols-outlined">touch_app</span><strong>{records===undefined?"Loading calendar…":"Select a highlighted date"}</strong><p>{records===undefined?"Published dates will appear here.":"Choose a marked day to view its Muhurtham timings and details."}</p></div>}
+        </>:<div className="employee-muhurtham__empty"><span className="material-symbols-outlined">touch_app</span><strong>{records===undefined?"Loading calendar…":"Select a highlighted date"}</strong><p>{records===undefined?"Published dates will appear here.":"Choose a marked day to view its Muhurtham details."}</p></div>}
       </section>
       <p className="employee-muhurtham__footnote"><span className="material-symbols-outlined">info</span> Only dates published by Orchid Flowers administrators are shown.</p>
     </div>
