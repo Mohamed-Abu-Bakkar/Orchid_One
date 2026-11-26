@@ -583,7 +583,7 @@
         docContent.replaceChildren();if(!rows.length){empty(docContent,"No documents in this category yet.");return;}
         rows.forEach(doc=>{
           const card=document.createElement("div");card.className="doc-card";
-          const icon=document.createElement("div");icon.className="doc-icon";icon.textContent="description";
+          const icon=document.createElement("div");icon.className="doc-icon material-symbols-outlined";icon.textContent="description";
           const copy=document.createElement("div");copy.className="flex flex-col flex-1 min-w-0";
           const name=document.createElement("p");name.className="text-body-md font-body-md font-semibold text-on-surface";name.textContent=doc.documentType||doc.originalFileName;
           const meta=document.createElement("p");meta.className="text-label-sm font-label-sm text-on-surface-variant mt-0.5";meta.textContent=(doc.documentCategory||"Document")+" · uploaded "+fmtDate(doc.uploadedAt)+(doc.replacesDocumentId?" · replacement":"");copy.append(name,meta);
@@ -990,7 +990,8 @@
           card.type = "button";
           card.className = "bento-card flex items-center gap-3 cursor-pointer hover:bg-surface-container-high transition-colors text-left w-full";
           const icon = document.createElement("span");
-          icon.className = "more-ic bg-secondary-fixed text-secondary";
+          icon.className = "more-ic bg-secondary-fixed text-secondary material-symbols-outlined";
+          icon.style.fontSize = "20px";
           icon.textContent = "menu_book";
           const copy = document.createElement("span");
           copy.className = "flex flex-col flex-1 min-w-0";
