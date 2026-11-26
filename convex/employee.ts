@@ -616,7 +616,7 @@ export const updateMyProfile = mutation({
       const name = args.emergencyContact.name.trim();
       const relationship = args.emergencyContact.relationship.trim();
       const phone = args.emergencyContact.phone.trim();
-      const digits = phone.replace(/\\D/g, "");
+      const digits = phone.replace(/\D/g, "");
       if (!name && !relationship && !phone) emergencyContact = undefined;
       else {
         if (!name || !relationship || digits.length < 7 || digits.length > 15) throw new Error("INVALID_EMERGENCY_CONTACT");
