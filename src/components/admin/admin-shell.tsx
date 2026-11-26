@@ -23,6 +23,7 @@ import { OvertimeManagement } from "@/components/admin/overtime-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
 import { PerformanceManagement } from "@/components/admin/performance-management";
 import { EmployeeEditModal } from "@/components/admin/employee-edit-modal";
+import { EmployeeProfile } from "@/components/admin/employee-profile";
 import { AdminNotificationCenter } from "@/components/admin/admin-notification-center";
 import { AdminMuhurthamCalendar } from "@/components/shared/muhurtham-calendar";
 import orchidLogo from "../../../OrchidHRM/assets/android/launchericon-192x192.png";
@@ -96,12 +97,14 @@ function EmployeeManagement() {
     const [status, setStatus] = useState("all");
     const [editingEmployee, setEditingEmployee] = useState<any>(null);
     const [notice, setNotice] = useState("");
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<any>(null);
     const filtered = useMemo(() => (employees ?? []).filter(e => {
         const term = search.trim().toLowerCase();
         const text = [e.employeeCode, e.firstName, e.lastName, e.email, e.phone, e.designation, e.departmentName, e.locationName, e.defaultShiftName].join(" ").toLowerCase();
         return (status === "all" || e.status === status) && (!term || text.includes(term));
     }), [employees, search, status]);
     if (employees === undefined || account === undefined || account === null) return <section className="sec"><p className="sub">Loading employee records…</p></section>;
+    if (selectedEmployeeId) return <EmployeeProfile employeeId={selectedEmployeeId} onBack={() => setSelectedEmployeeId(null)} />;
     const count = (s: string) => employees.filter(e => e.status === s).length;
     const names: Record<string, string> = { active: "Active", inactive: "Inactive", pending: "Pending", archived: "Archived" };
     const types: Record<string, string> = { permanent: "Permanent", hourly: "Hourly", daily: "Daily", contract: "Contract" };
@@ -115,7 +118,7 @@ function EmployeeManagement() {
                 <label className="employee-status-filter"><span className="t-caption text-tertiary">Status</span><select className="input" value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses ({employees.length})</option>{["active", "pending", "inactive", "archived"].map(s => <option key={s} value={s}>{names[s]} ({count(s)})</option>)}</select></label>
             </div>
             <div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Employee</th><th>Department</th><th>Designation</th><th>Employment</th><th>Default shift</th><th>Location</th><th>Joined</th><th>Status</th>{(account.role === "superadmin" || account.role === "admin") && <th>Actions</th>}</tr></thead><tbody>
-                {filtered.map(e => <tr key={e._id}><td><div className="employee-directory-person"><span className="employee-directory-avatar">{e.firstName.slice(0, 1)}{e.lastName.slice(0, 1)}</span><span><strong>{e.firstName} {e.lastName}</strong><small>{e.employeeCode}</small><small>{e.email || e.phone}</small></span></div></td><td>{e.departmentName}</td><td>{e.designation}</td><td>{types[e.employmentType] ?? e.employmentType}</td><td>{e.defaultShiftName}</td><td>{e.locationName}</td><td>{e.joiningDate || "—"}</td><td><span className={"badge " + (e.status === "active" ? "badge-success" : "badge-neutral")}>{names[e.status] ?? e.status}</span></td>{(account.role === "superadmin" || account.role === "admin") && <td><div className="row gap-2"><button className="btn btn-outline btn-sm" type="button" onClick={() => setEditingEmployee(e)}>Edit</button><button className="btn btn-outline btn-sm" type="button" disabled={e.status === "archived"} onClick={() => { if (window.confirm("Archive this employee? Historical records will be retained.")) void archiveEmployee({ employeeId: e._id }); }}>Archive</button></div></td>}</tr>)}
+                {filtered.map(e => <tr key={e._id}><td><div className="employee-directory-person"><span className="employee-directory-avatar">{e.firstName.slice(0, 1)}{e.lastName.slice(0, 1)}</span><span><button type="button" className="section-link" style={{ padding: 0, fontWeight: 700 }} onClick={() => setSelectedEmployeeId(e._id)} aria-label={"View profile for " + e.firstName + " " + e.lastName}>{e.firstName} {e.lastName}</button><small>{e.employeeCode}</small><small>{e.email || e.phone}</small></span></div></td><td>{e.departmentName}</td><td>{e.designation}</td><td>{types[e.employmentType] ?? e.employmentType}</td><td>{e.defaultShiftName}</td><td>{e.locationName}</td><td>{e.joiningDate || "—"}</td><td><span className={"badge " + (e.status === "active" ? "badge-success" : "badge-neutral")}>{names[e.status] ?? e.status}</span></td>{(account.role === "superadmin" || account.role === "admin") && <td><div className="row gap-2"><button className="btn btn-outline btn-sm" type="button" onClick={() => setEditingEmployee(e)}>Edit</button><button className="btn btn-outline btn-sm" type="button" disabled={e.status === "archived"} onClick={() => { if (window.confirm("Archive this employee? Historical records will be retained.")) void archiveEmployee({ employeeId: e._id }); }}>Archive</button></div></td>}</tr>)}
             </tbody></table>{filtered.length === 0 && <div className="empty-state"><Users size={26} /><strong>{employees.length === 0 ? "No employee records yet" : "No matching employees"}</strong><p>{employees.length === 0 ? "Employee records added to this organization will appear here." : "Try another search term or status filter."}</p></div>}</div>
             <div className="employee-directory-footer">Showing {filtered.length} of {employees.length} employee records</div>
         </div>
