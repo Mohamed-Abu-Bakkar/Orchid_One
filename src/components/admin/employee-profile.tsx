@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
-import { ArrowLeft, BriefcaseBusiness, CalendarDays, Clock3, FileText, UserRound, Wallet } from "lucide-react";
+import type { Id } from "@/../convex/_generated/dataModel";
+import { ArrowLeft, FileText, UserRound } from "lucide-react";
 
 type Tab = "overview" | "attendance" | "leave" | "work" | "documents" | "pay";
 
@@ -37,7 +38,7 @@ function Empty({ children }: { children: string }) {
   return <div className="empty-state"><FileText size={24} /><p className="t-body-sm text-secondary">{children}</p></div>;
 }
 
-export function EmployeeProfile({ employeeId, onBack }: { employeeId: any; onBack: () => void }) {
+export function EmployeeProfile({ employeeId, onBack }: { employeeId: Id<"employees">; onBack: () => void }) {
   const data = useQuery(api.employee.getProfileForAdmin, { employeeId });
   const [tab, setTab] = useState<Tab>("overview");
   if (data === undefined) return <section className="sec"><button className="btn btn-outline" onClick={onBack}><ArrowLeft size={16} /> Back to employees</button><p className="sub" style={{ marginTop: 18 }}>Loading employee profile…</p></section>;
