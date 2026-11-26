@@ -96,3 +96,29 @@ The organization must have at least one active department and one active work lo
 - Change an employee's date-specific shifts and confirm incompatible team memberships are deactivated.
 - Confirm cross-organization employees/shifts and inactive employees/shifts are rejected.
 - Confirm all changes write audit logs.
+
+
+## Date of birth collection and profile completion
+
+- New employee records require a date of birth during **People → Onboarding**. The value is stored as a date-only `YYYY-MM-DD` string; it is not converted to a timestamp.
+- The server validates the exact calendar date, rejects impossible dates, dates before 1900, and future dates. Browser validation is only a usability aid.
+- Existing employee records retain an optional `dateOfBirth` field so historical records can be completed without a destructive migration.
+- When an authenticated, active employee opens the employee workspace and their linked employee record has no date of birth, the app displays a blocking profile-completion dialog. It cannot be dismissed; the employee must submit a valid date before using the workspace.
+- The dialog submits through the authenticated parent frame to `employee.submitMyDateOfBirth`. The mutation derives the employee and organization from the authenticated identity; it does not accept an employee ID from the browser.
+- The mutation is one-time only: it rejects attempts to overwrite an existing date of birth. It also verifies that the linked employee is active and belongs to the caller's organization.
+- A successful self-submission updates only the employee's date of birth and `updatedAt`, and writes an audit log with action `employee.date_of_birth.submitted`. The actual date is not copied into audit metadata.
+- Employees whose records already contain a date of birth do not see the dialog. Realtime workspace refresh also removes the dialog after a successful save.
+- Date of birth is returned only in the authenticated employee's own workspace profile; do not add it to general employee directory projections, notifications, or unrelated APIs.
+
+## Date of birth QA checklist
+
+- Onboard a new employee with a valid date; confirm it is persisted and the onboarding form resets.
+- Confirm onboarding rejects missing, impossible, pre-1900 and future dates at the server boundary.
+- Sign in as an existing linked active employee with no date of birth; confirm the blocking dialog appears on app open.
+- Confirm the employee cannot dismiss the dialog or interact with the workspace behind it.
+- Submit a valid date; confirm the dialog closes, the workspace becomes usable, and the audit event is written.
+- Reload after successful submission; confirm the dialog does not reappear.
+- Sign in as an employee whose date of birth is already set; confirm no dialog appears.
+- Attempt to submit a second date; confirm the mutation rejects the overwrite.
+- Attempt to call the mutation as an admin, supervisor, unlinked user, inactive employee, or cross-organization identity; confirm it is rejected.
+- Verify a date-only value remains the same calendar date across browser and organization time zones.
