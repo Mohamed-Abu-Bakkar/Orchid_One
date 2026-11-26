@@ -32,6 +32,11 @@ export function EmployeeRealtimeFrame() {
         void markNotificationRead({ notificationId: message.notificationId as any });
       } else if (message.action === "mark-all-read") {
         void markAllNotificationsRead({});
+      } else if (message.action === "submit-date-of-birth" && typeof message.dateOfBirth === "string") {
+        void submitDateOfBirth({ dateOfBirth: message.dateOfBirth }).then(
+          () => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_DATE_OF_BIRTH_RESULT", success: true }, window.location.origin),
+          (error: unknown) => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_DATE_OF_BIRTH_RESULT", success: false, error: error instanceof Error ? error.message : "Unable to save date of birth." }, window.location.origin)
+        );
       }
     };
     window.addEventListener("message", handleNotificationAction);
