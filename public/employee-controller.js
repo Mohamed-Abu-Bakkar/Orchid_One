@@ -460,7 +460,7 @@
     label.append(input);
     const note = document.createElement("p");
     note.className = "text-xs leading-5 text-[#887b89]";
-    note.textContent = "This information is saved to your employee record and can only be submitted once through this prompt.";
+    note.textContent = "You can update this information later from More → Settings.";
     const error = document.createElement("p");
     error.className = "hidden text-sm text-red-700";
     error.setAttribute("role", "alert");
