@@ -131,7 +131,7 @@ export const myWorkspace = query({
     return {
       linked: true as const,
       timeZone,
-      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null },
+      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null, emergencyContact: employee.emergencyContact ?? null },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
