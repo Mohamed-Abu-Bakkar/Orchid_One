@@ -521,6 +521,7 @@
       const moreProfileIdentity = document.getElementById("moreProfileIdentity");
       if (moreProfileIdentity) moreProfileIdentity.textContent = [p.employeeCode, p.designation, workspace.department?.name].filter(Boolean).join(" · ");
 
+      window.renderEmployeeProfile?.();
       const joiningDate = p.joiningDate && /^\d{4}-\d{2}-\d{2}$/.test(p.joiningDate)
         ? new Date(p.joiningDate + "T00:00:00Z")
         : null;
@@ -1165,10 +1166,62 @@
     if (snapshot !== window.__orchidWorkspaceSnapshot) hydrate(payload);
   };
 
+
+  function profileErrorMessage(code) {
+    const messages = {
+      INVALID_DATE_OF_BIRTH: "Enter a valid date of birth between 1 January 1900 and today.",
+      INVALID_EMPLOYEE_NAME: "Enter a valid first and last name.",
+      INVALID_EMERGENCY_CONTACT: "Complete the emergency contact name, relationship and a valid phone number, or clear all three fields.",
+      EMPLOYEE_PROFILE_NOT_FOUND: "Your active employee profile could not be found. Contact HR.",
+    };
+    return messages[code] || "Unable to update your profile. Please try again.";
+  }
+
+  window.renderEmployeeProfile = () => {
+    const p = window.__orchidWorkspace?.profile;
+    if (!p) return;
+    const set = (id, value) => { const node = document.getElementById(id); if (node && document.activeElement !== node) node.value = value ?? ""; };
+    set("profileFirstName", p.firstName); set("profileLastName", p.lastName); set("profileDateOfBirth", p.dateOfBirth);
+    set("profileEmail", p.email); set("profilePhone", p.phone);
+    set("profileEmergencyName", p.emergencyContact?.name); set("profileEmergencyRelationship", p.emergencyContact?.relationship); set("profileEmergencyPhone", p.emergencyContact?.phone);
+    const labels = { profileEmployeeCode: p.employeeCode, profileDesignation: p.designation, profileDepartment: window.__orchidWorkspace?.department?.name, profileJoiningDate: fmtDate(p.joiningDate) };
+    Object.entries(labels).forEach(([id, value]) => { const node = document.getElementById(id); if (node) node.textContent = safe(value); });
+  };
+
+  window.saveEmployeeProfile = (event) => {
+    event.preventDefault();
+    const form = document.getElementById("employeeProfileForm");
+    if (!form?.reportValidity()) return;
+    const get = id => document.getElementById(id)?.value?.trim() || "";
+    const emergencyContact = { name: get("profileEmergencyName"), relationship: get("profileEmergencyRelationship"), phone: get("profileEmergencyPhone") };
+    const hasEmergency = Object.values(emergencyContact).some(Boolean);
+    const button = document.getElementById("employeeProfileSave");
+    const message = document.getElementById("employeeProfileMessage");
+    if (button) { button.disabled = true; button.textContent = "Saving…"; }
+    if (message) { message.textContent = ""; message.className = "text-label-sm text-on-surface-variant"; }
+    window.parent.postMessage({
+      type: "ORCHID_NOTIFICATION_ACTION", action: "update-my-profile",
+      firstName: get("profileFirstName"), lastName: get("profileLastName"),
+      dateOfBirth: get("profileDateOfBirth"), emergencyContact: hasEmergency ? emergencyContact : null,
+    }, window.location.origin);
+  };
+
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent || event.origin !== window.location.origin) return;
     if (event.data?.type === "ORCHID_EMPLOYEE_WORKSPACE") {
       window.__orchidApplyRealtimePayload(event.data.payload);
+    } else if (event.data?.type === "ORCHID_PROFILE_UPDATE_RESULT") {
+      const button = document.getElementById("employeeProfileSave");
+      const message = document.getElementById("employeeProfileMessage");
+      if (event.data.success) {
+        if (message) { message.textContent = "Your profile has been updated."; message.className = "text-label-sm text-[#176b36]"; }
+        if (button) { button.disabled = false; button.textContent = "Save changes"; }
+        window.__orchidWorkspaceSnapshot = null;
+        toast("Profile updated successfully.");
+      } else {
+        if (message) { message.textContent = profileErrorMessage(event.data.error); message.className = "text-label-sm text-red-700"; }
+        if (button) { button.disabled = false; button.textContent = "Save changes"; }
+      }
     } else if (event.data?.type === "ORCHID_DATE_OF_BIRTH_RESULT") {
       const prompt = document.getElementById("orchidDobPrompt");
       if (event.data.success) {
