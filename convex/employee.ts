@@ -396,7 +396,7 @@ export const getProfileForAdmin = query({
       period: { startDate, endDate: new Date(now).toISOString().slice(0, 10), days: 90 },
       analytics: {
         attendanceDays: attendanceDays.length, presentDays, exceptionDays,
-        attendanceRate: attendanceDays.length ? Math.round(presentDays / attendanceDays.length * 100) : null,
+        
         payableHours: Math.round(totalPayableMinutes / 60 * 10) / 10,
         leaveRequests: leaveRequests.length,
         approvedLeaveDays: leaveRequests.filter(item => item.status === "approved").reduce((sum, item) => sum + item.requestedDays, 0),
