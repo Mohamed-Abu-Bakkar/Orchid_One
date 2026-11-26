@@ -71,7 +71,7 @@ export function EmployeeProfile({ employeeId, onBack }: { employeeId: Id<"employ
     </div>
 
     <div className="employee-directory-stats" style={{ marginBottom: 18 }}>
-      <Stat label="Attendance rate" value={a.attendanceRate === null ? "—" : a.attendanceRate + "%"} detail="Recorded attendance days · 90 days" />
+      <Stat label="Present days" value={a.presentDays} detail="Recorded present / late days · 90 days" />
       <Stat label="Payable hours" value={a.payableHours + "h"} detail="From attendance-day records" />
       <Stat label="Leave requests" value={a.leaveRequests} detail={a.pendingLeaveRequests + " pending"} />
       <Stat label="Task completion" value={a.taskCompletionRate === null ? "—" : a.taskCompletionRate + "%"} detail={a.completedTasks + " of " + a.totalTasks + " tracked"} />
