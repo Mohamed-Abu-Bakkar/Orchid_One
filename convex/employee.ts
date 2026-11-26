@@ -524,7 +524,8 @@ export const createForAdmin = mutation({
     const phone = args.phone.trim();
     const designation = args.designation.trim();
     const email = args.email?.trim().toLowerCase();
-    if (!firstName || !phone || !designation || !args.joiningDate) throw new Error("REQUIRED_EMPLOYEE_FIELDS");\n    validateDateOfBirth(args.dateOfBirth);
+    if (!firstName || !phone || !designation || !args.joiningDate) throw new Error("REQUIRED_EMPLOYEE_FIELDS");
+    validateDateOfBirth(args.dateOfBirth);
     const [department, location, defaultShift] = await Promise.all([
       ctx.db.get(args.departmentId),
       ctx.db.get(args.locationId),
