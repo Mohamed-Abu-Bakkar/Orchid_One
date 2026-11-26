@@ -14,6 +14,7 @@ export function EmployeeRealtimeFrame() {
   const markNotificationRead = useMutation(api.notifications.markRead);
   const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
   const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);
+  const updateMyProfile = useMutation(api.employee.updateMyProfile);
 
   useEffect(() => {
     if (!frameReady || workspace === undefined || policies === undefined || work === undefined) return;
@@ -32,6 +33,17 @@ export function EmployeeRealtimeFrame() {
         void markNotificationRead({ notificationId: message.notificationId as any });
       } else if (message.action === "mark-all-read") {
         void markAllNotificationsRead({});
+      } else if (message.action === "update-my-profile") {
+        void updateMyProfile({
+          firstName: String(message.firstName ?? ""), lastName: String(message.lastName ?? ""),
+          dateOfBirth: String(message.dateOfBirth ?? ""),
+          emergencyContact: message.emergencyContact && typeof message.emergencyContact === "object"
+            ? { name: String(message.emergencyContact.name ?? ""), relationship: String(message.emergencyContact.relationship ?? ""), phone: String(message.emergencyContact.phone ?? "") }
+            : null,
+        }).then(
+          () => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_PROFILE_UPDATE_RESULT", success: true }, window.location.origin),
+          (error: unknown) => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_PROFILE_UPDATE_RESULT", success: false, error: error instanceof Error ? error.message : "Unable to update your profile." }, window.location.origin)
+        );
       } else if (message.action === "submit-date-of-birth" && typeof message.dateOfBirth === "string") {
         void submitDateOfBirth({ dateOfBirth: message.dateOfBirth }).then(
           () => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_DATE_OF_BIRTH_RESULT", success: true }, window.location.origin),
@@ -41,7 +53,7 @@ export function EmployeeRealtimeFrame() {
     };
     window.addEventListener("message", handleNotificationAction);
     return () => window.removeEventListener("message", handleNotificationAction);
-  }, [markNotificationRead, markAllNotificationsRead, submitDateOfBirth]);
+  }, [markNotificationRead, markAllNotificationsRead, submitDateOfBirth, updateMyProfile]);
   return (
     <iframe
       ref={frameRef}

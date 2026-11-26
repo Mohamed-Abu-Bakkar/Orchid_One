@@ -1024,7 +1024,7 @@ Submit Request
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
 </div>
 <div class="h-px bg-outline-variant/30 mx-4"></div>
-<div class="more-item" onclick="toast('Profile opens')">
+<div class="more-item" onclick="openSettings()">
 <span class="more-ic bg-[#fdf1e1] text-[#B26A00]"><span class="material-symbols-outlined">account_circle</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Profile</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Personal details and contact</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
@@ -1056,7 +1056,7 @@ Submit Request
 <div>
 <p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Account</p>
 <div class="bento-card p-0 overflow-hidden">
-<div class="more-item" onclick="toast('Settings opens')">
+<div class="more-item" onclick="openSettings()">
 <span class="more-ic bg-secondary-fixed text-secondary"><span class="material-symbols-outlined">settings</span></span>
 <span class="flex flex-col flex-1 min-w-0"><span class="text-body-md font-body-md font-medium text-on-surface">Settings</span><span class="text-label-sm font-label-sm text-on-surface-variant mt-0.5">Language, security and more</span></span>
 <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0 text-[18px]">chevron_right</span>
@@ -1092,6 +1092,42 @@ Submit Request
 </div>
 </div>
 </div>
+<!-- Employee Settings / My Profile -->
+<div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="settingsScreen">
+<div class="flex flex-col h-full">
+<header class="flex items-center gap-3 w-full px-4 h-16 bg-surface shadow-sm border-b border-outline-variant/40">
+<button type="button" class="text-on-surface rounded-full p-2" onclick="closeSettings()" aria-label="Back to More"><span class="material-symbols-outlined">arrow_back</span></button>
+<div class="flex flex-col"><span class="text-title-md font-title-md font-bold text-on-surface">Settings</span><span class="text-label-sm text-on-surface-variant">Manage your personal profile</span></div>
+</header>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<section class="bento-card flex flex-col gap-1">
+<div class="flex items-center justify-between gap-3"><div><h2 class="text-body-lg font-semibold text-on-surface">My Profile</h2><p class="text-label-sm text-on-surface-variant mt-1">Keep your personal details up to date</p></div><span class="material-symbols-outlined text-primary text-2xl">account_circle</span></div>
+<form id="employeeProfileForm" class="mt-3 flex flex-col gap-3" onsubmit="saveEmployeeProfile(event)">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<label class="flex flex-col gap-1 text-label-sm font-medium text-on-surface-variant">First name<input id="profileFirstName" maxlength="80" required autocomplete="given-name" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-body-md text-on-surface"></label>
+<label class="flex flex-col gap-1 text-label-sm font-medium text-on-surface-variant">Last name<input id="profileLastName" maxlength="80" autocomplete="family-name" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-body-md text-on-surface"></label>
+</div>
+<label class="flex flex-col gap-1 text-label-sm font-medium text-on-surface-variant">Date of birth<input id="profileDateOfBirth" type="date" min="1900-01-01" required class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-body-md text-on-surface"></label>
+<div class="rounded-lg bg-surface-container-low p-3"><p class="text-label-sm font-semibold text-on-surface">Contact details</p><p class="text-xs text-on-surface-variant mt-1">Email and mobile changes require verification. Contact HR if either detail is incorrect.</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Email<input id="profileEmail" type="email" readonly class="w-full rounded-lg border border-outline-variant/50 bg-surface-container px-3 py-2.5 text-body-md text-on-surface" aria-readonly="true"></label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Mobile number<input id="profilePhone" type="tel" readonly class="w-full rounded-lg border border-outline-variant/50 bg-surface-container px-3 py-2.5 text-body-md text-on-surface" aria-readonly="true"></label>
+</div></div>
+<div class="rounded-lg border border-outline-variant/50 p-3 flex flex-col gap-3"><div><p class="text-label-sm font-semibold text-on-surface">Emergency contact</p><p class="text-xs text-on-surface-variant mt-1">Optional, but recommended so HR can reach someone if needed.</p></div>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Contact name<input id="profileEmergencyName" maxlength="100" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-body-md text-on-surface"></label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Relationship<input id="profileEmergencyRelationship" maxlength="50" placeholder="e.g. Parent, spouse, sibling" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-body-md text-on-surface"></label>
+<label class="flex flex-col gap-1 text-label-sm text-on-surface-variant">Emergency phone<input id="profileEmergencyPhone" type="tel" maxlength="20" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-body-md text-on-surface"></label>
+</div>
+<div class="rounded-lg bg-surface-container-low p-3"><p class="text-label-sm font-semibold text-on-surface">Employment details · Managed by HR</p><div class="grid grid-cols-2 gap-3 mt-2 text-label-sm">
+<div><span class="text-on-surface-variant">Employee ID</span><p id="profileEmployeeCode" class="font-semibold text-on-surface mt-0.5">—</p></div>
+<div><span class="text-on-surface-variant">Designation</span><p id="profileDesignation" class="font-semibold text-on-surface mt-0.5">—</p></div>
+<div><span class="text-on-surface-variant">Department</span><p id="profileDepartment" class="font-semibold text-on-surface mt-0.5">—</p></div>
+<div><span class="text-on-surface-variant">Joining date</span><p id="profileJoiningDate" class="font-semibold text-on-surface mt-0.5">—</p></div>
+</div></div>
+<p id="employeeProfileMessage" class="text-label-sm text-on-surface-variant" role="status" aria-live="polite"></p>
+<button id="employeeProfileSave" type="submit" class="w-full rounded-lg bg-primary text-white font-semibold py-3 disabled:opacity-50">Save changes</button>
+</form></section>
+<p class="text-xs leading-5 text-on-surface-variant">Changes to your name, date of birth and emergency contact are recorded in the employee profile audit history. Employment and payroll information cannot be changed here.</p>
+</div></div></div>
 <!-- Policies Screen -->
 <div class="fixed inset-x-0 top-0 bottom-0 z-[90] bg-surface hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))]" id="polScreen">
 <div class="flex flex-col h-full">
@@ -1176,7 +1212,7 @@ Submit Request
             const content = document.getElementById('docContent');
             if (content) content.textContent = 'Loading your documents…';
         }
-        const SCREEN_IDS = ['homeScreen', 'attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'myWorkScreen', 'scheduleScreen', 'polScreen', 'polDetailScreen'];
+        const SCREEN_IDS = ['homeScreen', 'settingsScreen', 'attScreen', 'reqScreen', 'analyticsScreen', 'docsScreen', 'hoursScreen', 'payScreen', 'notifScreen', 'newReqScreen', 'helpScreen', 'moreScreen', 'myWorkScreen', 'scheduleScreen', 'polScreen', 'polDetailScreen'];
         const SCREEN_ALIASES = { home: 'homeScreen' };
         let navStack = ['home'];
         let navigationReady = false;
@@ -1257,6 +1293,8 @@ Submit Request
         function closeHelpdesk() { goBack(); }
         function openMore() { pushScreen('moreScreen'); }
         function closeMore() { goBack(); }
+        function openSettings() { pushScreen('settingsScreen'); window.renderEmployeeProfile?.(); }
+        function closeSettings() { goBack(); }
         function openMySchedule() { pushScreen('scheduleScreen'); window.renderMySchedule?.(); }
         function closeMySchedule() { goBack(); }
         function openMyWork() { pushScreen('myWorkScreen'); window.renderMyWork?.(); }

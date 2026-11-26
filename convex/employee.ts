@@ -131,7 +131,7 @@ export const myWorkspace = query({
     return {
       linked: true as const,
       timeZone,
-      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null },
+      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null, emergencyContact: employee.emergencyContact ?? null },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
@@ -590,6 +590,51 @@ export const submitMyDateOfBirth = mutation({
       createdAt: now,
     });
     return { saved: true };
+  },
+});
+
+
+/** Authenticated employee self-service update for personal profile fields. */
+export const updateMyProfile = mutation({
+  args: {
+    firstName: v.string(),
+    lastName: v.string(),
+    dateOfBirth: v.string(),
+    emergencyContact: v.union(v.object({ name: v.string(), relationship: v.string(), phone: v.string() }), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireIdentity(ctx);
+    if (user.role !== "employee" || !user.employeeId) throw new Error("EMPLOYEE_ACCESS_REQUIRED");
+    const employee = await ctx.db.get(user.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") throw new Error("EMPLOYEE_PROFILE_NOT_FOUND");
+    const firstName = args.firstName.trim();
+    const lastName = args.lastName.trim();
+    if (!firstName || firstName.length > 80 || lastName.length > 80) throw new Error("INVALID_EMPLOYEE_NAME");
+    validateDateOfBirth(args.dateOfBirth);
+    let emergencyContact: { name: string; relationship: string; phone: string } | undefined;
+    if (args.emergencyContact) {
+      const name = args.emergencyContact.name.trim();
+      const relationship = args.emergencyContact.relationship.trim();
+      const phone = args.emergencyContact.phone.trim();
+      const digits = phone.replace(/\D/g, "");
+      if (!name && !relationship && !phone) emergencyContact = undefined;
+      else {
+        if (!name || !relationship || digits.length < 7 || digits.length > 15) throw new Error("INVALID_EMERGENCY_CONTACT");
+        emergencyContact = { name, relationship, phone };
+      }
+    }
+    const now = Date.now();
+    const before = { firstName: employee.firstName, lastName: employee.lastName ?? "", dateOfBirth: employee.dateOfBirth ?? null, emergencyContact: employee.emergencyContact ?? null };
+    const after = { firstName, lastName, dateOfBirth: args.dateOfBirth, emergencyContact: emergencyContact ?? null };
+    const changedFields = Object.keys(after).filter(key => JSON.stringify(before[key as keyof typeof before]) !== JSON.stringify(after[key as keyof typeof after]));
+    if (!changedFields.length) return { saved: true, changed: false };
+    await ctx.db.patch(employee._id, { firstName, lastName: lastName || undefined, dateOfBirth: args.dateOfBirth, emergencyContact, updatedAt: now });
+    await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId, actorUserId: user._id, action: "employee.profile.updated",
+      entityType: "employee", entityId: String(employee._id),
+      metadata: { source: "employee_self_service", changedFields, before, after }, createdAt: now,
+    });
+    return { saved: true, changed: true };
   },
 });
 
