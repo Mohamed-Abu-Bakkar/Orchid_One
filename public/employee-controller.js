@@ -1193,6 +1193,8 @@
     const form = document.getElementById("employeeProfileForm");
     if (!form?.reportValidity()) return;
     const get = id => document.getElementById(id)?.value?.trim() || "";
+    const originalDob = window.__orchidWorkspace?.profile?.dateOfBirth || "";
+    if (get("profileDateOfBirth") !== originalDob && !window.confirm("You are changing your date of birth. This change will be recorded in your employee profile audit history. Continue?")) return;
     const emergencyContact = { name: get("profileEmergencyName"), relationship: get("profileEmergencyRelationship"), phone: get("profileEmergencyPhone") };
     const hasEmergency = Object.values(emergencyContact).some(Boolean);
     const button = document.getElementById("employeeProfileSave");
