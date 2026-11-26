@@ -131,7 +131,7 @@ export const myWorkspace = query({
     return {
       linked: true as const,
       timeZone,
-      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate },
+      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
@@ -560,6 +560,39 @@ export const listAccountsForLinking = query({
 });
 
 /** Creates an employee and optionally links an already registered account atomically. */
+function validateDateOfBirth(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("INVALID_DATE_OF_BIRTH");
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error("INVALID_DATE_OF_BIRTH");
+  const today = new Date().toISOString().slice(0, 10);
+  if (value > today || year < 1900) throw new Error("INVALID_DATE_OF_BIRTH");
+}
+
+export const submitMyDateOfBirth = mutation({
+  args: { dateOfBirth: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireIdentity(ctx);
+    if (user.role !== "employee" || !user.employeeId) throw new Error("EMPLOYEE_ACCESS_REQUIRED");
+    const employee = await ctx.db.get(user.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") throw new Error("EMPLOYEE_PROFILE_NOT_FOUND");
+    if (employee.dateOfBirth) throw new Error("DATE_OF_BIRTH_ALREADY_SET");
+    validateDateOfBirth(args.dateOfBirth);
+    const now = Date.now();
+    await ctx.db.patch(employee._id, { dateOfBirth: args.dateOfBirth, updatedAt: now });
+    await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId,
+      actorUserId: user._id,
+      action: "employee.date_of_birth.submitted",
+      entityType: "employee",
+      entityId: String(employee._id),
+      metadata: { source: "employee_onboarding_prompt" },
+      createdAt: now,
+    });
+    return { saved: true };
+  },
+});
+
 export const createForAdmin = mutation({
   args: {
     firstName: v.string(),
@@ -570,6 +603,7 @@ export const createForAdmin = mutation({
     employmentType: v.union(v.literal("permanent"), v.literal("hourly"), v.literal("daily"), v.literal("contract")),
     status: v.union(v.literal("active"), v.literal("inactive"), v.literal("pending"), v.literal("archived")),
     joiningDate: v.string(),
+    dateOfBirth: v.string(),
     departmentId: v.id("departments"),
     locationId: v.id("locations"),
     defaultShiftId: v.optional(v.id("shifts")),
@@ -584,6 +618,7 @@ export const createForAdmin = mutation({
     const designation = args.designation.trim();
     const email = args.email?.trim().toLowerCase();
     if (!firstName || !phone || !designation || !args.joiningDate) throw new Error("REQUIRED_EMPLOYEE_FIELDS");
+    validateDateOfBirth(args.dateOfBirth);
     const [department, location, defaultShift] = await Promise.all([
       ctx.db.get(args.departmentId),
       ctx.db.get(args.locationId),
@@ -626,6 +661,7 @@ export const createForAdmin = mutation({
       employmentType: args.employmentType,
       status: args.status,
       joiningDate: args.joiningDate,
+      dateOfBirth: args.dateOfBirth,
       createdAt: now,
       updatedAt: now,
     });

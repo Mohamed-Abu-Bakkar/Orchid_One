@@ -20,6 +20,7 @@ export function EmployeeOnboarding() {
   const [employmentType,setEmploymentType]=useState("permanent");
   const [status,setStatus]=useState("pending");
   const [joiningDate,setJoiningDate]=useState("");
+  const [dateOfBirth,setDateOfBirth]=useState("");
   const [departmentId,setDepartmentId]=useState("");
   const [locationId,setLocationId]=useState("");
   const [defaultShiftId,setDefaultShiftId]=useState("");
@@ -29,7 +30,7 @@ export function EmployeeOnboarding() {
   const [error,setError]=useState("");
   const [optionMessage,setOptionMessage]=useState("");
   const unlinked=useMemo(()=>accounts?.filter(a=>!a.employeeId&&a.role==="employee")??[],[accounts]);
-  const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDepartmentId("");setLocationId("");setDefaultShiftId("");setUserId("");};
+  const reset=()=>{setFirstName("");setLastName("");setEmail("");setPhone("");setDesignation("");setEmploymentType("permanent");setStatus("pending");setJoiningDate("");setDateOfBirth("");setDepartmentId("");setLocationId("");setDefaultShiftId("");setUserId("");};
 
   const submit=async(e:FormEvent<HTMLFormElement>)=>{
     e.preventDefault();setSaving(true);setError("");setMessage("");
@@ -37,7 +38,7 @@ export function EmployeeOnboarding() {
       const result=await createEmployee({
         firstName,lastName:lastName||undefined,email:email||undefined,phone,designation,
         employmentType:employmentType as "permanent"|"hourly"|"daily"|"contract",
-        status:status as "active"|"inactive"|"pending"|"archived",joiningDate,
+        status:status as "active"|"inactive"|"pending"|"archived",joiningDate,dateOfBirth,
         departmentId:departmentId as any,locationId:locationId as any,defaultShiftId:defaultShiftId?defaultShiftId as any:undefined,userId:userId?userId as any:undefined
       });
       setMessage(`Employee ${result.employeeCode} created${result.linked?" and account linked":". Account can be linked later from User Management."}`);
@@ -58,6 +59,7 @@ export function EmployeeOnboarding() {
           <label className="policy-field">Email<input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} /></label>
           <label className="policy-field">Phone number *<input className="input" required value={phone} onChange={e=>setPhone(e.target.value)} /></label>
           <label className="policy-field">Designation *<input className="input" required value={designation} onChange={e=>setDesignation(e.target.value)} /></label>
+          <label className="policy-field">Date of birth *<input className="input" type="date" required max={new Date().toISOString().slice(0,10)} min="1900-01-01" value={dateOfBirth} onChange={e=>setDateOfBirth(e.target.value)} /></label>
           <label className="policy-field">Joining date *<input className="input" type="date" required value={joiningDate} onChange={e=>setJoiningDate(e.target.value)} /></label>
           <div className="onboarding-master-field"><CreatableSelect label="Department *" value={departmentId} options={options.departments.map(d=>({value:d._id,label:d.name}))} placeholder="Select department" required onChange={setDepartmentId} createLabel="Create department" onCreate={async name=>{const result=await createDepartment({name});setOptionMessage(`Department "${result.name}" created and selected.`);return {value:result.departmentId,label:result.name};}}/></div>
           <div className="onboarding-master-field"><CreatableSelect label="Work location *" value={locationId} options={options.locations.map(l=>({value:l._id,label:`${l.name}${l.locationType === "remote" ? " · Remote" : " · Physical"}`}))} placeholder="Select configured location" required onChange={setLocationId} createLabel="Create location draft" onCreate={async name=>{await createLocationDraft({name});setOptionMessage(`Location "${name}" created as a draft. Configure its type and activate it in Locations before assigning employees.`);return null;}}/><p className="t-caption text-tertiary">New locations remain inactive until configured and activated in Locations. Remote locations do not require an address or geofence.</p></div>
