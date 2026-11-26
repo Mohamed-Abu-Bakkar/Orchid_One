@@ -13,6 +13,7 @@ export function EmployeeRealtimeFrame() {
   const work = useQuery(api.teamsWork.myWorkDashboard, { workDate });
   const markNotificationRead = useMutation(api.notifications.markRead);
   const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
+  const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);
 
   useEffect(() => {
     if (!frameReady || workspace === undefined || policies === undefined || work === undefined) return;
@@ -35,7 +36,7 @@ export function EmployeeRealtimeFrame() {
     };
     window.addEventListener("message", handleNotificationAction);
     return () => window.removeEventListener("message", handleNotificationAction);
-  }, [markNotificationRead, markAllNotificationsRead]);
+  }, [markNotificationRead, markAllNotificationsRead, submitDateOfBirth]);
   return (
     <iframe
       ref={frameRef}
