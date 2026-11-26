@@ -504,6 +504,8 @@
       const { workspace, policies, work } = payload;
       window.__orchidWorkspaceSnapshot = JSON.stringify({ workspace, policies, work });
       window.__orchidWorkspace = workspace;
+      if (workspace?.linked && workspace.profile && !workspace.profile.dateOfBirth) showDateOfBirthPrompt();
+      else document.getElementById("orchidDobPrompt")?.remove();
       renderHomeUpcoming(workspace);
       window.__orchidWork = work || { assignments: [], history: [] };
       window.renderHours?.();
