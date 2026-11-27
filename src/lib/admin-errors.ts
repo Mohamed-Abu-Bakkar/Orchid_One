@@ -96,6 +96,15 @@ export function getAdminErrorDetails(error: unknown, fallback = "We couldn't ide
     unknown: { title: "Action could not be completed", message: fallback },
   };
   const detail = defaults[kind];
+  if (kind === "unknown" && code) {
+    return {
+      kind,
+      title: "The service reported a specific error",
+      message: `The service returned this reason: ${humanizeCode(code)}. Refresh the section and check the related record or settings before retrying.`,
+      code,
+      technicalDetails: humanizeCode(code),
+    };
+  }
   return { kind, ...detail, ...(code ? { code, technicalDetails: humanizeCode(code) } : {}) };
 }
 
