@@ -71,3 +71,35 @@
 .employee-muhurtham__bottom-nav small{font-size:10px;font-weight:700}
 @media(min-width:600px){.employee-muhurtham{border-left:1px solid #eee8ef;border-right:1px solid #eee8ef;box-shadow:0 0 24px rgba(74,18,84,.04)}}
 @media(max-width:360px){.employee-muhurtham__content{padding:16px 12px}.employee-muhurtham__calendar-card,.employee-muhurtham__details{padding:12px}.employee-muhurtham__weekdays,.employee-muhurtham__days{gap:3px}.employee-muhurtham__day{min-height:39px}}
+
+
+/* Admin Muhurtham calendar grid */
+.muhurtham-calendar .muhurtham-admin-calendar{padding:22px;background:linear-gradient(180deg,#fff 0%,#fdfbfd 100%);border:1px solid #e9e1eb;border-radius:18px;box-shadow:0 8px 26px rgba(54,25,61,.045)}
+.muhurtham-admin-calendar__toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.muhurtham-admin-calendar__eyebrow{margin:0 0 5px;color:#8b7190;font-size:10px;font-weight:800;letter-spacing:.15em}
+.muhurtham-admin-calendar__toolbar h3{margin:0;color:#35113d;font-family:Manrope,Inter,sans-serif;font-size:23px;font-weight:800;letter-spacing:-.045em}
+.muhurtham-admin-calendar__navigation{display:flex;gap:8px}
+.muhurtham-calendar .muhurtham-admin-calendar__navigation button{width:38px;height:38px;display:grid;place-items:center;border:1px solid #e9e1eb;border-radius:11px;background:#fff;color:#4a1254;font-size:25px;line-height:1;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.muhurtham-calendar .muhurtham-admin-calendar__navigation button:hover{background:#f7eff8;border-color:#d8c4dd;transform:translateY(-1px)}
+.muhurtham-admin-calendar__weekdays,.muhurtham-admin-calendar__days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.muhurtham-admin-calendar__weekdays{margin-bottom:8px}
+.muhurtham-admin-calendar__weekdays span{padding:9px 4px;text-align:center;color:#8a7c8d;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.muhurtham-admin-calendar__blank{min-height:112px}
+.muhurtham-calendar .muhurtham-admin-calendar__day{position:relative;min-width:0;min-height:112px;display:flex;align-items:flex-start;flex-direction:column;gap:7px;padding:10px;border:1px solid #eee8ef;border-radius:13px;background:#fff;color:#302a31;text-align:left;cursor:pointer;overflow:hidden;transition:border-color .18s,background .18s,box-shadow .18s,transform .18s}
+.muhurtham-calendar .muhurtham-admin-calendar__day:hover{border-color:#cdb7d2;background:#fdfaff;box-shadow:0 4px 12px rgba(74,18,84,.07);transform:translateY(-1px)}
+.muhurtham-calendar .muhurtham-admin-calendar__day.is-selected{border:1.5px solid #6a3473;background:#f7eff9;box-shadow:0 0 0 3px rgba(106,52,115,.09)}
+.muhurtham-admin-calendar__date{width:27px;height:27px;display:grid;place-items:center;border-radius:8px;color:#514653;font-size:12px;font-weight:800}
+.muhurtham-admin-calendar__day.is-published .muhurtham-admin-calendar__date{background:#e8f4ec;color:#246b42}
+.muhurtham-admin-calendar__day.is-draft .muhurtham-admin-calendar__date{background:#fff3df;color:#95601c}
+.muhurtham-admin-calendar__status{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.02em}
+.muhurtham-admin-calendar__day.is-published .muhurtham-admin-calendar__status{background:#eaf5ed;color:#287347}
+.muhurtham-admin-calendar__day.is-draft .muhurtham-admin-calendar__status{background:#fff4e2;color:#94611f}
+.muhurtham-admin-calendar__notes{display:-webkit-box;width:100%;overflow:hidden;color:#675b6a;font-size:10px;font-weight:500;line-height:1.45;text-align:left;overflow-wrap:anywhere;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.muhurtham-admin-calendar__legend{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:18px;padding-top:14px;border-top:1px solid #f0ebf1}
+.muhurtham-admin-calendar__legend span{display:inline-flex;align-items:center;gap:7px;color:#766b79;font-size:10px;font-weight:600}
+.muhurtham-admin-calendar__legend i{width:8px;height:8px;border-radius:50%;background:#a8a0aa}
+.muhurtham-admin-calendar__legend i.is-published{background:#3c9560}
+.muhurtham-admin-calendar__legend i.is-draft{background:#d69a3e}
+.muhurtham-admin-calendar__legend .muhurtham-admin-calendar__hint{margin-left:auto;color:#9a8f9c;font-weight:500}
+@media(max-width:760px){.muhurtham-calendar .muhurtham-admin-calendar{padding:14px;border-radius:14px}.muhurtham-admin-calendar__weekdays,.muhurtham-admin-calendar__days{gap:4px}.muhurtham-admin-calendar__blank{min-height:76px}.muhurtham-calendar .muhurtham-admin-calendar__day{min-height:76px;padding:6px;border-radius:9px;gap:5px}.muhurtham-admin-calendar__date{width:23px;height:23px;font-size:11px}.muhurtham-admin-calendar__status{padding:3px 5px;font-size:8px}.muhurtham-admin-calendar__notes{font-size:9px;line-height:1.3}.muhurtham-admin-calendar__weekdays span{font-size:9px;padding:6px 1px}.muhurtham-admin-calendar__legend .muhurtham-admin-calendar__hint{display:none}}
+@media(max-width:420px){.muhurtham-admin-calendar__weekdays,.muhurtham-admin-calendar__days{gap:3px}.muhurtham-calendar .muhurtham-admin-calendar__day{min-height:68px;padding:4px}.muhurtham-admin-calendar__blank{min-height:68px}.muhurtham-admin-calendar__status{font-size:7px;padding:2px 4px}.muhurtham-admin-calendar__notes{font-size:8px}}
