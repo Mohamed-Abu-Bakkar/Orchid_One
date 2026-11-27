@@ -58,3 +58,14 @@ After the schema/function deployment, an operator must run the internal mutation
 - The mutation writes a `payroll.draft_period_deleted` audit event, deletes the draft wage records, and then deletes the period in one Convex transaction.
 - Pending-approval, approved, and locked periods/records cannot be deleted through this operation.
 - The UI requires an explicit browser confirmation; the mutation also requires the fixed confirmation token.
+
+
+## Supervisor onboarding and payroll recommendation authority
+
+- Supervisors can create and edit onboarding recommendation drafts for their organization. A supervisor can submit only their own draft; submitted recommendations become immutable to the supervisor.
+- An onboarding recommendation does not create or activate an employee record. Only an organization Admin or Super Admin can approve/reject a submitted recommendation. Approval creates an employee record in `pending` status; account linking and activation remain separate admin-controlled actions.
+- Rejection requires an administrator note. Draft, submission, approval, and rejection actions are audit logged.
+- Supervisors can view organization payroll periods and employee-level draft calculations, generate payroll drafts, and add audited adjustments while a period remains in `draft`.
+- A supervisor must submit a draft period for approval. Submission transitions both the period and its wage records to `pending_approval`.
+- Only Admin/Super Admin can approve and publish payroll, lock a period, or delete a payroll period. Employee payslips remain visible only after approval/locking.
+- Payroll calculation, draft adjustment, submission, approval and locking operations validate organization ownership and state transitions in Convex; UI visibility is not the authorization boundary.
