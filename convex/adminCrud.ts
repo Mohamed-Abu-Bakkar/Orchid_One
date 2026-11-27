@@ -29,6 +29,14 @@ export const updateEmployee = mutation({
     employmentType,
     status: employeeStatus,
     joiningDate: v.string(),
+    dateOfBirth: v.optional(v.string()),
+    address: v.optional(v.union(v.object({
+      line1: v.string(), line2: v.optional(v.string()), city: v.string(),
+      district: v.optional(v.string()), state: v.string(), postalCode: v.string(), country: v.string(),
+    }), v.null())),
+    emergencyContact: v.optional(v.union(v.object({
+      name: v.string(), relationship: v.string(), phone: v.string(),
+    }), v.null())),
     departmentId: v.id("departments"),
     locationId: v.id("locations"),
     defaultShiftId: v.union(v.id("shifts"), v.null()),
@@ -59,6 +67,34 @@ export const updateEmployee = mutation({
     ) {
       throw new Error("INVALID_JOINING_DATE");
     }
+    if (args.dateOfBirth !== undefined) {
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(args.dateOfBirth)) throw new Error("INVALID_DATE_OF_BIRTH");
+      const [birthYear, birthMonth, birthDay] = args.dateOfBirth.split("-").map(Number);
+      const birthDate = new Date(Date.UTC(birthYear, birthMonth - 1, birthDay));
+      if (birthYear < 1900 || args.dateOfBirth > new Date().toISOString().slice(0, 10)
+        || birthDate.getUTCFullYear() !== birthYear || birthDate.getUTCMonth() !== birthMonth - 1 || birthDate.getUTCDate() !== birthDay) {
+        throw new Error("INVALID_DATE_OF_BIRTH");
+      }
+    }
+    let address = args.address === undefined ? employee.address : args.address ?? undefined;
+    if (address) {
+      address = {
+        line1: address.line1.trim(), line2: address.line2?.trim() || undefined,
+        city: address.city.trim(), district: address.district?.trim() || undefined,
+        state: address.state.trim(), postalCode: address.postalCode.trim(), country: address.country.trim(),
+      };
+      if (!address.line1 || !address.city || !address.state || !address.country || !/^[A-Za-z0-9 -]{4,10}$/.test(address.postalCode)) {
+        throw new Error("INVALID_EMPLOYEE_ADDRESS");
+      }
+    }
+    let emergencyContact = args.emergencyContact === undefined ? employee.emergencyContact : args.emergencyContact ?? undefined;
+    if (emergencyContact) {
+      const name = emergencyContact.name.trim();
+      const relationship = emergencyContact.relationship.trim();
+      const phoneDigits = emergencyContact.phone.replace(/\\D/g, "");
+      if (!name || !relationship || phoneDigits.length < 7 || phoneDigits.length > 15) throw new Error("INVALID_EMERGENCY_CONTACT");
+      emergencyContact = { name, relationship, phone: emergencyContact.phone.trim() };
+    }
     const [department, location, shift] = await Promise.all([
       ctx.db.get(args.departmentId), ctx.db.get(args.locationId),
       args.defaultShiftId ? ctx.db.get(args.defaultShiftId) : null,
@@ -66,13 +102,31 @@ export const updateEmployee = mutation({
     if (!department || department.organizationId !== admin.organizationId || !department.isActive) throw new Error("INVALID_DEPARTMENT");
     if (!location || location.organizationId !== admin.organizationId || !location.isActive) throw new Error("INVALID_LOCATION");
     if (args.defaultShiftId && (!shift || shift.organizationId !== admin.organizationId || !shift.isActive)) throw new Error("INVALID_SHIFT");
+    const changedFields = [
+      ...(employee.firstName !== firstName ? ["firstName"] : []),
+      ...(employee.lastName !== (args.lastName?.trim() || undefined) ? ["lastName"] : []),
+      ...(employee.email !== (email || undefined) ? ["email"] : []),
+      ...(employee.phone !== phone ? ["phone"] : []),
+      ...(employee.designation !== designation ? ["designation"] : []),
+      ...(employee.employmentType !== args.employmentType ? ["employmentType"] : []),
+      ...(employee.status !== args.status ? ["status"] : []),
+      ...(employee.joiningDate !== joiningDate ? ["joiningDate"] : []),
+      ...(employee.departmentId !== args.departmentId ? ["departmentId"] : []),
+      ...(employee.locationId !== args.locationId ? ["locationId"] : []),
+      ...(employee.defaultShiftId !== (args.defaultShiftId ?? undefined) ? ["defaultShiftId"] : []),
+      ...(args.dateOfBirth !== undefined && employee.dateOfBirth !== args.dateOfBirth ? ["dateOfBirth"] : []),
+      ...(JSON.stringify(employee.address ?? null) !== JSON.stringify(address ?? null) ? ["address"] : []),
+      ...(JSON.stringify(employee.emergencyContact ?? null) !== JSON.stringify(emergencyContact ?? null) ? ["emergencyContact"] : []),
+    ];
     await ctx.db.patch(employee._id, {
       firstName, lastName: args.lastName?.trim() || undefined, email: email || undefined,
       phone, designation, employmentType: args.employmentType, status: args.status,
       joiningDate, departmentId: args.departmentId, locationId: args.locationId,
-      defaultShiftId: args.defaultShiftId ?? undefined, updatedAt: Date.now(),
+      defaultShiftId: args.defaultShiftId ?? undefined,
+      ...(args.dateOfBirth !== undefined ? { dateOfBirth: args.dateOfBirth } : {}),
+      address, emergencyContact, updatedAt: Date.now(),
     });
-    await audit(ctx, admin, "employee.updated", "employee", String(employee._id), { status: args.status });
+    await audit(ctx, admin, "employee.updated", "employee", String(employee._id), { status: args.status, changedFields });
     return true;
   },
 });

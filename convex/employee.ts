@@ -404,6 +404,16 @@ export const getProfileForAdmin = query({
         designation: employee.designation, employmentType: employee.employmentType, status: employee.status,
         joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null,
         emergencyContact: employee.emergencyContact ?? null,
+        address: employee.address ?? null,
+        profileCompletedAt: employee.profileCompletedAt ?? null,
+        bankDetailsConfigured: Boolean(employee.bankDetailsEncrypted),
+        profileComplete: Boolean(employee.dateOfBirth && employee.address && employee.profileCompletedAt),
+        profileMissingFields: [
+          ...(!employee.dateOfBirth ? ["Date of birth"] : []),
+          ...(!employee.address ? ["Residential address"] : []),
+          ...(!employee.emergencyContact ? ["Emergency contact (optional)"] : []),
+          ...(!employee.bankDetailsEncrypted ? ["Bank details (optional)"] : []),
+        ],
         departmentName: department?.name ?? "Unassigned", locationName: location?.name ?? "Unassigned",
         locationAddress: location?.address ?? "", defaultShiftName: defaultShift?.name ?? "Not assigned",
         reportingManager: reportingManager ? [reportingManager.firstName, reportingManager.lastName].filter(Boolean).join(" ") : null,
@@ -478,6 +488,13 @@ export const listForAdmin = query({
         departmentName: department?.name ?? "Unassigned",
         locationName: location?.name ?? "Unassigned",
         defaultShiftName: defaultShift?.name ?? "Not assigned",
+        ...(user.role === "superadmin" || user.role === "admin" ? {
+          dateOfBirth: employee.dateOfBirth ?? "",
+          address: employee.address ?? null,
+          emergencyContact: employee.emergencyContact ?? null,
+          profileCompletedAt: employee.profileCompletedAt ?? null,
+          bankDetailsConfigured: Boolean(employee.bankDetailsEncrypted),
+        } : {}),
       };
     }));
   },
