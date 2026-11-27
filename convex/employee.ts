@@ -407,7 +407,7 @@ export const getProfileForAdmin = query({
         address: employee.address ?? null,
         profileCompletedAt: employee.profileCompletedAt ?? null,
         bankDetailsConfigured: Boolean(employee.bankDetailsEncrypted),
-        profileComplete: Boolean(employee.dateOfBirth && employee.address && employee.profileCompletedAt),
+        profileComplete: Boolean(employee.dateOfBirth && employee.address),
         profileMissingFields: [
           ...(!employee.dateOfBirth ? ["Date of birth"] : []),
           ...(!employee.address ? ["Residential address"] : []),

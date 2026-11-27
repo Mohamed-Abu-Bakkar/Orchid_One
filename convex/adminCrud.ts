@@ -68,7 +68,7 @@ export const updateEmployee = mutation({
       throw new Error("INVALID_JOINING_DATE");
     }
     if (args.dateOfBirth !== undefined) {
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(args.dateOfBirth)) throw new Error("INVALID_DATE_OF_BIRTH");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(args.dateOfBirth)) throw new Error("INVALID_DATE_OF_BIRTH");
       const [birthYear, birthMonth, birthDay] = args.dateOfBirth.split("-").map(Number);
       const birthDate = new Date(Date.UTC(birthYear, birthMonth - 1, birthDay));
       if (birthYear < 1900 || args.dateOfBirth > new Date().toISOString().slice(0, 10)
@@ -91,7 +91,7 @@ export const updateEmployee = mutation({
     if (emergencyContact) {
       const name = emergencyContact.name.trim();
       const relationship = emergencyContact.relationship.trim();
-      const phoneDigits = emergencyContact.phone.replace(/\\D/g, "");
+      const phoneDigits = emergencyContact.phone.replace(/\D/g, "");
       if (!name || !relationship || phoneDigits.length < 7 || phoneDigits.length > 15) throw new Error("INVALID_EMERGENCY_CONTACT");
       emergencyContact = { name, relationship, phone: emergencyContact.phone.trim() };
     }
