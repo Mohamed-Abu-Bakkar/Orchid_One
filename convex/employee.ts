@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { requireIdentity } from "./lib/auth";
 import { notifyOrganizationAdmins } from "./lib/notifications";
 import { canChangeAccountStatus, canChangePrimarySuperadmin, canManageAccountRole } from "./lib/rolePolicy";
+import { calculateShiftWorkBuckets } from "./attendanceTimePolicy";
 
 export const myWorkspace = query({
   args: {},
@@ -941,4 +942,113 @@ export const listOnboardingRecommendations = query({
 export const reviewOnboardingRecommendation = mutation({
  args:{recommendationId:v.id("onboardingRecommendations"),decision:v.union(v.literal("approved"),v.literal("rejected")),note:v.optional(v.string())},
  handler:async(ctx,args)=>{const admin=await requireIdentity(ctx);if(admin.role!=="admin"&&admin.role!=="superadmin")throw new Error("ADMIN_APPROVAL_REQUIRED");const item=await ctx.db.get(args.recommendationId);if(!item||item.organizationId!==admin.organizationId)throw new Error("RECOMMENDATION_NOT_FOUND");if(item.status!=="pending_approval")throw new Error("RECOMMENDATION_NOT_PENDING");const note=args.note?.trim();if(args.decision==="rejected"&&(!note||note.length>500))throw new Error("REJECTION_NOTE_REQUIRED");let employeeCode:string|undefined;if(args.decision==="approved"){const [department,location,shift]=await Promise.all([ctx.db.get(item.departmentId),ctx.db.get(item.locationId),item.defaultShiftId?ctx.db.get(item.defaultShiftId):null]);if(!department||department.organizationId!==admin.organizationId||!department.isActive)throw new Error("INVALID_DEPARTMENT");if(!location||location.organizationId!==admin.organizationId||!location.isActive)throw new Error("INVALID_LOCATION");if(item.defaultShiftId&&(!shift||shift.organizationId!==admin.organizationId||!shift.isActive))throw new Error("INVALID_DEFAULT_SHIFT");const employees=await ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",admin.organizationId)).collect();const highest=employees.reduce((max,e)=>{const m=/^ORC-(\d+)$/.exec(e.employeeCode);return m?Math.max(max,Number(m[1])):max;},0);employeeCode=`ORC-${String(highest+1).padStart(4,"0")}`;if(employees.some(e=>e.employeeCode===employeeCode))throw new Error("EMPLOYEE_CODE_CONFLICT");const now=Date.now();const employeeId=await ctx.db.insert("employees",{organizationId:admin.organizationId,locationId:item.locationId,employeeCode,firstName:item.firstName,lastName:item.lastName,email:item.email,phone:item.phone,departmentId:item.departmentId,designation:item.designation,defaultShiftId:item.defaultShiftId,employmentType:item.employmentType,status:"pending",joiningDate:item.joiningDate,dateOfBirth:item.dateOfBirth,createdAt:now,updatedAt:now});await ctx.db.insert("auditLogs",{organizationId:admin.organizationId,actorUserId:admin._id,action:"employee.created_from_onboarding_recommendation",entityType:"employee",entityId:String(employeeId),metadata:{employeeCode,recommendationId:String(item._id)},createdAt:now});}const now=Date.now();await ctx.db.patch(item._id,{status:args.decision,reviewedBy:admin._id,reviewedAt:now,reviewNote:note,updatedAt:now});await ctx.db.insert("auditLogs",{organizationId:admin.organizationId,actorUserId:admin._id,action:"onboarding.recommendation_"+args.decision,entityType:"onboardingRecommendation",entityId:String(item._id),metadata:{note:note??null,employeeCode:employeeCode??null},createdAt:now});return {decision:args.decision,employeeCode};}
+});
+
+
+function employeeLocalDateTimeUtc(date: string, minuteOfDay: number, timeZone: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  const target = Date.UTC(year, month - 1, day, Math.floor(minuteOfDay / 60), minuteOfDay % 60);
+  let guess = target;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date(guess));
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    const represented = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
+    const difference = represented - target;
+    if (!difference) break;
+    guess -= difference;
+  }
+  return guess;
+}
+
+/**
+ * Employee-only live estimate. It reuses payroll's verified attendance bucketing,
+ * but never writes a wage record or includes unapproved overtime.
+ */
+export const myTodayWageEstimate = query({
+  args: { minuteBucket: v.number() },
+  handler: async (ctx, args) => {
+    if (!Number.isSafeInteger(args.minuteBucket) || args.minuteBucket < 0) throw new Error("INVALID_ESTIMATE_REFRESH");
+    const user = await requireIdentity(ctx);
+    if (user.role !== "employee" || !user.employeeId) throw new Error("EMPLOYEE_ACCESS_REQUIRED");
+    const employee = await ctx.db.get(user.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") {
+      return { employmentType: null, amountPaise: null, payableMinutes: 0, ratePaise: null, status: "unavailable", note: "Employee profile is unavailable." };
+    }
+    const organization = await ctx.db.get(user.organizationId);
+    if (!organization) throw new Error("ORGANIZATION_NOT_FOUND");
+    const now = Date.now();
+    const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: organization.timezone }).format(new Date(now));
+    if (employee.employmentType === "permanent") {
+      return { employmentType: "permanent", amountPaise: null, payableMinutes: 0, ratePaise: null, status: "monthly", note: "Monthly salary is finalized through payroll." };
+    }
+
+    const rate = await ctx.db.query("wageRates")
+      .withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).lte("effectiveFrom", workDate))
+      .order("desc")
+      .first();
+    if (!rate || rate.organizationId !== user.organizationId || rate.employmentType !== employee.employmentType || (rate.effectiveTo && rate.effectiveTo < workDate)) {
+      return { employmentType: employee.employmentType, amountPaise: null, payableMinutes: 0, ratePaise: null, status: "rate_missing", note: "Your active wage rate is not configured yet." };
+    }
+
+    const dayStart = employeeLocalDateTimeUtc(workDate, 0, organization.timezone);
+    const nextDayStart = employeeLocalDateTimeUtc(workDate, 1440, organization.timezone);
+    const allEvents = await ctx.db.query("attendanceEvents")
+      .withIndex("by_employee_time", q => q.eq("employeeId", employee._id).gte("receivedAt", dayStart).lt("receivedAt", nextDayStart))
+      .collect();
+    if (allEvents.some(event => event.reviewStatus === "pending")) {
+      return { employmentType: employee.employmentType, amountPaise: null, payableMinutes: 0, ratePaise: rate.amountPaise, status: "pending_review", note: "Attendance is awaiting review, so no estimate is shown yet." };
+    }
+    const events = allEvents
+      .filter(event => event.reviewStatus !== "rejected" && (event.locationType === "remote" || event.geofencePassed === true || event.reviewStatus === "approved"))
+      .sort((a, b) => a.receivedAt - b.receivedAt);
+    if (!events.length) {
+      return { employmentType: employee.employmentType, amountPaise: 0, payableMinutes: 0, ratePaise: rate.amountPaise, status: "not_started", note: "Verified check-in time will appear here." };
+    }
+
+    const lastEvent = events[events.length - 1];
+    const calculationEvents: typeof events = [...events];
+    if (lastEvent.eventType === "check_in") calculationEvents.push({ ...lastEvent, eventType: "check_out", receivedAt: now });
+    else if (lastEvent.eventType === "break_start") calculationEvents.push({ ...lastEvent, eventType: "break_end", receivedAt: now });
+
+    const assignments = await ctx.db.query("shiftAssignments")
+      .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", workDate))
+      .collect();
+    if (assignments.length > 1) {
+      return { employmentType: employee.employmentType, amountPaise: null, payableMinutes: 0, ratePaise: rate.amountPaise, status: "schedule_exception", note: "Multiple shifts are assigned today. HR must review the schedule." };
+    }
+    const shiftId = assignments[0]?.shiftId ?? employee.defaultShiftId;
+    const shift = shiftId ? await ctx.db.get(shiftId) : null;
+    if (shiftId && (!shift || shift.organizationId !== user.organizationId || !shift.isActive || shift.endMinute <= shift.startMinute || shift.endMinute > 1440)) {
+      return { employmentType: employee.employmentType, amountPaise: null, payableMinutes: 0, ratePaise: rate.amountPaise, status: "schedule_exception", note: "Today's shift cannot be used for an estimate." };
+    }
+    const shiftStartAt = shift ? employeeLocalDateTimeUtc(workDate, shift.startMinute, organization.timezone) : undefined;
+    const shiftEndAt = shift ? employeeLocalDateTimeUtc(workDate, shift.endMinute, organization.timezone) : undefined;
+    let payableMinutes = 0;
+    try {
+      payableMinutes = calculateShiftWorkBuckets(calculationEvents, shiftStartAt, shiftEndAt).regularMinutes;
+    } catch {
+      return { employmentType: employee.employmentType, amountPaise: null, payableMinutes: 0, ratePaise: rate.amountPaise, status: "attendance_incomplete", note: "Attendance needs correction before a reliable estimate can be shown." };
+    }
+
+    if (employee.employmentType === "daily") {
+      const completed = lastEvent.eventType === "check_out" && payableMinutes > 0;
+      return {
+        employmentType: "daily",
+        amountPaise: completed ? rate.amountPaise : null,
+        payableMinutes,
+        ratePaise: rate.amountPaise,
+        status: completed ? "completed" : "awaiting_checkout",
+        note: completed ? "One completed attendance day at the configured daily rate." : "Daily wages are counted after a verified checkout; partial-day proration is not applied.",
+      };
+    }
+
+    return {
+      employmentType: "hourly",
+      amountPaise: Math.round(payableMinutes * rate.amountPaise / 60),
+      payableMinutes,
+      ratePaise: rate.amountPaise,
+      status: lastEvent.eventType === "check_out" ? "completed" : lastEvent.eventType === "break_start" ? "on_break" : "working",
+      note: "Regular payable time after breaks and shift limits. Overtime is excluded until approved.",
+    };
+  },
 });
