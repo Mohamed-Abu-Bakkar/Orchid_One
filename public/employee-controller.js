@@ -538,7 +538,8 @@
     dialog.querySelector("#orchidProfileNext").addEventListener("click",()=>{
       const active=stepNodes[current];
       readValues();
-      if (!active.reportValidity()) return;
+      const invalidField=active.querySelector(":invalid");
+      if (invalidField) { invalidField.reportValidity(); return; }
       if (current===2 && [values.emergencyName,values.emergencyRelationship,values.emergencyPhone].some(Boolean) && ![values.emergencyName,values.emergencyRelationship,values.emergencyPhone].every(Boolean)) {
         error.textContent="Complete the emergency contact name, relationship and phone number, or leave all three blank.";error.classList.remove("hidden");return;
       }
