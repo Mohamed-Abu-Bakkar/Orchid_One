@@ -274,3 +274,9 @@
 .admin-inline-error p{flex:1 1 240px;margin:0;color:var(--text-secondary);font-size:12px;line-height:1.5}
 .admin-inline-error .admin-error-icon{width:30px;height:30px;flex-shrink:0;background:transparent}
 @media(max-width:640px){.admin-error-state{padding:24px 16px}.admin-error-actions{width:100%}.admin-error-actions button{flex:1}}
+
+
+/* Safe diagnostic details for admin and supervisor error states */
+.admin-error-diagnostics{width:min(100%,520px);margin:4px 0;padding:10px 12px;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.admin-error-diagnostics summary{cursor:pointer;color:var(--text-secondary);font-size:12px;font-weight:600}
+.admin-error-diagnostics code{display:block;margin-top:8px;overflow-wrap:anywhere;color:var(--text-primary);font-size:11px}
