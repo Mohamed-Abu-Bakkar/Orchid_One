@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -29,7 +30,7 @@ export function AttendanceExceptionReview() {
       }
       setNotes(current => ({ ...current, [id]: "" }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to resolve attendance review.");
+      setError(getAdminErrorMessage(cause, "Unable to resolve attendance review."));
     } finally { setBusyId(null); }
   }
 
