@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
-import { getAdminErrorMessage, classifyAdminError } from "@/lib/admin-errors";
+import { getAdminErrorDetails } from "@/lib/admin-errors";
 
 type Props = {
   error: unknown;
@@ -11,14 +11,20 @@ type Props = {
 };
 
 export function AdminErrorState({ error, onRetry, title, compact = false }: Props) {
-  const kind = classifyAdminError(error);
-  const restricted = kind === "forbidden" || kind === "suspended";
+  const details = getAdminErrorDetails(error, "We couldn't identify the exact cause from the server response.");
+  const restricted = details.kind === "forbidden" || details.kind === "suspended";
   return (
     <div className={compact ? "admin-inline-error" : "admin-error-state"} role="alert">
       <span className="admin-error-icon">{restricted ? <ShieldAlert size={20} /> : <AlertCircle size={20} />}</span>
-      <h3>{title ?? (restricted ? "Access restricted" : "Unable to load this information")}</h3>
-      <p>{getAdminErrorMessage(error, "We couldn't load this information. Please try again.")}</p>
-      {onRetry && kind !== "forbidden" && kind !== "suspended" && (
+      <h3>{title ?? details.title}</h3>
+      <p>{details.message}</p>
+      {details.code && (
+        <details className="admin-error-diagnostics">
+          <summary>Technical details</summary>
+          <code>{details.code}</code>
+        </details>
+      )}
+      {onRetry && details.kind !== "forbidden" && details.kind !== "suspended" && (
         <button type="button" className="btn btn-outline btn-sm" onClick={onRetry}>
           <RefreshCw size={14} /> Retry
         </button>
