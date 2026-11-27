@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyAdminError, getAdminErrorMessage } from "@/lib/admin-errors";
+import { classifyAdminError, getAdminErrorMessage } from "./admin-errors";
 
 describe("admin error classification", () => {
   it.each([
