@@ -24,7 +24,7 @@ The admin Attendance page reads attendance records from the organization's Conve
 - A day without a recorded event is not displayed as absent.
 - A failed geofence event remains visible as an exception; it is not silently discarded.
 - Existing review decisions are reflected in the register.
-- The employee portal uses the existing GPS punch mutation, shows all assigned shifts for the day, excludes pending/rejected punches from its elapsed-time display, and blocks further punches while a geofence exception is pending review.
+- The employee portal uses the existing GPS punch mutation, shows all assigned shifts for the day, excludes pending/rejected punches from its elapsed-time display, and applies the punch-blocking rules documented below.
 - The register uses server-received timestamps and the organization's configured timezone for day grouping.
 
 ## Deliberately not calculated yet
@@ -54,11 +54,13 @@ Before enabling those calculations, confirm:
 - CSV: exports the currently filtered rows and uses proper CSV quoting.
 - Persisted `attendanceDays` with no punch events: still appear as a stored daily summary.
 
-
 ## Open-session blocker review and correction
 
-- The Attendance page exposes the same punch blockers used by `recordPunch`: qualifying pending review events and active employees whose latest non-rejected event before the current organization-local day is not a checkout.
-- This queue is distinct from the geofence KPI and shows the exact blocking event, employee, work date, timestamp and location that can prevent another punch.
+- The Attendance page exposes the same punch blockers used by `recordPunch`: pending review events from the current organization-local workday and active employees whose latest non-rejected event before the current day is not a checkout.
+- A pending event from an earlier workday remains in the review queue but does not block a new-day punch once that previous session has a checkout.
+- A pending event from the current workday continues to block further punches.
+- An earlier workday without a checkout remains a blocker even if no review is pending.
+- The queue is distinct from the geofence KPI and shows the exact blocking event, employee, work date, timestamp and location that can prevent another punch.
 - A pending event must be resolved through the attendance review workflow first; the session-correction action is disabled while any event on that workday remains pending.
 - Admin and Super Admin roles may append a verified historical checkout. Supervisors can view the blocker but cannot apply a correction.
 - If the latest event is an open break, the administrator must provide both the verified break-end time and checkout time.
@@ -71,7 +73,10 @@ Before enabling those calculations, confirm:
 
 - A previous-day check-in with no checkout appears in the open-session panel.
 - A previous-day session whose latest non-rejected event is checkout does not appear.
-- Pending reviews are shown as blockers but cannot be bypassed by the correction action.
+- A previous-day pending geofence check-in followed by a system-generated midnight checkout does not block the employee's next-day check-in; the original event remains pending for review.
+- A current-day pending geofence event continues to block further punches.
+- A previous-day open session remains blocked until a verified checkout is appended.
+- Pending reviews are shown as blockers only when they belong to the current workday; previous-day review records remain visible but do not block after session closure.
 - A supervisor can inspect open sessions but cannot submit corrections.
 - An admin can correct a check-in or break-end session using a verified checkout time.
 - An open break requires a verified break-end time earlier than checkout.

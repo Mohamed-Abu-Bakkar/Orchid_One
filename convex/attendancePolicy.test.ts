@@ -22,12 +22,25 @@ describe("attendance next-day punch policy", () => {
     expect(getOrganizationWorkDate(timestamp, "America/Los_Angeles")).toBe("2026-11-16");
   });
 
-  it("allows a new-day check-in when the only pending event is a prior-day checkout", () => {
+  it("allows a new-day check-in when yesterday's pending geofence check-in was closed by midnight auto-checkout", () => {
+    const pendingYesterdayCheckIn = event("check_in", "2026-11-16T03:00:00.000Z");
+    const generatedCheckout = event("check_out", "2026-11-16T18:29:59.999Z", undefined);
+
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
-      [event("check_out", "2026-11-16T16:00:00.000Z")],
+      [pendingYesterdayCheckIn],
       "Asia/Kolkata",
-      event("check_out", "2026-11-16T16:00:00.000Z"),
+      generatedCheckout,
+    )).toBe(false);
+  });
+
+  it("allows a new-day check-in when the only pending event is a prior-day checkout", () => {
+    const priorCheckout = event("check_out", "2026-11-16T16:00:00.000Z");
+    expect(shouldBlockAttendancePunch(
+      "2026-11-17",
+      [priorCheckout],
+      "Asia/Kolkata",
+      priorCheckout,
     )).toBe(false);
   });
 
@@ -43,22 +56,10 @@ describe("attendance next-day punch policy", () => {
     )).toBe(true);
   });
 
-  it("blocks an older pending non-checkout even when a newer pending checkout exists", () => {
+  it("blocks a new-day punch when the previous session is still open", () => {
     expect(shouldBlockAttendancePunch(
       "2026-11-17",
-      [
-        event("check_in", "2026-11-15T03:00:00.000Z"),
-        event("check_out", "2026-11-16T16:00:00.000Z"),
-      ],
-      "Asia/Kolkata",
-      event("check_out", "2026-11-16T16:00:00.000Z"),
-    )).toBe(true);
-  });
-
-  it("blocks a prior-day pending break event", () => {
-    expect(shouldBlockAttendancePunch(
-      "2026-11-17",
-      [event("break_start", "2026-11-16T11:00:00.000Z")],
+      [event("check_in", "2026-11-16T03:00:00.000Z")],
       "Asia/Kolkata",
       event("break_start", "2026-11-16T11:00:00.000Z"),
     )).toBe(true);
