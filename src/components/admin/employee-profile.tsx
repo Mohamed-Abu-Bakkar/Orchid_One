@@ -96,7 +96,7 @@ export function EmployeeProfile({ employeeId, onBack }: { employeeId: Id<"employ
             <tr><th>Employee record created</th><td>{dateTimeLabel(p.createdAt)}</td></tr>
           </tbody></table></div></div>
           <div><h3 className="t-h3">Profile completion</h3><div className="employee-directory-stats" style={{ marginTop: 12 }}>
-            <Stat label="Personal profile" value={p.profileComplete ? "Complete" : "Incomplete"} detail={p.profileCompletedAt ? "Completed " + dateLabel(p.profileCompletedAt) : "Required personal details are on file"} />
+            <Stat label="Personal profile" value={p.profileComplete ? "Complete" : "Incomplete"} detail={p.profileComplete ? (p.profileCompletedAt ? "Employee submitted " + dateLabel(p.profileCompletedAt) : "Required details are on file") : "Missing required personal information"} />
             <Stat label="Bank details" value={p.bankDetailsConfigured ? "Submitted" : "Not provided"} detail="Encrypted at rest; account values are never displayed here" />
           </div>
           {!p.profileComplete && p.profileMissingFields?.length > 0 && <p className="t-caption text-tertiary">Outstanding: {p.profileMissingFields.join(" · ")}</p>}
