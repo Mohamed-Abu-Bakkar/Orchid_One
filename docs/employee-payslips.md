@@ -36,3 +36,14 @@ The authenticated Next.js employee frame loads `api.employee.myWorkspace` throug
 - Print / Save PDF produces a readable mobile- and desktop-friendly statement.
 - Popup blocking is handled with a clear message.
 - Unauthenticated, inactive, unlinked and non-employee accounts cannot access the employee route.
+
+
+## Employee home · Today's estimated wage
+
+- The employee home card shows a live, indicative estimate for the current organization-local work date; it is not an approved wage record or payslip.
+- Hourly employees are estimated from verified attendance events using the same shift-window and break-exclusion calculation as payroll-v2. An open check-in or break is provisionally closed at the current server time for display, and the estimate refreshes once per minute.
+- The active effective-dated employee hourly rate is applied to regular payable minutes. Unapproved overtime is excluded; only regular time is included in this estimate.
+- Daily employees are shown the configured daily rate only after a complete, verified checkout with positive payable minutes. Partial-day proration is not applied.
+- Monthly employees are directed to approved payroll/payslips; no daily pro-rata salary is inferred.
+- If attendance is pending review, incomplete, invalid, or has conflicting shift assignments, the UI does not display a monetary estimate.
+- The query is employee-scoped using the authenticated linked employee identity. It does not accept a client employee ID and does not create or modify wage records.
