@@ -28,7 +28,7 @@ export const myWorkspace = query({
     nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
     const monthEnd = dayOffset(nextMonthDate.toISOString().slice(0, 10), -1);
     const nextMonthStartAt = new Date(nextMonthDate.toISOString().slice(0, 10) + "T00:00:00+05:30");
-    const [department, location, attendance, leaveBalances, leaveTypes, leaveRequests, overtimeRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignments, upcomingShifts, holidays, organizationEmployees, monthAttendanceDays, workCalendars] = await Promise.all([
+    const [department, location, attendance, leaveBalances, leaveTypes, leaveRequests, overtimeRequests, documents, wageRecords, notifications, monthEvents, monthShifts, todayShiftAssignments, upcomingShifts, holidays, organizationEmployees, monthAttendanceDays, workCalendars, publishedMuhurthamDates] = await Promise.all([
       ctx.db.get(employee.departmentId), ctx.db.get(employee.locationId),
       ctx.db.query("attendanceEvents").withIndex("by_employee_time", q => q.eq("employeeId", employee._id)).order("desc").take(500),
       ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id).eq("periodYear", Number(today.slice(0, 4)))).collect(),
@@ -46,6 +46,7 @@ export const myWorkspace = query({
       ctx.db.query("employees").withIndex("by_org_code", q => q.eq("organizationId", user.organizationId)).collect(),
       ctx.db.query("attendanceDays").withIndex("by_employee_date", q => q.eq("employeeId", employee._id).gte("workDate", monthStart).lte("workDate", monthEnd)).collect(),
       ctx.db.query("workCalendars").withIndex("by_org", q => q.eq("organizationId", user.organizationId)).collect(),
+      ctx.db.query("muhurthamDates").withIndex("by_org_status_date", q => q.eq("organizationId", user.organizationId).eq("status", "published").gte("date", today).lte("date", upcomingEnd)).order("asc").collect(),
     ]);
     const currentShiftRows = todayShiftAssignments.length ? todayShiftAssignments : (employee.defaultShiftId ? [{ shiftId: employee.defaultShiftId, workDate: today }] : []);
     const currentShifts = await Promise.all(currentShiftRows.map(async assignment => {
@@ -122,6 +123,9 @@ export const myWorkspace = query({
         const date = dayOffset(today, offset);
         if (date.slice(5, 10) === birthday) { upcoming.push({ type: "birthday", title: "Birthday · " + [colleague.firstName, colleague.lastName].filter(Boolean).join(" "), date, subtitle: colleague.departmentId === employee.departmentId ? "Your department" : "Orchid Flowers" }); break; }
       }
+    }
+    for (const muhurtham of publishedMuhurthamDates) {
+      upcoming.push({ type: "muhurtham", title: "Muhurtham day", date: muhurtham.date, subtitle: muhurtham.notes?.trim() || "Published auspicious date" });
     }
     for (const assignment of upcomingShifts) {
       const shift = await ctx.db.get(assignment.shiftId);

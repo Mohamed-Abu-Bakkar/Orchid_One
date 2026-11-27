@@ -122,3 +122,22 @@ The organization must have at least one active department and one active work lo
 - Attempt to submit a second date; confirm the mutation rejects the overwrite.
 - Attempt to call the mutation as an admin, supervisor, unlinked user, inactive employee, or cross-organization identity; confirm it is rejected.
 - Verify a date-only value remains the same calendar date across browser and organization time zones.
+
+
+## Employee upcoming birthdays and Muhurtham dates
+
+- The employee workspace Upcoming feed covers today through the next 29 calendar days in the organization's configured time zone.
+- Birthday entries are visible to all active employees in the same organization. Only the employee's name and the calendar day/month are exposed in the feed; the stored date of birth and birth year are not included in the event payload.
+- Published Muhurtham dates for the same organization and 30-day window are included in the feed. Draft and archived entries are excluded.
+- Muhurtham dates remain available in the employee monthly calendar at `/employee/calendar`; the Upcoming feed is a concise summary, not a replacement for the calendar.
+- Holidays and scheduled shifts continue to appear in the same feed.
+
+### QA checklist
+
+- Confirm an employee sees upcoming birthdays for all active colleagues in their organization, including their own.
+- Confirm inactive employees and employees without a date of birth do not create birthday entries.
+- Confirm birthday event payloads contain no full date of birth or birth year.
+- Confirm a published Muhurtham date in the next 30 days appears once in the feed.
+- Confirm draft and archived Muhurtham dates are not visible.
+- Confirm dates outside the 30-day window are excluded and organization boundaries are respected.
+- Confirm the employee monthly Muhurtham calendar continues to show published dates when navigating months.
