@@ -21,6 +21,15 @@ function notificationIcon(item: NotificationItem): LucideIcon {
   return BellRing;
 }
 
+/** Resolve legacy notifications that were created before destinations were persisted. */
+function notificationDestination(item: NotificationItem): "leave" | "overtime" | undefined {
+  if (item.destination) return item.destination;
+  const content = `${item.title} ${item.body}`.toLowerCase();
+  if (/leave request|leave application|leave submitted|holiday request/.test(content)) return "leave";
+  if (/overtime|extra hours/.test(content)) return "overtime";
+  return undefined;
+}
+
 function dayGroup(timestamp: number, now: Date): "Today" | "Yesterday" | "Earlier" {
   const date = new Date(timestamp);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -166,20 +175,21 @@ export function AdminNotificationCenter({ onNavigate }: { onNavigate: (destinati
                 {group.items.map(item => {
                   const Icon = notificationIcon(item);
                   const isUnread = item.readAt === undefined;
+                  const destination = notificationDestination(item);
                   return (
                     <article className={`admin-notification__item ${isUnread ? "is-unread" : ""}`} key={item._id}>
                       <span className="admin-notification__item-icon"><Icon size={17} strokeWidth={1.8} /></span>
                       <button
                         type="button"
-                        className={`admin-notification__item-content ${item.destination ? "is-navigable" : ""}`}
-                        disabled={!item.destination}
-                        aria-label={item.destination ? `Open ${item.title} in ${item.destination === "leave" ? "Leave" : "Overtime"}` : undefined}
+                        className={`admin-notification__item-content ${destination ? "is-navigable" : ""}`}
+                        disabled={!destination}
+                        aria-label={destination ? `Open ${item.title} in ${destination === "leave" ? "Leave" : "Overtime"}` : undefined}
                         onClick={() => {
-                          if (!item.destination) return;
+                          if (!destination) return;
                           void (async () => {
                             if (isUnread) await read(item._id);
                             setOpen(false);
-                            onNavigate(item.destination!);
+                            onNavigate(destination);
                           })();
                         }}
                       >
@@ -191,7 +201,7 @@ export function AdminNotificationCenter({ onNavigate }: { onNavigate: (destinati
                         <div className="admin-notification__item-meta">
                           <span><Clock3 size={12} />{relativeTime(item.createdAt, now)}</span>
                           <time dateTime={new Date(item.createdAt).toISOString()} title={fullTime(item.createdAt)}>{fullTime(item.createdAt)}</time>
-                          {item.destination && <span className="admin-notification__view-link">View {item.destination === "leave" ? "leave requests" : "overtime"} <span aria-hidden="true">→</span></span>}
+                          {destination && <span className="admin-notification__view-link">View {destination === "leave" ? "leave requests" : "overtime"} <span aria-hidden="true">→</span></span>}
                         </div>
                       </button>
                       {isUnread && (
