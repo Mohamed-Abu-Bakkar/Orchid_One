@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";import { useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Save, X } from "lucide-react";
@@ -82,7 +83,7 @@ export function EmployeeEditModal({
       });
       onSaved();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message.replaceAll("_", " ").toLowerCase() : "Unable to update employee. Please try again.");
+      setError(getAdminErrorMessage(cause, "Unable to update employee. Please try again."));
     } finally {
       setSaving(false);
     }
