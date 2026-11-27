@@ -17,7 +17,6 @@ const minute = (value: string) => {
   const [h, m] = value.split(":").map(Number);
   return h * 60 + m;
 };
-const clock = (value: number) => `${String(Math.floor(value / 60) % 24).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
 const errorText = (error: unknown) => error instanceof Error ? error.message.replaceAll("_", " ").toLowerCase() : "Something went wrong. Please try again.";
 
 export function TeamWorkManagement() {
@@ -76,7 +75,6 @@ export function TeamWorkManagement() {
   const archiveAssignment = useMutation(api.adminCrud.archiveWorkAssignment);
   const reviewWork = useMutation(api.teamsWork.reviewWorkSubmission);
 
-  const isAdmin = account?.role === "admin" || account?.role === "superadmin";
   const selectedTeam = data?.teams.find((item: any) => item._id === memberTeam);
   const eligibleEmployees = useMemo(
     () => data?.employees.filter((employee: any) => employee.shiftIds.includes(selectedTeam?.shiftId)) ?? [],
@@ -164,7 +162,7 @@ export function TeamWorkManagement() {
         }, editingAssignment ? "Assignment updated." : "Work assigned.");
       }}>
         <label className="policy-field">Work title<input className="input" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Prepare rose bouquets" /></label>
-        <label className="policy-field">Category<CreatableSelect label="" value={category} options={categoryOptions} placeholder="Choose category" onChange={setCategory} createLabel="Create category" onCreate={async (value) => { await createCategory({ name: value }); setCategory(value); return { value, label: value }; }} /></label>
+        <div className="col gap-2"><span className="t-caption text-tertiary">Category</span><CreatableSelect label="" value={category} options={categoryOptions} placeholder="Choose category" onChange={setCategory} createLabel="Create category" onCreate={async (value) => { await createCategory({ name: value }); setCategory(value); return { value, label: value }; }} /></div>
         <label className="policy-field">Priority<select className="input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
         <label className="policy-field">Description / instructions<textarea className="input" rows={3} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add clear instructions or expected outcome" /></label>
         {!editingAssignment && <>
@@ -258,7 +256,7 @@ export function TeamWorkManagement() {
       <div className="panel-body col gap-3">
         <form className="grid-2-equal gap-3" onSubmit={(event) => { event.preventDefault(); void run(() => createRecurring({ title, description: description.trim() || undefined, category, priority, targetType, ...(targetType === "team" ? { teamId: target as any } : targetType === "employee" ? { employeeId: target as any } : { employeeIds: selectedEmployees as any }), frequency, weekdays: frequency === "weekly" ? weekdays : undefined, startDate: date, endDate: recurrenceEnd || undefined }), "Recurring schedule created."); }}>
           <label className="policy-field">Task title<input className="input" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Recurring task name" /></label>
-          <label className="policy-field">Category<CreatableSelect label="" value={category} options={categoryOptions} onChange={setCategory} placeholder="Choose category" createLabel="Create category" onCreate={async (value) => { await createCategory({ name: value }); return { value, label: value }; }} /></label>
+          <div className="col gap-2"><span className="t-caption text-tertiary">Category</span><CreatableSelect label="" value={category} options={categoryOptions} onChange={setCategory} placeholder="Choose category" createLabel="Create category" onCreate={async (value) => { await createCategory({ name: value }); return { value, label: value }; }} /></div>
           <label className="policy-field">Priority<select className="input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
           <label className="policy-field">Assign to<select className="input" value={targetType} onChange={(e) => { setTargetType(e.target.value as TargetType); setTarget(""); setSelectedEmployees([]); }}><option value="team">Team</option><option value="employee">One employee</option><option value="employees">Multiple employees</option></select></label>
           {targetType === "employees" ? <div className="col gap-1">{employeeOptions.map((e: any) => <label className="row gap-2" key={e.value}><input type="checkbox" checked={selectedEmployees.includes(e.value)} onChange={(event) => setSelectedEmployees((old) => event.target.checked ? [...old, e.value] : old.filter((id) => id !== e.value))} />{e.label}</label>)}</div> : <CreatableSelect label="Target" value={target} options={targetType === "team" ? teamOptions : employeeOptions} onChange={setTarget} placeholder="Select target" />}
