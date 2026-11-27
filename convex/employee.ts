@@ -982,11 +982,16 @@ export const myTodayWageEstimate = query({
       return { employmentType: "permanent", amountPaise: null, payableMinutes: 0, ratePaise: null, status: "monthly", note: "Monthly salary is finalized through payroll." };
     }
 
-    const rate = await ctx.db.query("wageRates")
+    const applicableRates = await ctx.db.query("wageRates")
       .withIndex("by_employee_effective", q => q.eq("employeeId", employee._id).lte("effectiveFrom", workDate))
       .order("desc")
-      .first();
-    if (!rate || rate.organizationId !== user.organizationId || rate.employmentType !== employee.employmentType || (rate.effectiveTo && rate.effectiveTo < workDate)) {
+      .collect();
+    const rate = applicableRates.find(item =>
+      item.organizationId === user.organizationId &&
+      item.employmentType === employee.employmentType &&
+      (!item.effectiveTo || item.effectiveTo >= workDate)
+    );
+    if (!rate) {
       return { employmentType: employee.employmentType, amountPaise: null, payableMinutes: 0, ratePaise: null, status: "rate_missing", note: "Your active wage rate is not configured yet." };
     }
 
@@ -1007,8 +1012,12 @@ export const myTodayWageEstimate = query({
 
     const lastEvent = events[events.length - 1];
     const calculationEvents: typeof events = [...events];
-    if (lastEvent.eventType === "check_in") calculationEvents.push({ ...lastEvent, eventType: "check_out", receivedAt: now });
-    else if (lastEvent.eventType === "break_start") calculationEvents.push({ ...lastEvent, eventType: "break_end", receivedAt: now });
+    if (lastEvent.eventType === "check_in" || lastEvent.eventType === "break_end") {
+      calculationEvents.push({ ...lastEvent, eventType: "check_out", receivedAt: now });
+    } else if (lastEvent.eventType === "break_start") {
+      calculationEvents.push({ ...lastEvent, eventType: "break_end", receivedAt: now });
+      calculationEvents.push({ ...lastEvent, eventType: "check_out", receivedAt: now });
+    }
 
     const assignments = await ctx.db.query("shiftAssignments")
       .withIndex("by_employee_date", q => q.eq("employeeId", employee._id).eq("workDate", workDate))
