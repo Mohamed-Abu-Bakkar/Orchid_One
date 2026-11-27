@@ -5,6 +5,7 @@ describe("admin error classification", () => {
   it.each([
     ["UNAUTHENTICATED", "unauthenticated"],
     ["FORBIDDEN", "forbidden"],
+    ["SUPERVISOR_REVIEW_REQUIRED", "forbidden"],
     ["ACCOUNT_SUSPENDED", "suspended"],
     ["EMPLOYEE_NOT_FOUND", "not-found"],
     ["REQUEST_ALREADY_DECIDED", "conflict"],
