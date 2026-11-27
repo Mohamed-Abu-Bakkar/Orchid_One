@@ -411,8 +411,6 @@ export const getProfileForAdmin = query({
         profileMissingFields: [
           ...(!employee.dateOfBirth ? ["Date of birth"] : []),
           ...(!employee.address ? ["Residential address"] : []),
-          ...(!employee.emergencyContact ? ["Emergency contact (optional)"] : []),
-          ...(!employee.bankDetailsEncrypted ? ["Bank details (optional)"] : []),
         ],
         departmentName: department?.name ?? "Unassigned", locationName: location?.name ?? "Unassigned",
         locationAddress: location?.address ?? "", defaultShiftName: defaultShift?.name ?? "Not assigned",
