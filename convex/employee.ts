@@ -135,7 +135,7 @@ export const myWorkspace = query({
     return {
       linked: true as const,
       timeZone,
-      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null, emergencyContact: employee.emergencyContact ?? null },
+      profile: { id: employee._id, employeeCode: employee.employeeCode, firstName: employee.firstName, lastName: employee.lastName ?? "", email: employee.email ?? user.email ?? "", phone: employee.phone, designation: employee.designation, employmentType: employee.employmentType, status: employee.status, joiningDate: employee.joiningDate, dateOfBirth: employee.dateOfBirth ?? null, emergencyContact: employee.emergencyContact ?? null, address: employee.address ?? null, profileCompletedAt: employee.profileCompletedAt ?? null, bankDetailsConfigured: Boolean(employee.bankDetailsEncrypted) },
       department: department ? { name: department.name } : null,
       location: location ? { name: location.name, address: location.address, locationType: location.locationType ?? "physical" } : null,
       shift: currentShift, shifts: validCurrentShifts, schedule: { month: monthStart.slice(0, 7), days: scheduleDays },
@@ -572,6 +572,70 @@ function validateDateOfBirth(value: string) {
   const today = new Date().toISOString().slice(0, 10);
   if (value > today || year < 1900) throw new Error("INVALID_DATE_OF_BIRTH");
 }
+
+
+async function encryptEmployeeBankDetails(value: { accountHolder: string; bankName: string; accountNumber: string; ifsc: string }) {
+  const encodedKey = process.env.ORCHID_BANK_DETAILS_ENCRYPTION_KEY;
+  if (!encodedKey) throw new Error("BANK_DETAILS_ENCRYPTION_NOT_CONFIGURED");
+  let rawKey: Uint8Array;
+  try { rawKey = Uint8Array.from(atob(encodedKey), character => character.charCodeAt(0)); }
+  catch { throw new Error("BANK_DETAILS_ENCRYPTION_KEY_INVALID"); }
+  if (rawKey.length !== 32) throw new Error("BANK_DETAILS_ENCRYPTION_KEY_INVALID");
+  const key = await crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+  const toBase64 = (bytes: Uint8Array) => btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
+  return `v1:${toBase64(iv)}:${toBase64(new Uint8Array(ciphertext))}`;
+}
+
+export const completeMyProfile = mutation({
+  args: {
+    dateOfBirth: v.string(),
+    address: v.object({ line1: v.string(), line2: v.optional(v.string()), city: v.string(), district: v.optional(v.string()), state: v.string(), postalCode: v.string(), country: v.string() }),
+    emergencyContact: v.union(v.object({ name: v.string(), relationship: v.string(), phone: v.string() }), v.null()),
+    bankDetails: v.union(v.object({ accountHolder: v.string(), bankName: v.string(), accountNumber: v.string(), ifsc: v.string() }), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireIdentity(ctx);
+    if (user.role !== "employee" || !user.employeeId) throw new Error("EMPLOYEE_ACCESS_REQUIRED");
+    const employee = await ctx.db.get(user.employeeId);
+    if (!employee || employee.organizationId !== user.organizationId || employee.status !== "active") throw new Error("EMPLOYEE_PROFILE_NOT_FOUND");
+    validateDateOfBirth(args.dateOfBirth);
+    const address = {
+      line1: args.address.line1.trim(), line2: args.address.line2?.trim() || undefined,
+      city: args.address.city.trim(), district: args.address.district?.trim() || undefined,
+      state: args.address.state.trim(), postalCode: args.address.postalCode.trim(), country: args.address.country.trim(),
+    };
+    if (!address.line1 || !address.city || !address.state || !address.country || !/^[A-Za-z0-9 -]{4,10}$/.test(address.postalCode)) throw new Error("INVALID_EMPLOYEE_ADDRESS");
+    let emergencyContact: { name: string; relationship: string; phone: string } | undefined;
+    if (args.emergencyContact) {
+      const name = args.emergencyContact.name.trim(), relationship = args.emergencyContact.relationship.trim(), phone = args.emergencyContact.phone.trim();
+      const digits = phone.replace(/\\D/g, "");
+      if (!name || !relationship || digits.length < 7 || digits.length > 15) throw new Error("INVALID_EMERGENCY_CONTACT");
+      emergencyContact = { name, relationship, phone };
+    }
+    let bankDetailsEncrypted: string | undefined;
+    if (args.bankDetails) {
+      const accountHolder = args.bankDetails.accountHolder.trim(), bankName = args.bankDetails.bankName.trim();
+      const accountNumber = args.bankDetails.accountNumber.replace(/\\s/g, ""), ifsc = args.bankDetails.ifsc.trim().toUpperCase();
+      if (!accountHolder || !bankName || !/^\\d{8,18}$/.test(accountNumber) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) throw new Error("INVALID_BANK_DETAILS");
+      bankDetailsEncrypted = await encryptEmployeeBankDetails({ accountHolder, bankName, accountNumber, ifsc });
+    }
+    const now = Date.now();
+    await ctx.db.patch(employee._id, {
+      dateOfBirth: args.dateOfBirth, address, emergencyContact,
+      bankDetailsEncrypted, profileCompletedAt: now, updatedAt: now,
+    });
+    await ctx.db.insert("auditLogs", {
+      organizationId: user.organizationId, actorUserId: user._id, action: "employee.profile.completed",
+      entityType: "employee", entityId: String(employee._id),
+      metadata: { source: "employee_self_service_wizard", fields: ["dateOfBirth", "address", "emergencyContact", "bankDetails"] },
+      createdAt: now,
+    });
+    return { saved: true };
+  },
+});
 
 export const submitMyDateOfBirth = mutation({
   args: { dateOfBirth: v.string() },
