@@ -1,53 +1,285 @@
 "use client";
-import { useMemo,useState } from "react";
-import { useMutation,useQuery } from "convex/react";
+
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { CreatableSelect } from "@/components/admin/creatable-select";
-const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
-const toMinute=(value:string)=>{const [h,m]=value.split(":").map(Number);return h*60+m;};
-export function TeamWorkManagement(){
- const [date,setDate]=useState(today),[name,setName]=useState(""),[shift,setShift]=useState(""),[team,setTeam]=useState(""),[members,setMembers]=useState<string[]>([]),[title,setTitle]=useState(""),[description,setDescription]=useState(""),[category,setCategory]=useState("Flower operations"),[priority,setPriority]=useState("normal"),[targetType,setTargetType]=useState("team"),[target,setTarget]=useState(""),[selectedEmployees,setSelectedEmployees]=useState<string[]>([]),[templateTitle,setTemplateTitle]=useState(""),[notice,setNotice]=useState("");
- const [frequency,setFrequency]=useState("daily"),[weekdays,setWeekdays]=useState<number[]>([1,2,3,4,5,6]),[recurrenceEnd,setRecurrenceEnd]=useState(""),[showShift,setShowShift]=useState(false),[shiftName,setShiftName]=useState(""),[start,setStart]=useState(""),[end,setEnd]=useState(""),[breakMins,setBreakMins]=useState("");
- const data=useQuery(api.teamsWork.adminWorkspace,{workDate:date}),account=useQuery(api.account.getMyAccountStatus,{}),createTeam=useMutation(api.teamsWork.createTeam),save=useMutation(api.teamsWork.setTeamMembers),assign=useMutation(api.teamsWork.createWorkAssignment),createShift=useMutation(api.teamsWork.createShift),createCategory=useMutation(api.teamsWork.createWorkCategory),createTemplate=useMutation(api.teamsWork.createWorkTaskTemplate),createRecurring=useMutation(api.teamsWork.createRecurringWorkSchedule),setRecurringStatus=useMutation(api.teamsWork.setRecurringWorkScheduleStatus),updateTeam=useMutation(api.adminCrud.updateTeam),archiveTeam=useMutation(api.adminCrud.archiveTeam),updateCategory=useMutation(api.adminCrud.updateWorkCategory),archiveCategory=useMutation(api.adminCrud.archiveWorkCategory),updateAssignment=useMutation(api.adminCrud.updateWorkAssignment),archiveAssignment=useMutation(api.adminCrud.archiveWorkAssignment),reviewWork=useMutation(api.teamsWork.reviewWorkSubmission);
- const selected=data?.teams.find((t:any)=>t._id===team),eligible=useMemo(()=>data?.employees.filter((e:any)=>e.shiftIds.includes(selected?.shiftId))||[],[data?.employees,selected]);
- async function run(fn:()=>Promise<unknown>,msg:string){try{await fn();setNotice(msg);}catch(e){setNotice(e instanceof Error?e.message:"Unable to save.");}}
- async function addTeam(value:string){if(!shift)throw Error("Select a shift before creating a team.");const id=await createTeam({name:value,shiftId:shift as any});return {value:String(id),label:value};}
- async function addCategory(value:string){const id=await createCategory({name:value});return {value,label:value};}
- async function addShift(){try{const id=await createShift({name:shiftName,startMinute:toMinute(start),endMinute:toMinute(end),breakMinutes:Number(breakMins)});setShift(String(id));setShowShift(false);setShiftName("");setStart("");setEnd("");setBreakMins("");setNotice("Shift created and selected.");}catch(e){setNotice(e instanceof Error?e.message:"Unable to create shift.");}}
- if(!data||account===undefined)return <section className="sec"><p className="sub">Loading teams…</p></section>;
- const categoryOptions=[...new Set(["Flower operations","General operations","Inventory","Order fulfilment","Other",...data.categories])].map(x=>({value:x,label:x}));
- const teamOptions=data.teams.map((t:any)=>({value:t._id,label:t.name+" · "+t.shiftName}));
- const shiftOptions=data.shifts.map((s:any)=>({value:s._id,label:s.name}));
- const employeeOptions=data.employees.map((e:any)=>({value:e._id,label:e.name+" · "+e.employeeCode}));
- const groupedAssignments=Object.entries(data.assignments.reduce((groups:Record<string,any[]>,item:any)=>{(groups[item.category]??=[]).push(item);return groups;},{}));
- return <section className="sec">
- <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Teams & work assignments</h2><p className="sub">Create shift teams and allocate daily work.</p></div><input className="input" type="date" value={date} onChange={e=>{setDate(e.target.value);setMembers([]);}}/></div>
- {notice&&<p className="panel panel-body" role="status">{notice}</p>}
 
- <div className="grid-2-equal mt-4">
- <div className="panel"><div className="panel-head"><b>Create team</b></div><div className="panel-body col gap-3"><input className="input" placeholder="Team name" value={name} onChange={e=>setName(e.target.value)}/>
- <CreatableSelect label="Shift" value={shift} options={shiftOptions} placeholder="Select shift" onChange={setShift} createLabel="Create shift" onCreateRequested={()=>setShowShift(true)}/>
- {showShift&&<div className="card p-3 col gap-2"><input className="input" placeholder="Shift name" value={shiftName} onChange={e=>setShiftName(e.target.value)}/><div className="grid-2-equal"><label className="policy-field">Start<input className="input" type="time" value={start} onChange={e=>setStart(e.target.value)}/></label><label className="policy-field">End<input className="input" type="time" value={end} onChange={e=>setEnd(e.target.value)}/></label></div><label className="policy-field">Break (minutes)<input className="input" type="number" min="0" max="720" value={breakMins} onChange={e=>setBreakMins(e.target.value)}/></label><div className="row gap-2"><button type="button" className="btn btn-primary btn-sm" disabled={!shiftName.trim()||!start||!end||breakMins===""||!Number.isInteger(Number(breakMins))||Number(breakMins)<0||Number(breakMins)>720} onClick={()=>void addShift()}>Create & select shift</button><button type="button" className="btn btn-outline btn-sm" onClick={()=>setShowShift(false)}>Cancel</button></div></div>}
- <button className="btn btn-primary" disabled={!name.trim()||!shift} onClick={()=>void run(async()=>{await createTeam({name,shiftId:shift as any});setName("");},"Team created.")}>Create team</button></div></div>
- <div className="panel"><div className="panel-head"><b>Team membership · {date}</b></div><div className="panel-body col gap-3"><CreatableSelect label="Team" value={team} options={teamOptions} placeholder="Select team" onChange={v=>{setTeam(v);setMembers(data.memberships.filter((m:any)=>m.teamId===v).map((m:any)=>m.employeeId));}} createLabel="Create new team" onCreate={addTeam}/><p className="t-caption text-tertiary">Choose the shift in the Create Team panel first; new teams inherit that shift.</p>{selected&&<><p className="t-caption text-tertiary">Employees must have this shift as their effective shift for the selected date.</p>{eligible.map((e:any)=><label className="row gap-2" key={e._id}><input type="checkbox" checked={members.includes(e._id)} onChange={v=>setMembers(old=>v.target.checked?[...old,e._id]:old.filter(x=>x!==e._id))}/>{e.name} · {e.employeeCode}</label>)}<button className="btn btn-primary" onClick={()=>void run(()=>save({teamId:team as any,workDate:date,employeeIds:members as any}),"Team membership saved.")}>Save members ({members.length})</button></>}</div></div></div>
- <div className="panel mt-4"><div className="panel-head"><b>Assign work</b></div><div className="panel-body grid-2-equal gap-3"><input className="input" placeholder="Work title" value={title} onChange={e=>setTitle(e.target.value)}/>
- <textarea className="input" rows={2} placeholder="Instructions / expected outcome (optional)" value={description} onChange={e=>setDescription(e.target.value)}/>
- <CreatableSelect label="Work category" value={category} options={categoryOptions} placeholder="Select category" onChange={setCategory} createLabel="Create category" onCreate={addCategory}/>
- <label className="policy-field">Priority<select className="input" value={priority} onChange={e=>setPriority(e.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
- <div className="col gap-2"><label className="policy-field">Use task template<select className="input" value="" onChange={e=>{const t=data.templates?.find((x:any)=>x._id===e.target.value);if(t){setTitle(t.title);setDescription(t.description);setCategory(t.category);setPriority(t.priority);}}}><option value="">Start from scratch</option>{(data.templates??[]).map((t:any)=><option key={t._id} value={t._id}>{t.title} · {t.category}</option>)}</select></label><button className="btn btn-outline btn-sm" type="button" disabled={!title.trim()||!category.trim()} onClick={()=>void run(()=>createTemplate({title,description:description.trim()||undefined,category,priority:priority as any}),"Reusable task template saved.")}>Save current task as reusable template</button></div><label className="policy-field">Assign to<select className="input" value={targetType} onChange={e=>{setTargetType(e.target.value);setTarget("");setSelectedEmployees([]);}}><option value="team">Team</option><option value="employee">One employee</option><option value="employees">Multiple employees</option></select></label>
- {targetType==="employees"?<div className="col gap-2"><b className="t-body-sm">Select employees</b>{employeeOptions.map((e:any)=><label className="row gap-2" key={e.value}><input type="checkbox" checked={selectedEmployees.includes(e.value)} onChange={event=>setSelectedEmployees(old=>event.target.checked?[...old,e.value]:old.filter(x=>x!==e.value))}/>{e.label}</label>)}</div>:<CreatableSelect label={targetType==="team"?"Team":"Employee"} value={target} options={targetType==="team"?teamOptions:employeeOptions} placeholder={targetType==="team"?"Choose team":"Choose employee"} onChange={setTarget} createLabel="Create new team" allowCreate={targetType==="team"&&(account?.role === "superadmin" || account?.role === "admin")} onCreate={(account?.role === "superadmin" || account?.role === "admin")?addTeam:undefined} /> }
- <button className="btn btn-primary" disabled={!title.trim()||(targetType==="employees"?!selectedEmployees.length:!target)} onClick={()=>void run(async()=>{await assign({title,description:description.trim()||undefined,category,priority:priority as any,workDate:date,targetType:targetType as any,...(targetType==="team"?{teamId:target as any}:targetType==="employees"?{employeeIds:selectedEmployees as any}:{employeeId:target as any})});setTitle("");setDescription("");setSelectedEmployees([]);},"Work assigned.")}>Assign work</button></div><p className="t-caption text-tertiary" style={{margin:14}}>Employees are managed through People → Onboarding. Team eligibility follows each employee’s default or date-specific shift schedule.</p></div>
- {(account?.role === "superadmin" || account?.role === "admin")&&<> <div className="grid-2-equal mt-4"><div className="kpi card"><span className="kpi-label">Active teams today</span><span className="kpi-val">{data.teams.length}</span></div><div className="kpi card"><span className="kpi-label">Work assignments</span><span className="kpi-val">{data.assignments.length}</span></div></div>
- <div className="panel mt-4"><div className="panel-head"><b>Daily teams · Manage</b></div><div className="panel-body grid-2-equal">{data.teams.map((t:any)=><article className="card p-3" key={t._id}><b>{t.name}</b><p className="t-caption text-tertiary">{t.shiftName} · {t.members.length} members</p><p className="t-body-sm">{t.members.map((m:any)=>m.name).join(", ")||"No members today"}</p><div className="row gap-2 mt-2"><button className="btn btn-outline btn-sm" onClick={()=>{const value=window.prompt("Team name",t.name);if(value?.trim())void run(()=>updateTeam({teamId:t._id,name:value.trim(),shiftId:t.shiftId}),"Team updated.");}}>Edit</button><button className="btn btn-outline btn-sm" onClick={()=>{if(window.confirm("Archive this team? Historical assignments remain."))void run(()=>archiveTeam({teamId:t._id}),"Team archived.");}}>Archive</button></div></article>)}</div></div>
-</>}
- <div className="panel mt-4"><div className="panel-head"><b>Recurring work schedule</b></div><div className="panel-body col gap-3">
- <p className="t-caption text-tertiary">Create a daily or weekly schedule. Assignments are generated automatically on each due date using the selected employees or that date's team membership.</p>
- <label className="policy-field">Frequency<select className="input" value={frequency} onChange={e=>setFrequency(e.target.value)}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label>
- {frequency==="weekly"&&<div className="row gap-3 wrap">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((day,index)=><label className="row gap-1" key={day}><input type="checkbox" checked={weekdays.includes(index)} onChange={e=>setWeekdays(old=>e.target.checked?[...old,index]:old.filter(x=>x!==index))}/>{day}</label>)}</div>}
- <label className="policy-field">End date (optional)<input className="input" type="date" min={date} value={recurrenceEnd} onChange={e=>setRecurrenceEnd(e.target.value)}/></label>
- <button className="btn btn-primary" disabled={!title.trim()||!category.trim()||(targetType==="employees"?!selectedEmployees.length:!target)||(frequency==="weekly"&&!weekdays.length)||Boolean(recurrenceEnd && recurrenceEnd < date)} onClick={()=>void run(async()=>{await createRecurring({title,description:description.trim()||undefined,category,priority:priority as any,targetType:targetType as any,...(targetType==="team"?{teamId:target as any}:targetType==="employees"?{employeeIds:selectedEmployees as any}:{employeeId:target as any}),frequency:frequency as any,weekdays:frequency==="weekly"?weekdays:undefined,startDate:date,endDate:recurrenceEnd||undefined});}, "Recurring schedule created.")}>Create recurring schedule</button>
- <div className="col gap-2"><b>Active schedules</b>{(data.recurringSchedules??[]).map((schedule:any)=><div className="row justify-between gap-2" key={schedule._id}><div><b>{schedule.title}</b><p className="t-caption text-tertiary">{schedule.frequency} · Next: {schedule.nextRunDate}{schedule.endDate?" · Until "+schedule.endDate:""}</p></div><button className="btn btn-outline btn-sm" onClick={()=>void run(()=>setRecurringStatus({scheduleId:schedule._id,isActive:false}),"Schedule paused.")}>Pause</button></div>)}{!(data.recurringSchedules??[]).length&&<p className="sub">No active recurring schedules.</p>}</div>
- </div></div>
- <div className="panel mt-4"><div className="panel-head"><b>Work categories · Manage</b></div><div className="panel-body col gap-2">{data.categories.map((cat:any)=><div className="row gap-2" key={cat}><span className="flex-1">{cat}</span><button className="btn btn-outline btn-sm" onClick={()=>{const record=data.categoryRecords?.find((x:any)=>x.name===cat);if(!record){setNotice("This category is not available for editing.");return;}const value=window.prompt("Rename category",cat);if(value?.trim()&&value.trim()!==cat)void run(()=>updateCategory({categoryId:record._id,name:value.trim()}),"Category updated.");}}>Edit</button></div>)}</div></div>
- <div className="panel mt-4"><div className="panel-head"><b>Work progress</b></div><div className="panel-body col gap-3">{groupedAssignments.map(([categoryName,items]:any)=><section className="col gap-2" key={categoryName}><div className="row justify-between"><b>{categoryName}</b><span className="badge badge-neutral">{items.length} tasks</span></div>{items.map((a:any)=><article className="card p-3" key={a._id}><div className="row gap-2"><b>{a.title}</b><span className={"badge "+(a.priority==="high"?"badge-warning":"badge-neutral")}>{a.priority}</span></div><p className="t-caption text-tertiary">{a.category} · {a.targetName}</p>{a.description&&<p className="t-body-sm">{a.description}</p>}<p className="t-caption text-tertiary">{a.progress.filter((p:any)=>p.status==="completed").length} / {a.progress.length} completed</p>{a.progress.map((p:any)=><p className="t-body-sm mt-2" key={p.code}>{p.name} · {p.status.replace("_"," ")}{p.reviewNote?` · ${p.reviewNote}`:""}</p>)}{a.progress.filter((p:any)=>p.status==="submitted_for_review").map((p:any)=><div className="row gap-2" key={p.progressId}><button className="btn btn-outline btn-sm" onClick={()=>void run(()=>reviewWork({progressId:p.progressId,decision:"approved"}),"Work submission approved.")}>Approve · {p.name}</button><button className="btn btn-outline btn-sm" onClick={()=>{const note=window.prompt("Reason for returning this work");if(note?.trim())void run(()=>reviewWork({progressId:p.progressId,decision:"returned",note:note.trim()}),"Work returned for updates.");}}>Return · {p.name}</button></div>)}<div className="row gap-2 mt-2"><button className="btn btn-outline btn-sm" onClick={()=>{const value=window.prompt("Work title",a.title);if(value?.trim())void run(()=>updateAssignment({assignmentId:a._id,title:value.trim(),description:a.description||undefined,category:a.category,priority:a.priority,workDate:a.workDate}),"Work assignment updated.");}}>Edit</button><button className="btn btn-outline btn-sm" onClick={()=>{if(window.confirm("Archive this work assignment?"))void run(()=>archiveAssignment({assignmentId:a._id}),"Work assignment archived.");}}>Archive</button></div></article>)}</section>)}{!data.assignments.length&&<p className="sub">No assignments for this date.</p>}</div></div></section>;
+type Tab = "overview" | "assignments" | "teams" | "recurring" | "categories";
+type Priority = "low" | "normal" | "high";
+type TargetType = "team" | "employee" | "employees";
+
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const minute = (value: string) => {
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
+};
+const clock = (value: number) => `${String(Math.floor(value / 60) % 24).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+const errorText = (error: unknown) => error instanceof Error ? error.message.replaceAll("_", " ").toLowerCase() : "Something went wrong. Please try again.";
+
+export function TeamWorkManagement() {
+  const [date, setDate] = useState(today);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<any>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Flower operations");
+  const [priority, setPriority] = useState<Priority>("normal");
+  const [targetType, setTargetType] = useState<TargetType>("team");
+  const [target, setTarget] = useState("");
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+
+  const [teamOpen, setTeamOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<any>(null);
+  const [teamName, setTeamName] = useState("");
+  const [teamShift, setTeamShift] = useState("");
+  const [memberTeam, setMemberTeam] = useState("");
+  const [members, setMembers] = useState<string[]>([]);
+
+  const [shiftOpen, setShiftOpen] = useState(false);
+  const [shiftName, setShiftName] = useState("");
+  const [shiftStart, setShiftStart] = useState("08:00");
+  const [shiftEnd, setShiftEnd] = useState("17:00");
+  const [shiftBreak, setShiftBreak] = useState("60");
+
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [categoryName, setCategoryName] = useState("");
+
+  const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
+  const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [recurrenceEnd, setRecurrenceEnd] = useState("");
+
+  const data = useQuery(api.teamsWork.adminWorkspace, { workDate: date });
+  const account = useQuery(api.account.getMyAccountStatus, {});
+  const createTeam = useMutation(api.teamsWork.createTeam);
+  const saveMembers = useMutation(api.teamsWork.setTeamMembers);
+  const createAssignment = useMutation(api.teamsWork.createWorkAssignment);
+  const createShift = useMutation(api.teamsWork.createShift);
+  const createCategory = useMutation(api.teamsWork.createWorkCategory);
+  const createRecurring = useMutation(api.teamsWork.createRecurringWorkSchedule);
+  const setRecurringStatus = useMutation(api.teamsWork.setRecurringWorkScheduleStatus);
+  const updateTeam = useMutation(api.adminCrud.updateTeam);
+  const archiveTeam = useMutation(api.adminCrud.archiveTeam);
+  const updateCategory = useMutation(api.adminCrud.updateWorkCategory);
+  const archiveCategory = useMutation(api.adminCrud.archiveWorkCategory);
+  const updateAssignment = useMutation(api.adminCrud.updateWorkAssignment);
+  const archiveAssignment = useMutation(api.adminCrud.archiveWorkAssignment);
+  const reviewWork = useMutation(api.teamsWork.reviewWorkSubmission);
+
+  const isAdmin = account?.role === "admin" || account?.role === "superadmin";
+  const selectedTeam = data?.teams.find((item: any) => item._id === memberTeam);
+  const eligibleEmployees = useMemo(
+    () => data?.employees.filter((employee: any) => employee.shiftIds.includes(selectedTeam?.shiftId)) ?? [],
+    [data?.employees, selectedTeam],
+  );
+  const filteredAssignments = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (data?.assignments ?? []).filter((item: any) => {
+      const matchesSearch = !q || [item.title, item.category, item.targetName].some((v: string) => v.toLowerCase().includes(q));
+      const matchesPriority = priorityFilter === "all" || item.priority === priorityFilter;
+      const statuses = item.progress.map((p: any) => p.status);
+      const status = statuses.length && statuses.every((s: string) => s === "completed") ? "completed"
+        : statuses.some((s: string) => s === "submitted_for_review") ? "review"
+        : statuses.some((s: string) => s === "in_progress") ? "in_progress" : "not_started";
+      return matchesSearch && matchesPriority && (statusFilter === "all" || status === statusFilter);
+    });
+  }, [data?.assignments, search, priorityFilter, statusFilter]);
+
+  async function run(action: () => Promise<unknown>, success: string) {
+    setNotice("");
+    try { await action(); setNotice(success); }
+    catch (error) { setNotice(errorText(error)); }
+  }
+  function resetAssignment() {
+    setEditingAssignment(null); setTitle(""); setDescription(""); setCategory("Flower operations");
+    setPriority("normal"); setTargetType("team"); setTarget(""); setSelectedEmployees([]);
+  }
+  function openNewAssignment() { resetAssignment(); setAssignmentOpen(true); }
+  function openEditAssignment(item: any) {
+    setEditingAssignment(item); setTitle(item.title); setDescription(item.description ?? "");
+    setCategory(item.category); setPriority(item.priority); setAssignmentOpen(true);
+  }
+  function resetTeam() { setEditingTeam(null); setTeamName(""); setTeamShift(""); }
+  function openEditTeam(item: any) { setEditingTeam(item); setTeamName(item.name); setTeamShift(item.shiftId); setTeamOpen(true); }
+  function resetCategory() { setEditingCategory(null); setCategoryName(""); }
+
+  if (!data || account === undefined) return <section className="sec"><p className="sub">Loading work management…</p></section>;
+
+  const teamOptions = data.teams.map((item: any) => ({ value: item._id, label: item.name + " · " + item.shiftName }));
+  const employeeOptions = data.employees.map((item: any) => ({ value: item._id, label: item.name + " · " + item.employeeCode }));
+  const shiftOptions = data.shifts.map((item: any) => ({ value: item._id, label: item.name }));
+  const categoryOptions = [...new Set(["Flower operations", "General operations", "Inventory", "Order fulfilment", "Other", ...data.categories])]
+    .map((item) => ({ value: item, label: item }));
+
+  const stats = {
+    total: data.assignments.length,
+    completed: data.assignments.filter((a: any) => a.progress.length > 0 && a.progress.every((p: any) => p.status === "completed")).length,
+    review: data.assignments.filter((a: any) => a.progress.some((p: any) => p.status === "submitted_for_review")).length,
+    teams: data.teams.length,
+  };
+
+  return <section className="sec">
+    <div className="page-head" style={{ alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+      <div><h2 className="t-h1" style={{ fontSize: 24 }}>Work assignment</h2><p className="sub">Plan daily work, manage teams and track delivery in one place.</p></div>
+      <div className="row gap-2" style={{ alignItems: "center" }}>
+        <label className="t-caption text-tertiary" htmlFor="work-date">Work date</label>
+        <input id="work-date" className="input" type="date" value={date} onChange={(event) => { setDate(event.target.value); setMembers([]); }} />
+        <button type="button" className="btn btn-primary" onClick={openNewAssignment}>+ Create assignment</button>
+      </div>
+    </div>
+
+    {notice && <div className="panel panel-body mt-3" role="status" aria-live="polite">{notice}</div>}
+
+    <nav className="row gap-2 mt-4" aria-label="Work management sections" style={{ flexWrap: "wrap", borderBottom: "1px solid var(--border, #e5e7eb)", paddingBottom: 10 }}>
+      {([
+        ["overview", "Overview"], ["assignments", "Assignments"], ["teams", "Teams"],
+        ["recurring", "Recurring schedules"], ["categories", "Categories"],
+      ] as [Tab, string][]).map(([key, label]) =>
+        <button key={key} type="button" className={tab === key ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm"} onClick={() => { setTab(key); setSearch(""); }}>{label}</button>
+      )}
+    </nav>
+
+    {assignmentOpen && <div className="panel mt-4">
+      <div className="panel-head row justify-between"><b>{editingAssignment ? "Edit assignment" : "Create assignment"}</b><button type="button" className="btn btn-outline btn-sm" onClick={() => { setAssignmentOpen(false); resetAssignment(); }}>Close</button></div>
+      <form className="panel-body grid-2-equal gap-3" onSubmit={(event) => {
+        event.preventDefault();
+        void run(async () => {
+          if (editingAssignment) {
+            await updateAssignment({ assignmentId: editingAssignment._id, title, description: description.trim() || undefined, category, priority, workDate: date });
+          } else {
+            await createAssignment({ title, description: description.trim() || undefined, category, priority, workDate: date, targetType,
+              ...(targetType === "team" ? { teamId: target as any } : targetType === "employee" ? { employeeId: target as any } : { employeeIds: selectedEmployees as any }) });
+          }
+          setAssignmentOpen(false); resetAssignment();
+        }, editingAssignment ? "Assignment updated." : "Work assigned.");
+      }}>
+        <label className="policy-field">Work title<input className="input" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Prepare rose bouquets" /></label>
+        <label className="policy-field">Category<CreatableSelect label="" value={category} options={categoryOptions} placeholder="Choose category" onChange={setCategory} createLabel="Create category" onCreate={async (value) => { await createCategory({ name: value }); setCategory(value); return { value, label: value }; }} /></label>
+        <label className="policy-field">Priority<select className="input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
+        <label className="policy-field">Description / instructions<textarea className="input" rows={3} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add clear instructions or expected outcome" /></label>
+        {!editingAssignment && <>
+          <label className="policy-field">Assign to<select className="input" value={targetType} onChange={(e) => { setTargetType(e.target.value as TargetType); setTarget(""); setSelectedEmployees([]); }}><option value="team">Team</option><option value="employee">One employee</option><option value="employees">Multiple employees</option></select></label>
+          {targetType === "employees" ? <div className="col gap-2"><b className="t-body-sm">Select employees</b><div style={{ maxHeight: 190, overflowY: "auto" }}>{employeeOptions.map((item: any) => <label className="row gap-2" key={item.value}><input type="checkbox" checked={selectedEmployees.includes(item.value)} onChange={(e) => setSelectedEmployees((old) => e.target.checked ? [...old, item.value] : old.filter((id) => id !== item.value))} />{item.label}</label>)}</div></div>
+            : <CreatableSelect label={targetType === "team" ? "Team" : "Employee"} value={target} options={targetType === "team" ? teamOptions : employeeOptions} placeholder="Choose a target" onChange={setTarget} />}
+          <p className="t-caption text-tertiary" style={{ gridColumn: "1 / -1" }}>Team assignments use that team's active members for the selected date. Make sure team membership is up to date first.</p>
+        </>}
+        {editingAssignment && <p className="t-caption text-tertiary">The current assignee is retained. This edit changes the task details and work date only.</p>}
+        <div className="row gap-2" style={{ gridColumn: "1 / -1" }}>
+          <button className="btn btn-primary" type="submit" disabled={!title.trim() || (!editingAssignment && (targetType === "employees" ? !selectedEmployees.length : !target))}>{editingAssignment ? "Save changes" : "Assign work"}</button>
+          <button className="btn btn-outline" type="button" onClick={() => { setAssignmentOpen(false); resetAssignment(); }}>Cancel</button>
+        </div>
+      </form>
+    </div>}
+
+    {teamOpen && <div className="panel mt-4">
+      <div className="panel-head row justify-between"><b>{editingTeam ? "Edit team" : "Create team"}</b><button type="button" className="btn btn-outline btn-sm" onClick={() => { setTeamOpen(false); resetTeam(); }}>Close</button></div>
+      <form className="panel-body grid-2-equal gap-3" onSubmit={(event) => { event.preventDefault(); void run(async () => {
+        if (editingTeam) await updateTeam({ teamId: editingTeam._id, name: teamName, shiftId: teamShift as any });
+        else await createTeam({ name: teamName, shiftId: teamShift as any });
+        setTeamOpen(false); resetTeam();
+      }, editingTeam ? "Team updated." : "Team created."); }}>
+        <label className="policy-field">Team name<input className="input" required maxLength={80} value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="e.g. Morning packing team" /></label>
+        <CreatableSelect label="Shift" value={teamShift} options={shiftOptions} placeholder="Select a shift" onChange={setTeamShift} createLabel="Create shift" onCreateRequested={() => setShiftOpen(true)} />
+        <div className="row gap-2" style={{ gridColumn: "1 / -1" }}><button className="btn btn-primary" type="submit" disabled={!teamName.trim() || !teamShift}>{editingTeam ? "Save team" : "Create team"}</button><button className="btn btn-outline" type="button" onClick={() => { setTeamOpen(false); resetTeam(); }}>Cancel</button></div>
+      </form>
+    </div>}
+
+    {shiftOpen && <div className="panel mt-3"><div className="panel-head"><b>New shift</b></div><div className="panel-body grid-2-equal gap-3">
+      <label className="policy-field">Shift name<input className="input" value={shiftName} onChange={(e) => setShiftName(e.target.value)} placeholder="Morning shift" /></label>
+      <label className="policy-field">Start time<input className="input" type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} /></label>
+      <label className="policy-field">End time<input className="input" type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} /></label>
+      <label className="policy-field">Break (minutes)<input className="input" type="number" min="0" max="720" value={shiftBreak} onChange={(e) => setShiftBreak(e.target.value)} /></label>
+      <div className="row gap-2" style={{ gridColumn: "1 / -1" }}><button type="button" className="btn btn-primary" disabled={!shiftName.trim() || !shiftStart || !shiftEnd || minute(shiftStart) === minute(shiftEnd) || !Number.isInteger(Number(shiftBreak)) || Number(shiftBreak) < 0 || Number(shiftBreak) > 720} onClick={() => void run(async () => { const id = await createShift({ name: shiftName, startMinute: minute(shiftStart), endMinute: minute(shiftEnd), breakMinutes: Number(shiftBreak) }); setTeamShift(String(id)); setShiftOpen(false); setShiftName(""); }, "Shift created and selected.")}>Create shift</button><button type="button" className="btn btn-outline" onClick={() => setShiftOpen(false)}>Cancel</button></div>
+    </div></div>}
+
+    {categoryOpen && <div className="panel mt-4"><div className="panel-head row justify-between"><b>{editingCategory ? "Rename category" : "New category"}</b><button type="button" className="btn btn-outline btn-sm" onClick={() => { setCategoryOpen(false); resetCategory(); }}>Close</button></div>
+      <form className="panel-body row gap-2" onSubmit={(event) => { event.preventDefault(); void run(async () => { if (editingCategory) await updateCategory({ categoryId: editingCategory._id, name: categoryName }); else await createCategory({ name: categoryName }); setCategoryOpen(false); resetCategory(); }, editingCategory ? "Category updated." : "Category created."); }}>
+        <input className="input" required maxLength={60} value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Category name" /><button className="btn btn-primary" type="submit" disabled={!categoryName.trim()}>{editingCategory ? "Save" : "Create"}</button><button className="btn btn-outline" type="button" onClick={() => { setCategoryOpen(false); resetCategory(); }}>Cancel</button>
+      </form>
+    </div>}
+
+    {tab === "overview" && <>
+      <div className="grid-2-equal mt-4">
+        {[[ "Assignments", stats.total ], [ "Completed", stats.completed ], [ "Awaiting review", stats.review ], [ "Active teams", stats.teams ]].map(([label, value]) => <div className="kpi card" key={label as string}><span className="kpi-label">{label}</span><span className="kpi-val">{value}</span></div>)}
+      </div>
+      <div className="panel mt-4"><div className="panel-head row justify-between"><b>Today's work</b><button className="btn btn-outline btn-sm" onClick={() => setTab("assignments")}>View assignments</button></div><div className="panel-body col gap-3">
+        {data.assignments.slice(0, 6).map((item: any) => <div className="row justify-between gap-3" key={item._id} style={{ alignItems: "flex-start" }}><div><b>{item.title}</b><p className="t-caption text-tertiary">{item.category} · {item.targetName}</p></div><span className={"badge " + (item.priority === "high" ? "badge-warning" : "badge-neutral")}>{item.priority}</span></div>)}
+        {!data.assignments.length && <p className="sub">No work assigned for this date. Create an assignment to get started.</p>}
+      </div></div>
+      <div className="panel mt-4"><div className="panel-head row justify-between"><b>Team snapshot</b><button className="btn btn-outline btn-sm" onClick={() => setTab("teams")}>Manage teams</button></div><div className="panel-body grid-2-equal">{data.teams.slice(0, 4).map((item: any) => <div className="card p-3" key={item._id}><b>{item.name}</b><p className="t-caption text-tertiary">{item.shiftName} · {item.members.length} members</p></div>)}{!data.teams.length && <p className="sub">No teams created yet.</p>}</div></div>
+    </>}
+
+    {tab === "assignments" && <div className="panel mt-4">
+      <div className="panel-head row justify-between" style={{ flexWrap: "wrap" }}><div><b>Assignments</b><p className="t-caption text-tertiary">Create, update and track work for {date}.</p></div><button className="btn btn-primary btn-sm" onClick={openNewAssignment}>+ New assignment</button></div>
+      <div className="panel-body">
+        <div className="grid-2-equal gap-2 mb-3"><input className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search title, category or assignee" /><select className="input" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}><option value="all">All priorities</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select><select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="all">All progress</option><option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="review">Awaiting review</option><option value="completed">Completed</option></select></div>
+        <div className="col gap-3">{filteredAssignments.map((item: any) => {
+          const completed = item.progress.filter((p: any) => p.status === "completed").length;
+          const pendingReview = item.progress.filter((p: any) => p.status === "submitted_for_review");
+          return <article className="card p-3" key={item._id}>
+            <div className="row justify-between gap-2" style={{ alignItems: "flex-start" }}><div><b>{item.title}</b><p className="t-caption text-tertiary">{item.category} · {item.targetName}</p></div><span className={"badge " + (item.priority === "high" ? "badge-warning" : "badge-neutral")}>{item.priority}</span></div>
+            {item.description && <p className="t-body-sm mt-2">{item.description}</p>}
+            <p className="t-caption text-tertiary mt-2">{completed} of {item.progress.length} completed · {pendingReview.length} awaiting review</p>
+            {item.progress.map((person: any) => <div className="row justify-between gap-2 mt-2" key={person.progressId} style={{ flexWrap: "wrap" }}><span className="t-body-sm">{person.name} <span className="text-tertiary">· {person.status.replaceAll("_", " ")}</span></span>
+              {person.status === "submitted_for_review" && <span className="row gap-2"><button className="btn btn-outline btn-sm" onClick={() => void run(() => reviewWork({ progressId: person.progressId, decision: "approved" }), "Submission approved.")}>Approve</button><button className="btn btn-outline btn-sm" onClick={() => { const note = window.prompt("Reason for returning this work"); if (note?.trim()) void run(() => reviewWork({ progressId: person.progressId, decision: "returned", note: note.trim() }), "Work returned for updates."); }}>Return</button></span>}
+            </div>)}
+            <div className="row gap-2 mt-3"><button className="btn btn-outline btn-sm" onClick={() => openEditAssignment(item)}>Edit details</button><button className="btn btn-outline btn-sm" onClick={() => { if (window.confirm("Archive this assignment? Employee progress history will be retained.")) void run(() => archiveAssignment({ assignmentId: item._id }), "Assignment archived."); }}>Archive</button></div>
+          </article>;
+        })}{!filteredAssignments.length && <p className="sub">No assignments match these filters.</p>}</div>
+      </div>
+    </div>}
+
+    {tab === "teams" && <div className="panel mt-4">
+      <div className="panel-head row justify-between"><div><b>Teams & membership</b><p className="t-caption text-tertiary">Teams group employees by shift for daily work allocation.</p></div><button className="btn btn-primary btn-sm" onClick={() => { resetTeam(); setTeamOpen(true); }}>+ Create team</button></div>
+      <div className="panel-body col gap-3">
+        <div className="grid-2-equal gap-3"><CreatableSelect label="Select team to manage members" value={memberTeam} options={teamOptions} placeholder="Choose team" onChange={(value) => { setMemberTeam(value); setMembers(data.memberships.filter((m: any) => m.teamId === value).map((m: any) => m.employeeId)); }} /><p className="t-caption text-tertiary">Membership is date-specific. Employees must have the team's shift on the selected work date.</p></div>
+        {selectedTeam && <div className="card p-3"><div className="row justify-between"><b>{selectedTeam.name} · {selectedTeam.shiftName}</b><span className="t-caption text-tertiary">{members.length} selected</span></div>
+          <div className="grid-2-equal mt-3">{eligibleEmployees.map((employee: any) => <label className="row gap-2" key={employee._id}><input type="checkbox" checked={members.includes(employee._id)} onChange={(e) => setMembers((old) => e.target.checked ? [...old, employee._id] : old.filter((id) => id !== employee._id))} />{employee.name} · {employee.employeeCode}</label>)}</div>
+          {!eligibleEmployees.length && <p className="sub mt-2">No active employees are scheduled for this team's shift on the selected date.</p>}
+          <button className="btn btn-primary btn-sm mt-3" onClick={() => void run(() => saveMembers({ teamId: memberTeam as any, workDate: date, employeeIds: members as any }), "Team membership saved.")}>Save membership</button>
+        </div>}
+        <div className="grid-2-equal">{data.teams.map((item: any) => <article className="card p-3" key={item._id}><div className="row justify-between"><b>{item.name}</b><span className="badge badge-neutral">{item.members.length} members</span></div><p className="t-caption text-tertiary">{item.shiftName}</p><p className="t-body-sm mt-2">{item.members.map((m: any) => m.name).join(", ") || "No members assigned for this date"}</p><div className="row gap-2 mt-3"><button className="btn btn-outline btn-sm" onClick={() => openEditTeam(item)}>Edit</button><button className="btn btn-outline btn-sm" onClick={() => { if (window.confirm("Archive this team? Its historical assignments will remain.")) void run(() => archiveTeam({ teamId: item._id }), "Team archived."); }}>Archive</button></div></article>)}</div>
+        {!data.teams.length && <p className="sub">No teams yet. Create a team and assign a shift to begin.</p>}
+      </div>
+    </div>}
+
+    {tab === "recurring" && <div className="panel mt-4">
+      <div className="panel-head"><b>Recurring schedules</b><p className="t-caption text-tertiary">Automatically create assignments for a team or selected employees.</p></div>
+      <div className="panel-body col gap-3">
+        <form className="grid-2-equal gap-3" onSubmit={(event) => { event.preventDefault(); void run(() => createRecurring({ title, description: description.trim() || undefined, category, priority, targetType, ...(targetType === "team" ? { teamId: target as any } : targetType === "employee" ? { employeeId: target as any } : { employeeIds: selectedEmployees as any }), frequency, weekdays: frequency === "weekly" ? weekdays : undefined, startDate: date, endDate: recurrenceEnd || undefined }), "Recurring schedule created."); }}>
+          <label className="policy-field">Task title<input className="input" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Recurring task name" /></label>
+          <label className="policy-field">Category<CreatableSelect label="" value={category} options={categoryOptions} onChange={setCategory} placeholder="Choose category" createLabel="Create category" onCreate={async (value) => { await createCategory({ name: value }); return { value, label: value }; }} /></label>
+          <label className="policy-field">Priority<select className="input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
+          <label className="policy-field">Assign to<select className="input" value={targetType} onChange={(e) => { setTargetType(e.target.value as TargetType); setTarget(""); setSelectedEmployees([]); }}><option value="team">Team</option><option value="employee">One employee</option><option value="employees">Multiple employees</option></select></label>
+          {targetType === "employees" ? <div className="col gap-1">{employeeOptions.map((e: any) => <label className="row gap-2" key={e.value}><input type="checkbox" checked={selectedEmployees.includes(e.value)} onChange={(event) => setSelectedEmployees((old) => event.target.checked ? [...old, e.value] : old.filter((id) => id !== e.value))} />{e.label}</label>)}</div> : <CreatableSelect label="Target" value={target} options={targetType === "team" ? teamOptions : employeeOptions} onChange={setTarget} placeholder="Select target" />}
+          <label className="policy-field">Frequency<select className="input" value={frequency} onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}><option value="daily">Every day</option><option value="weekly">Selected weekdays</option></select></label>
+          {frequency === "weekly" && <div className="row gap-3 wrap">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label className="row gap-1" key={day}><input type="checkbox" checked={weekdays.includes(index)} onChange={(e) => setWeekdays((old) => e.target.checked ? [...old, index] : old.filter((v) => v !== index))} />{day}</label>)}</div>}
+          <label className="policy-field">End date (optional)<input className="input" type="date" min={date} value={recurrenceEnd} onChange={(e) => setRecurrenceEnd(e.target.value)} /></label>
+          <label className="policy-field">Description<textarea className="input" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+          <button className="btn btn-primary" type="submit" disabled={!title.trim() || !target || (frequency === "weekly" && !weekdays.length) || Boolean(recurrenceEnd && recurrenceEnd < date)}>Create schedule</button>
+        </form>
+        <div className="divider" />
+        <b>Active schedules</b>
+        {(data.recurringSchedules ?? []).map((item: any) => <div className="card p-3 row justify-between gap-2" key={item._id}><div><b>{item.title}</b><p className="t-caption text-tertiary">{item.frequency} · Next run {item.nextRunDate}{item.endDate ? " · Ends " + item.endDate : ""}</p></div><button className="btn btn-outline btn-sm" onClick={() => void run(() => setRecurringStatus({ scheduleId: item._id, isActive: false }), "Schedule paused.")}>Pause</button></div>)}
+        {!(data.recurringSchedules ?? []).length && <p className="sub">No active recurring schedules.</p>}
+      </div>
+    </div>}
+
+    {tab === "categories" && <div className="panel mt-4">
+      <div className="panel-head row justify-between"><div><b>Work categories</b><p className="t-caption text-tertiary">Keep work classification consistent across teams.</p></div><button className="btn btn-primary btn-sm" onClick={() => { resetCategory(); setCategoryOpen(true); }}>+ Add category</button></div>
+      <div className="panel-body col gap-2">{data.categoryRecords.map((item: any) => <div className="row justify-between gap-2 card p-3" key={item._id}><span>{item.name}</span><div className="row gap-2"><button className="btn btn-outline btn-sm" onClick={() => { setEditingCategory(item); setCategoryName(item.name); setCategoryOpen(true); }}>Rename</button><button className="btn btn-outline btn-sm" onClick={() => { if (window.confirm("Archive this category? Existing assignments keep their category text.")) void run(() => archiveCategory({ categoryId: item._id }), "Category archived."); }}>Archive</button></div></div>)}
+        {!data.categoryRecords.length && <p className="sub">No custom categories yet. You can still use the built-in categories when assigning work.</p>}
+      </div>
+    </div>}
+  </section>;
 }
