@@ -25,6 +25,13 @@ Actual changes create an `auditLogs` entry with action `employee.profile.updated
 - Bank account values remain encrypted and are never returned to the admin query or rendered in Employee 360. The UI shows only whether bank details were submitted.
 - Admin update audit metadata records changed field names, not residential address or emergency-contact values.
 
+## Production release sequence
+
+- The controlled GitHub Actions release workflow requires a production-scoped `CONVEX_DEPLOY_KEY` and deploys Convex functions/schema first.
+- Only after the Convex deployment succeeds does the workflow validate and invoke `VERCEL_DEPLOY_HOOK` for the Next.js production frontend.
+- Production release commits must end with `[deploy]`; normal development commits and pull-request merges do not trigger production deployment.
+- The Convex deploy key must be stored only as a GitHub Actions secret. It must not be committed, added to Vercel, or exposed in application logs.
+
 ## Contact verification follow-up
 Future email/phone editing must verify control of the new address/number, prevent duplicate account identities, update auth identity and employee contact consistently, and audit the transition.
 
