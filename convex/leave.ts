@@ -1,7 +1,8 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin, requireOrganizationAdmin, requireRole } from "./lib/auth";
 import { notifyEmployee } from "./lib/notifications";
+import { calculateMonthlyAccrual, nextCalendarMonth } from "./leaveAccrual";
 
 const validDate = (value: string): boolean => {
  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -22,13 +23,15 @@ export const adminWorkspace=query({args:{year:v.number()},handler:async(ctx,{yea
   ctx.db.query("workCalendars").withIndex("by_org",q=>q.eq("organizationId",user.organizationId)).collect(),
   ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",user.organizationId).eq("periodYear",year)).collect()
  ]);
- const balances=(await Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year)).collect()))).flat();
+ const [balances,previousBalances]=await Promise.all([Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year)).collect())),year>2020?Promise.all(employees.map(e=>ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",e._id).eq("periodYear",year-1)).collect())):Promise.resolve(employees.map(()=>[]))]);
+ const allBalances=balances.flat(),priorBalances=previousBalances.flat();
  const employeeRows=employees.map(e=>({_id:e._id,name:[e.firstName,e.lastName].filter(Boolean).join(" "),employeeCode:e.employeeCode,locationId:e.locationId,locationName:locations.find(l=>l._id===e.locationId)?.name??"Unknown"}));
  const balanceRows=await Promise.all(employees.filter(e=>e.status==="active").flatMap(e=>types.filter(t=>t.isActive).flatMap(t=>{
-  const existing=balances.find(b=>b.employeeId===e._id&&b.leaveTypeId===t._id);
+  const existing=allBalances.find(b=>b.employeeId===e._id&&b.leaveTypeId===t._id);
   const defaultRow=defaults.find(d=>d.leaveTypeId===t._id);
   if(existing)return [{...existing,isOverride:existing.isOverride??true}];
-  if(defaultRow)return [{_id:`default-${e._id}-${t._id}`,organizationId:user.organizationId,employeeId:e._id,leaveTypeId:t._id,periodYear:year,allocated:defaultRow.allocated,used:0,pending:0,isOverride:false}];
+  if(defaultRow&&t.monthlyAccrual===undefined)return [{_id:`default-${e._id}-${t._id}`,organizationId:user.organizationId,employeeId:e._id,leaveTypeId:t._id,periodYear:year,allocated:defaultRow.allocated,used:0,pending:0,isOverride:false}];
+  if(t.monthlyAccrual!==undefined){const prior=priorBalances.find(b=>b.employeeId===e._id&&b.leaveTypeId===t._id);return [{_id:`monthly-${e._id}-${t._id}-${year}`,organizationId:user.organizationId,employeeId:e._id,leaveTypeId:t._id,periodYear:year,allocated:prior?Math.max(0,prior.allocated-prior.used-prior.pending):0,used:0,pending:0,isOverride:false}];}
   return [];
 })).map(b=>({...b,employeeName:employeeRows.find(e=>e._id===b.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===b.employeeId)?.employeeCode??"",leaveTypeName:types.find(t=>t._id===b.leaveTypeId)?.name??"Unknown"})));
  const requestRows=await Promise.all(requests.map(async r=>({ ...r,employeeName:employeeRows.find(e=>e._id===r.employeeId)?.name??"Unknown",employeeCode:employeeRows.find(e=>e._id===r.employeeId)?.employeeCode??"",locationId:employeeRows.find(e=>e._id===r.employeeId)?.locationId,leaveTypeName:types.find(t=>t._id===r.leaveTypeId)?.name??"Unknown"})));
@@ -63,10 +66,50 @@ export const saveHoliday=mutation({args:{holidayId:v.optional(v.id("holidays")),
 }});
 export const deleteHoliday=mutation({args:{holidayId:v.id("holidays")},handler:async(ctx,{holidayId})=>{const u=await requireOrganizationAdmin(ctx),row=await ctx.db.get(holidayId);if(!row||row.organizationId!==u.organizationId)throw Error("HOLIDAY_NOT_FOUND");await ctx.db.delete(holidayId);await audit(ctx,u,"holiday.deleted","holiday",String(holidayId),{name:row.name,date:row.date});}});
 
+export const setMonthlyAccrual=mutation({args:{leaveTypeId:v.id("leaveTypes"),monthlyAccrual:v.number()},handler:async(ctx,a)=>{
+ const u=await requireOrganizationAdmin(ctx);
+ if(!Number.isFinite(a.monthlyAccrual)||a.monthlyAccrual<0||a.monthlyAccrual>31||Math.round(a.monthlyAccrual*2)!==a.monthlyAccrual*2)throw Error("INVALID_MONTHLY_LEAVE_ACCRUAL");
+ const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");
+ const org=await ctx.db.get(u.organizationId),today=new Intl.DateTimeFormat("en-CA",{timeZone:org?.timezone??"Asia/Kolkata"}).format(new Date());
+ const startMonth=nextCalendarMonth(today.slice(0,7));
+ await ctx.db.patch(type._id,{monthlyAccrual:a.monthlyAccrual,monthlyAccrualStartMonth:startMonth});
+ await audit(ctx,u,"leave.monthly_accrual.updated","leaveType",String(type._id),{monthlyAccrual:a.monthlyAccrual,startMonth});return {monthlyAccrual:a.monthlyAccrual,startMonth};
+}});
+
+export const runMonthlyLeaveAccrual=internalMutation({args:{},handler:async(ctx)=>{
+ const organizations=await ctx.db.query("organizations").collect();let credited=0;const now=Date.now();
+ for(const org of organizations){
+  const today=new Intl.DateTimeFormat("en-CA",{timeZone:org.timezone??"Asia/Kolkata"}).format(new Date(now)),currentMonth=today.slice(0,7);
+  const [employees,types]=await Promise.all([ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",org._id)).collect(),ctx.db.query("leaveTypes").withIndex("by_org",q=>q.eq("organizationId",org._id)).collect()]);
+  for(const employee of employees.filter(e=>e.status==="active")){
+   for(const type of types.filter(t=>t.isActive&&(t.monthlyAccrual??0)>0&&t.monthlyAccrualStartMonth&&t.monthlyAccrualStartMonth<=currentMonth)){
+    let month=type.monthlyAccrualStartMonth!;
+    while(month<=currentMonth){
+     const amount=calculateMonthlyAccrual(type.monthlyAccrual!,employee.joiningDate,month);
+     if(amount>0){
+      const existing=await ctx.db.query("leaveAccruals").withIndex("by_employee_leave_month",q=>q.eq("employeeId",employee._id).eq("leaveTypeId",type._id).eq("accrualMonth",month)).first();
+      if(!existing){
+       const year=Number(month.slice(0,4));let rows=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",employee._id).eq("periodYear",year)).collect(),balance=rows.find(b=>b.leaveTypeId===type._id);
+       if(!balance){
+        const previousRows=year>2020?await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",employee._id).eq("periodYear",year-1)).collect():[],previous=previousRows.find(b=>b.leaveTypeId===type._id);
+        const openingBalance=previous?Math.max(0,previous.allocated-previous.used-previous.pending):0;
+        const id=await ctx.db.insert("leaveBalances",{organizationId:org._id,employeeId:employee._id,leaveTypeId:type._id,periodYear:year,allocated:openingBalance,used:0,pending:0,isOverride:false});balance=(await ctx.db.get(id))??undefined;
+       }
+       if(balance){await ctx.db.patch(balance._id,{allocated:balance.allocated+amount});await ctx.db.insert("leaveAccruals",{organizationId:org._id,employeeId:employee._id,leaveTypeId:type._id,accrualMonth:month,amount,creditedAt:now});credited++;}
+      }
+     }
+     month=nextCalendarMonth(month);
+    }
+   }
+  }
+ }
+ return {credited,processedAt:now};
+}});
+
 export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),periodYear:v.number(),allocated:v.number()},handler:async(ctx,a)=>{
  const u=await requireOrganizationAdmin(ctx);
  if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
- const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");
+ const type=await ctx.db.get(a.leaveTypeId);if(!type||type.organizationId!==u.organizationId||!type.isActive)throw Error("INVALID_LEAVE_TYPE");if(type.monthlyAccrual!==undefined)throw Error("MONTHLY_LEAVE_USES_ACCRUAL_POLICY");
  const rows=await ctx.db.query("leaveDefaults").withIndex("by_org_year",q=>q.eq("organizationId",u.organizationId).eq("periodYear",a.periodYear)).collect();
  const old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
  const employees=await ctx.db.query("employees").withIndex("by_org_code",q=>q.eq("organizationId",u.organizationId)).collect();
@@ -86,7 +129,7 @@ export const saveLeaveDefault=mutation({args:{leaveTypeId:v.id("leaveTypes"),per
 
 export const saveBalance=mutation({args:{employeeId:v.id("employees"),leaveTypeId:v.id("leaveTypes"),periodYear:v.number(),allocated:v.number()},handler:async(ctx,a)=>{
  const u=await requireOrganizationAdmin(ctx);if(!Number.isInteger(a.periodYear)||a.periodYear<2020||a.periodYear>2100||!Number.isFinite(a.allocated)||a.allocated<0||a.allocated>366)throw Error("INVALID_LEAVE_ALLOCATION");
- const [e,t]=await Promise.all([ctx.db.get(a.employeeId),ctx.db.get(a.leaveTypeId)]);if(!e||e.organizationId!==u.organizationId||!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("INVALID_EMPLOYEE_OR_LEAVE_TYPE");
+ const [e,t]=await Promise.all([ctx.db.get(a.employeeId),ctx.db.get(a.leaveTypeId)]);if(!e||e.organizationId!==u.organizationId||!t||t.organizationId!==u.organizationId||!t.isActive)throw Error("INVALID_EMPLOYEE_OR_LEAVE_TYPE");if(t.monthlyAccrual!==undefined)throw Error("MONTHLY_LEAVE_USES_ACCRUAL_POLICY");
  const rows=await ctx.db.query("leaveBalances").withIndex("by_employee_year",q=>q.eq("employeeId",a.employeeId).eq("periodYear",a.periodYear)).collect(),old=rows.find(x=>x.leaveTypeId===a.leaveTypeId);
  if(old){if(a.allocated<old.used+old.pending)throw Error("ALLOCATION_BELOW_COMMITTED_DAYS");await ctx.db.patch(old._id,{allocated:a.allocated,isOverride:true});await audit(ctx,u,"leave.balance.updated","leaveBalance",String(old._id),{allocated:a.allocated});return old._id;}
  const id=await ctx.db.insert("leaveBalances",{organizationId:u.organizationId,employeeId:a.employeeId,leaveTypeId:a.leaveTypeId,periodYear:a.periodYear,allocated:a.allocated,used:0,pending:0,isOverride:true});await audit(ctx,u,"leave.balance.created","leaveBalance",String(id),{allocated:a.allocated,periodYear:a.periodYear});return id;
