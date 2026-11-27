@@ -25,3 +25,13 @@
 - This is in-app delivery only; push, email, and SMS are not included.
 - Mark-all-read operates on the latest 500 notifications per user per request. The API returns a `truncated` flag if more exist.
 - The first admin-triggered event integrated in this release is employee leave submission. Other workflow events should be added deliberately as each workflow's state transitions are reviewed.
+
+
+## Admin notification destinations
+
+- Admin and Super Admin notification rows with a supported destination are actionable. Selecting one marks it read (when unread), closes the notification panel, and opens the relevant module in the admin shell.
+- Leave submission notifications navigate to Leave.
+- Overtime confirmation and employee-decline notifications navigate to Overtime.
+- Destinations are stored as a closed server-validated enum (`leave` or `overtime`), not arbitrary URLs, preventing untrusted notification data from causing external redirects.
+- Notifications without a configured destination remain informational and are not presented as clickable.
+- QA: verify leave and overtime notifications open their matching modules; unread count updates after navigation; read notifications remain navigable; notifications without destinations remain non-actionable; keyboard activation and mobile tap work.

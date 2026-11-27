@@ -224,7 +224,7 @@ export const submitMyLeaveRequest = mutation({
       daySelections: args.daySelections.slice().sort((a, b) => a.date.localeCompare(b.date)),
       reason, status: "pending", createdAt: now,
     });
-    await notifyOrganizationAdmins(ctx, user.organizationId, "New leave request", `${employee.firstName} ${employee.lastName ?? ""} · ${leaveType.name} · ${args.fromDate} to ${args.toDate}`.trim());
+    await notifyOrganizationAdmins(ctx, user.organizationId, "New leave request", `${employee.firstName} ${employee.lastName ?? ""} · ${leaveType.name} · ${args.fromDate} to ${args.toDate}`.trim(), "leave");
     await ctx.db.insert("auditLogs", {
       organizationId: user.organizationId, actorUserId: user._id, action: "leave.submitted",
       entityType: "leaveRequest", entityId: String(requestId),
@@ -262,12 +262,12 @@ export const confirmMyOvertimeRequest = mutation({
     const now = Date.now();
     if (!args.confirmed) {
       await ctx.db.patch(request._id, { status: "rejected", reviewerNote: "Employee declined the automatically detected overtime.", reviewedAt: now, reviewedBy: user._id });
-      await notifyOrganizationAdmins(ctx, user.organizationId, "Overtime declined by employee", `${employee.firstName} ${employee.lastName ?? ""} · ${request.workDate}`.trim());
+      await notifyOrganizationAdmins(ctx, user.organizationId, "Overtime declined by employee", `${employee.firstName} ${employee.lastName ?? ""} · ${request.workDate}`.trim(), "overtime");
       await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "overtime.employee_declined", entityType: "overtimeRequest", entityId: String(request._id), metadata: { workDate: request.workDate, detectedMinutes: request.detectedMinutes ?? request.requestedMinutes }, createdAt: now });
       return { confirmed: false };
     }
     await ctx.db.patch(request._id, { status: "pending", employeeConfirmedAt: now, employeeConfirmedBy: user._id, submittedBy: user._id });
-    await notifyOrganizationAdmins(ctx, user.organizationId, "Overtime awaiting review", `${employee.firstName} ${employee.lastName ?? ""} confirmed ${request.requestedMinutes} minutes · ${request.workDate}`.trim());
+    await notifyOrganizationAdmins(ctx, user.organizationId, "Overtime awaiting review", `${employee.firstName} ${employee.lastName ?? ""} confirmed ${request.requestedMinutes} minutes · ${request.workDate}`.trim(), "overtime");
     await ctx.db.insert("auditLogs", { organizationId: user.organizationId, actorUserId: user._id, action: "overtime.employee_confirmed", entityType: "overtimeRequest", entityId: String(request._id), metadata: { workDate: request.workDate, requestedMinutes: request.requestedMinutes }, createdAt: now });
     return { confirmed: true };
   },

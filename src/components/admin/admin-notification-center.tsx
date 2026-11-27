@@ -47,7 +47,7 @@ function fullTime(timestamp: number) {
   }).format(new Date(timestamp));
 }
 
-export function AdminNotificationCenter() {
+export function AdminNotificationCenter({ onNavigate }: { onNavigate: (destination: "leave" | "overtime") => void }) {
   const data = useQuery(api.notifications.listMine, {});
   const markRead = useMutation(api.notifications.markRead);
   const markAllRead = useMutation(api.notifications.markAllRead);
@@ -169,7 +169,20 @@ export function AdminNotificationCenter() {
                   return (
                     <article className={`admin-notification__item ${isUnread ? "is-unread" : ""}`} key={item._id}>
                       <span className="admin-notification__item-icon"><Icon size={17} strokeWidth={1.8} /></span>
-                      <div className="admin-notification__item-content">
+                      <button
+                        type="button"
+                        className={`admin-notification__item-content ${item.destination ? "is-navigable" : ""}`}
+                        disabled={!item.destination}
+                        aria-label={item.destination ? `Open ${item.title} in ${item.destination === "leave" ? "Leave" : "Overtime"}` : undefined}
+                        onClick={() => {
+                          if (!item.destination) return;
+                          void (async () => {
+                            if (isUnread) await read(item._id);
+                            setOpen(false);
+                            onNavigate(item.destination!);
+                          })();
+                        }}
+                      >
                         <div className="admin-notification__item-heading">
                           <h3>{item.title}</h3>
                           {isUnread && <span className="admin-notification__unread-dot" aria-label="Unread" />}
@@ -178,8 +191,9 @@ export function AdminNotificationCenter() {
                         <div className="admin-notification__item-meta">
                           <span><Clock3 size={12} />{relativeTime(item.createdAt, now)}</span>
                           <time dateTime={new Date(item.createdAt).toISOString()} title={fullTime(item.createdAt)}>{fullTime(item.createdAt)}</time>
+                          {item.destination && <span className="admin-notification__view-link">View {item.destination === "leave" ? "leave requests" : "overtime"} <span aria-hidden="true">→</span></span>}
                         </div>
-                      </div>
+                      </button>
                       {isUnread && (
                         <button
                           type="button"
