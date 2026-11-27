@@ -1383,6 +1383,34 @@
     const eventType = latestAccepted && latestAccepted.eventType !== "check_out" ? "check_out" : "check_in";
     const isRemote = window.__orchidWorkspace?.location?.locationType === "remote";
 
+    // Shift warnings are advisory: employees may still confirm an out-of-shift check-in.
+    if (eventType === "check_in") {
+      const assignedShifts = Array.isArray(workspace?.shifts) && workspace.shifts.length
+        ? workspace.shifts
+        : workspace?.shift ? [workspace.shift] : [];
+      const nowParts = new Intl.DateTimeFormat("en-GB", {
+        timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+      }).formatToParts(new Date());
+      const currentMinute = Number(nowParts.find(part => part.type === "hour")?.value) * 60
+        + Number(nowParts.find(part => part.type === "minute")?.value);
+      const isWithinAssignedShift = assignedShifts.some(shift => {
+        const start = Number(shift.startMinute);
+        const end = Number(shift.endMinute);
+        if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start >= 1440 || end < 0 || end >= 1440 || start === end) return false;
+        return start < end
+          ? currentMinute >= start && currentMinute < end
+          : currentMinute >= start || currentMinute < end;
+      });
+
+      if (!isWithinAssignedShift) {
+        const shiftDetails = assignedShifts.length
+          ? assignedShifts.map(shift => `${shift.name || "Assigned shift"} (${formatShiftTime(shift.startMinute)}–${formatShiftTime(shift.endMinute)})`).join(", ")
+          : "No shift is assigned for today";
+        const message = `You are outside your scheduled shift. ${shiftDetails}. Do you want to continue with check-in?`;
+        if (!window.confirm(message)) return;
+      }
+    }
+
     const submitPunch = async (gps) => {
       try {
         const response = await fetch("/api/employee/workspace", {
