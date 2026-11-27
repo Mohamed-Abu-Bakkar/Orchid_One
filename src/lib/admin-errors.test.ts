@@ -32,6 +32,12 @@ describe("admin error classification and explanation", () => {
     expect(details.kind).toBe("conflict");
   });
 
+  it("turns an unrecognized structured backend code into a readable cause", () => {
+    const details = getAdminErrorDetails(new Error("UNSUPPORTED_SHIFT_CONFIGURATION"));
+    expect(details.message).toContain("Unsupported Shift Configuration");
+    expect(details.code).toBe("UNSUPPORTED_SHIFT_CONFIGURATION");
+  });
+
   it("never exposes unknown backend messages or stack traces", () => {
     const secret = "INTERNAL_DATABASE_HOST_AND_STACK_TRACE";
     expect(getAdminErrorMessage(new Error(secret))).toContain("couldn't identify the exact cause");
