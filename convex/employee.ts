@@ -104,10 +104,19 @@ export const myWorkspace = query({
     const docsWithUrls = documents.map(doc => ({ ...doc, url: null }));
     const visibleWageRecords = wageRecords.filter(record => record.status === "approved" || record.status === "locked");
     const wagePeriods = await Promise.all(visibleWageRecords.map(record => ctx.db.get(record.wagePeriodId)));
-    const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(today.slice(0, 4)))).collect();
+    const currentLeaveYear = Number(today.slice(0, 4));
+    const leaveDefaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", currentLeaveYear)).collect();
+    const previousLeaveBalances = currentLeaveYear > 2020 ? await ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id).eq("periodYear", currentLeaveYear - 1)).collect() : [];
     const effectiveLeaveBalances = [...leaveBalances];
+    for (const type of leaveTypes.filter(item => item.isActive && item.monthlyAccrual !== undefined)) {
+      if (!effectiveLeaveBalances.some(balance => balance.leaveTypeId === type._id)) {
+        const previous = previousLeaveBalances.find(balance => balance.leaveTypeId === type._id);
+        effectiveLeaveBalances.push({ _id: `monthly-${type._id}` as any, organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: type._id, periodYear: currentLeaveYear, allocated: previous ? Math.max(0, previous.allocated - previous.used - previous.pending) : 0, used: 0, pending: 0, isOverride: false } as any);
+      }
+    }
     for (const entitlement of leaveDefaults) {
-      if (!effectiveLeaveBalances.some(balance => balance.leaveTypeId === entitlement.leaveTypeId)) {
+      const configuredType = await ctx.db.get(entitlement.leaveTypeId);
+      if (configuredType?.monthlyAccrual === undefined && !effectiveLeaveBalances.some(balance => balance.leaveTypeId === entitlement.leaveTypeId)) {
         effectiveLeaveBalances.push({ _id: `default-${entitlement._id}` as any, organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: entitlement.leaveTypeId, periodYear: Number(today.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false } as any);
       }
     }
@@ -210,8 +219,12 @@ export const submitMyLeaveRequest = mutation({
     if (!balance) {
       const defaults = await ctx.db.query("leaveDefaults").withIndex("by_org_year", q => q.eq("organizationId", user.organizationId).eq("periodYear", Number(args.fromDate.slice(0, 4)))).collect();
       const entitlement = defaults.find(item => item.leaveTypeId === leaveType._id);
-      if (!entitlement) throw new Error("LEAVE_BALANCE_NOT_CONFIGURED");
-      const balanceId = await ctx.db.insert("leaveBalances", { organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: leaveType._id, periodYear: Number(args.fromDate.slice(0, 4)), allocated: entitlement.allocated, used: 0, pending: 0, isOverride: false });
+      if (leaveType.monthlyAccrual === undefined && !entitlement) throw new Error("LEAVE_BALANCE_NOT_CONFIGURED");
+      const targetYear = Number(args.fromDate.slice(0, 4));
+      const previousRows = targetYear > 2020 ? await ctx.db.query("leaveBalances").withIndex("by_employee_year", q => q.eq("employeeId", employee._id).eq("periodYear", targetYear - 1)).collect() : [];
+      const previousBalance = previousRows.find(item => item.leaveTypeId === leaveType._id);
+      const openingBalance = previousBalance ? Math.max(0, previousBalance.allocated - previousBalance.used - previousBalance.pending) : 0;
+      const balanceId = await ctx.db.insert("leaveBalances", { organizationId: user.organizationId, employeeId: employee._id, leaveTypeId: leaveType._id, periodYear: targetYear, allocated: leaveType.monthlyAccrual !== undefined ? openingBalance : entitlement!.allocated, used: 0, pending: 0, isOverride: false });
       const createdBalance = await ctx.db.get(balanceId);
       if (!createdBalance) throw new Error("LEAVE_BALANCE_CREATION_FAILED");
       balance = createdBalance;

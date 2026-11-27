@@ -15,5 +15,11 @@ crons.daily(
   internal.teamsWork.generateDueRecurringWork,
   {},
 );
+crons.daily(
+  "monthly leave accrual catch-up",
+  { hourUTC: 1, minuteUTC: 0 },
+  internal.leave.runMonthlyLeaveAccrual,
+  {},
+);
 
 export default crons;
