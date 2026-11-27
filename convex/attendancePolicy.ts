@@ -16,9 +16,12 @@ export function getOrganizationWorkDate(timestamp: number, timeZone: string): st
 }
 
 /**
- * Blocks a punch for any unresolved event from today, or any unresolved
- * non-checkout event from an earlier workday. A prior-day pending checkout
- * is allowed only when the previous session is actually closed.
+ * Blocks punches for unresolved events on the current workday.
+ *
+ * An unresolved event from an earlier workday remains in the review queue,
+ * but it must not prevent a new-day punch once the previous session is closed.
+ * The latest prior non-rejected event is the source of truth for session
+ * closure; a non-checkout means the employee still has an unfinished session.
  */
 export function shouldBlockAttendancePunch(
   currentWorkDate: string,
@@ -26,12 +29,11 @@ export function shouldBlockAttendancePunch(
   timeZone: string,
   latestPriorNonRejectedEvent?: AttendanceReviewEvent,
 ): boolean {
-  const blockingPendingEvent = pendingEvents.some((event) => {
-    const eventWorkDate = getOrganizationWorkDate(event.receivedAt, timeZone);
-    return eventWorkDate === currentWorkDate || event.eventType !== "check_out";
-  });
+  const hasPendingEventToday = pendingEvents.some(
+    (event) => getOrganizationWorkDate(event.receivedAt, timeZone) === currentWorkDate,
+  );
 
-  if (blockingPendingEvent) return true;
+  if (hasPendingEventToday) return true;
 
   return Boolean(
     latestPriorNonRejectedEvent &&
