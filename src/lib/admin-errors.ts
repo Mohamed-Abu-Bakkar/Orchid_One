@@ -21,10 +21,10 @@ export function classifyAdminError(error: unknown): AdminErrorKind {
   const message = getErrorText(error).toUpperCase();
   if (message.includes("UNAUTHENTICATED") || message.includes("NOT_AUTHENTICATED")) return "unauthenticated";
   if (message.includes("ACCOUNT_SUSPENDED") || message.includes("SUSPENDED")) return "suspended";
-  if (message.includes("FORBIDDEN") || message.includes("PERMISSION") || message.includes("NOT_AUTHORIZED")) return "forbidden";
+  if (message.includes("FORBIDDEN") || message.includes("PERMISSION") || message.includes("NOT_AUTHORIZED") || message.includes("SUPERVISOR_REVIEW_REQUIRED") || message.includes("ADMIN_ONLY") || message.includes("ROLE_REQUIRED") || message.includes("NOT_ALLOWED") || message.includes("INSUFFICIENT")) return "forbidden";
   if (message.includes("NOT_FOUND") || message.includes("DOES_NOT_EXIST")) return "not-found";
   if (message.includes("ALREADY_") || message.includes("CONFLICT") || message.includes("STALE")) return "conflict";
-  if (message.includes("NETWORK") || message.includes("TIMEOUT") || message.includes("FETCH_FAILED") || message.includes("OFFLINE")) return "network";
+  if (message.includes("NETWORK") || message.includes("TIMEOUT") || message.includes("FETCH_FAILED") || message.includes("FAILED TO FETCH") || message.includes("CONNECTION") || message.includes("ECONN") || message.includes("OFFLINE")) return "network";
   if (message.includes("VALIDATION") || message.includes("INVALID_")) return "validation";
   return "unknown";
 }
