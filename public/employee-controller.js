@@ -27,6 +27,27 @@
     const date = new Date(value + "T00:00:00Z");
     return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { ...options, timeZone: "UTC" }).format(date);
   };
+  function renderTodayWageEstimate(estimate = window.__orchidWageEstimate) {
+    if (!estimate) return;
+    const amountNode = document.getElementById("statWeeklyWage");
+    const detailNode = document.getElementById("statWeeklyWageSub");
+    if (!amountNode || !detailNode) return;
+    const money = value => new Intl.NumberFormat("en-IN", {
+      style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }).format(Math.max(0, Number(value) || 0) / 100);
+    if (estimate.amountPaise !== null && estimate.amountPaise !== undefined) {
+      amountNode.textContent = money(estimate.amountPaise);
+    } else {
+      amountNode.textContent = estimate.status === "monthly" ? "Monthly" : estimate.status === "awaiting_checkout" ? "After checkout" : estimate.status === "pending_review" ? "Pending" : "—";
+    }
+    const hours = Math.floor((Number(estimate.payableMinutes) || 0) / 60);
+    const minutes = (Number(estimate.payableMinutes) || 0) % 60;
+    const payableLabel = hours + "h " + String(minutes).padStart(2, "0") + "m payable";
+    detailNode.textContent = estimate.status === "working" || estimate.status === "on_break" || estimate.status === "completed"
+      ? payableLabel + " · " + (estimate.note || "Regular time only")
+      : estimate.note || "Today's estimate is not available.";
+  }
+
   function renderHomeUpcoming(workspace = window.__orchidWorkspace) {
     const root = document.getElementById("upcomingList");
     if (!root) return;
@@ -583,6 +604,8 @@
       const { workspace, policies, work } = payload;
       window.__orchidWorkspaceSnapshot = JSON.stringify({ workspace, policies, work });
       window.__orchidWorkspace = workspace;
+      window.__orchidWageEstimate = payload.wageEstimate ?? null;
+      renderTodayWageEstimate(window.__orchidWageEstimate);
       if (workspace?.linked && workspace.profile && !workspace.profile.profileCompletedAt) showDateOfBirthPrompt();
       else document.getElementById("orchidDobPrompt")?.remove();
       renderHomeUpcoming(workspace);
@@ -868,9 +891,7 @@
       const availableLeave = balances.reduce((sum, item) => sum + Math.max(0, item.allocated - item.used - item.pending), 0);
       text("#statLeaveBalance", balances.length ? String(availableLeave) : "—");
       text("#statLeaveBalanceSub", balances.length ? balances.map(item => item.leaveTypeName).join(", ") : "No leave balance configured");
-      const weeklyWage = workspace.weeklyWage;
-      text("#statWeeklyWage", weeklyWage ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(weeklyWage.totalPaise / 100) : "—");
-      text("#statWeeklyWageSub", weeklyWage ? weeklyWage.payableUnits + " payable units · " + weeklyWage.status : "No approved wage for this week");
+      renderTodayWageEstimate(window.__orchidWageEstimate);
       // Employee performance is derived only from recorded attendance days and finalized wages.
       const performance = workspace.performance ?? {};
       const performanceDays = performance.attendanceDays ?? [];
@@ -1241,8 +1262,10 @@
       window.__orchidPendingRealtimePayload = payload;
       return;
     }
-    const snapshot = JSON.stringify(payload);
+    const snapshot = JSON.stringify({ workspace: payload.workspace, policies: payload.policies, work: payload.work });
+    window.__orchidWageEstimate = payload.wageEstimate ?? window.__orchidWageEstimate ?? null;
     if (snapshot !== window.__orchidWorkspaceSnapshot) hydrate(payload);
+    else renderTodayWageEstimate(window.__orchidWageEstimate);
   };
 
 
