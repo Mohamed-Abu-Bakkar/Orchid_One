@@ -1529,7 +1529,7 @@
 
       if (!isWithinAssignedShift) {
         const shiftDetails = assignedShifts.length
-          ? assignedShifts.map(shift => `${shift.name || "Assigned shift"} (${formatShiftTime(shift.startMinute)}–${formatShiftTime(shift.endMinute)})`).join(", ")
+          ? assignedShifts.map(shift => `${shift.name || "Assigned shift"} (${scheduleTime(shift.startMinute)}–${scheduleTime(shift.endMinute)})`).join(", ")
           : "No shift is assigned for today";
         const message = `You are outside your scheduled shift. ${shiftDetails}. Do you want to continue with check-in?`;
         if (!window.confirm(message)) return;
