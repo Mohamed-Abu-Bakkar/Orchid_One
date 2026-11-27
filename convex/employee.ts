@@ -581,10 +581,10 @@ async function encryptEmployeeBankDetails(value: { accountHolder: string; bankNa
   try { rawKey = Uint8Array.from(atob(encodedKey), character => character.charCodeAt(0)); }
   catch { throw new Error("BANK_DETAILS_ENCRYPTION_KEY_INVALID"); }
   if (rawKey.length !== 32) throw new Error("BANK_DETAILS_ENCRYPTION_KEY_INVALID");
-  const key = await crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, ["encrypt"]);
+  const key = await crypto.subtle.importKey("raw", new Uint8Array(rawKey).buffer, { name: "AES-GCM" }, false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const plaintext = new TextEncoder().encode(JSON.stringify(value));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: new Uint8Array(iv).buffer }, key, new Uint8Array(plaintext).buffer);
   const toBase64 = (bytes: Uint8Array) => btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
   return `v1:${toBase64(iv)}:${toBase64(new Uint8Array(ciphertext))}`;
 }
