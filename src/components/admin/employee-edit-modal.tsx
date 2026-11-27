@@ -1,7 +1,8 @@
 "use client";
 
 
-import { getAdminErrorMessage } from "@/lib/admin-errors";import { useState, type FormEvent } from "react";
+import { getAdminErrorMessage } from "@/lib/admin-errors";
+import { useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Save, X } from "lucide-react";
