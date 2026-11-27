@@ -2,7 +2,6 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { getAdminErrorMessage } from "@/lib/admin-errors";
 
 type Props = { children: ReactNode; resetKey?: string };
 type State = { hasError: boolean; incidentId: string };
