@@ -430,57 +430,134 @@
     if (document.getElementById("orchidDobPrompt")) return;
     const overlay = document.createElement("div");
     overlay.id = "orchidDobPrompt";
-    overlay.className = "fixed inset-0 z-[200] flex items-center justify-center bg-[#211525]/65 p-4";
-    overlay.setAttribute("role", "presentation");
+    overlay.className = "fixed inset-0 z-[200] flex items-center justify-center bg-[#211525]/65 p-3 sm:p-4";
     const dialog = document.createElement("section");
-    dialog.className = "w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl";
+    dialog.className = "w-full max-w-xl max-h-[92dvh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-7 shadow-2xl";
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
-    dialog.setAttribute("aria-labelledby", "orchidDobTitle");
-    const heading = document.createElement("h2");
-    heading.id = "orchidDobTitle";
-    heading.className = "text-xl font-bold text-[#38223e]";
-    heading.textContent = "Complete your employee profile";
-    const description = document.createElement("p");
-    description.className = "mt-2 text-sm leading-6 text-[#756879]";
-    description.textContent = "Your date of birth is missing from your employee record. Please enter it to continue to your workspace.";
-    const form = document.createElement("form");
-    form.className = "mt-5 flex flex-col gap-3";
-    const label = document.createElement("label");
-    label.className = "flex flex-col gap-2 text-sm font-semibold text-[#4b3b50]";
-    label.textContent = "Date of birth";
-    const input = document.createElement("input");
-    input.type = "date";
-    input.name = "dateOfBirth";
-    input.required = true;
-    input.min = "1900-01-01";
-    input.max = new Date().toISOString().slice(0, 10);
-    input.className = "w-full rounded-xl border border-[#d9cddd] bg-white px-3 py-3 text-base text-[#302633]";
-    input.setAttribute("aria-label", "Date of birth");
-    label.append(input);
-    const note = document.createElement("p");
-    note.className = "text-xs leading-5 text-[#887b89]";
-    note.textContent = "You can update this information later from More → Settings.";
-    const error = document.createElement("p");
-    error.className = "hidden text-sm text-red-700";
-    error.setAttribute("role", "alert");
-    const button = document.createElement("button");
-    button.type = "submit";
-    button.className = "mt-1 rounded-xl bg-[#5a285f] px-4 py-3 font-semibold text-white disabled:opacity-60";
-    button.textContent = "Save and continue";
-    form.append(label, note, error, button);
-    form.addEventListener("submit", event => {
-      event.preventDefault();
-      if (!form.reportValidity()) return;
-      button.disabled = true;
-      button.textContent = "Saving…";
-      error.classList.add("hidden");
-      window.parent.postMessage({ type: "ORCHID_NOTIFICATION_ACTION", action: "submit-date-of-birth", dateOfBirth: input.value }, window.location.origin);
-    });
-    dialog.append(heading, description, form);
+    dialog.setAttribute("aria-labelledby", "orchidProfileTitle");
+    dialog.innerHTML = `
+      <div class="mb-5">
+        <p class="text-[10px] font-bold tracking-[.18em] text-[#8b7190]">ORCHID ONE · EMPLOYEE SETUP</p>
+        <h2 id="orchidProfileTitle" class="mt-1 text-2xl font-bold text-[#38223e]">Complete your profile</h2>
+        <p class="mt-2 text-sm leading-6 text-[#756879]">A few details will help HR keep your employee records accurate and support payroll when needed.</p>
+      </div>
+      <div class="mb-5">
+        <div class="flex items-center justify-between text-xs font-semibold text-[#6f5385]"><span id="orchidProfileStepLabel">STEP 1 OF 5</span><span id="orchidProfileStepName">Address</span></div>
+        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#eee7f0]"><div id="orchidProfileProgress" class="h-full rounded-full bg-[#5a285f] transition-all" style="width:20%"></div></div>
+        <div class="mt-3 grid grid-cols-5 gap-1 text-center text-[9px] font-semibold text-[#8b7c8e]"><span>Address</span><span>DOB</span><span>Emergency</span><span>Bank</span><span>Review</span></div>
+      </div>
+      <form id="orchidProfileWizard" class="flex flex-col gap-4">
+        <fieldset data-step="0" class="flex flex-col gap-3">
+          <div><h3 class="font-bold text-[#38223e]">Your residential address</h3><p class="text-xs text-[#817486]">Enter the address where you currently reside.</p></div>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Address line 1 *<input name="line1" required maxlength="120" autocomplete="address-line1" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="Door number, street name"></label>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Address line 2<input name="line2" maxlength="120" autocomplete="address-line2" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="Area, landmark (optional)"></label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">City / Town *<input name="city" required maxlength="80" autocomplete="address-level2" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">District<input name="district" maxlength="80" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">State *<input name="state" required maxlength="80" autocomplete="address-level1" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">PIN code *<input name="postalCode" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="6-digit PIN"></label>
+          </div>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Country *<input name="country" required maxlength="60" value="India" autocomplete="country-name" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+        </fieldset>
+        <fieldset data-step="1" hidden class="flex flex-col gap-3">
+          <div><h3 class="font-bold text-[#38223e]">Date of birth</h3><p class="text-xs text-[#817486]">Your date of birth is used for employee records and birthday notifications.</p></div>
+          <label class="flex flex-col gap-2 text-sm font-semibold text-[#4b3b50]">Date of birth *<input name="dateOfBirth" type="date" required min="1900-01-01" max="${new Date().toISOString().slice(0,10)}" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-base font-normal"></label>
+        </fieldset>
+        <fieldset data-step="2" hidden class="flex flex-col gap-3">
+          <div><h3 class="font-bold text-[#38223e]">Emergency contact</h3><p class="text-xs text-[#817486]">Someone HR can contact if there is an emergency. This section is optional.</p></div>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Contact name<input name="emergencyName" maxlength="100" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Relationship<input name="emergencyRelationship" maxlength="50" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="Parent, spouse, sibling…"></label>
+            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Phone number<input name="emergencyPhone" type="tel" inputmode="tel" maxlength="20" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+          </div>
+          <p class="text-[11px] text-[#817486]">You can leave all three fields blank. If you enter one, complete all three.</p>
+        </fieldset>
+        <fieldset data-step="3" hidden class="flex flex-col gap-3">
+          <div><h3 class="font-bold text-[#38223e]">Bank details</h3><p class="text-xs text-[#817486]">Optional. These details are encrypted before they are stored and are not returned in your normal profile data.</p></div>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Account holder name<input name="accountHolder" maxlength="100" autocomplete="name" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Bank name<input name="bankName" maxlength="100" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Account number<input name="accountNumber" type="password" inputmode="numeric" autocomplete="off" maxlength="18" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
+          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">IFSC code<input name="ifsc" maxlength="11" autocapitalize="characters" autocomplete="off" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="e.g. SBIN0001234"></label>
+          <p class="text-[11px] text-[#817486]">Leave all fields blank to add bank information later. If you enter one, complete all four.</p>
+        </fieldset>
+        <fieldset data-step="4" hidden class="flex flex-col gap-3">
+          <div><h3 class="font-bold text-[#38223e]">Review your information</h3><p class="text-xs text-[#817486]">Check the details before submitting. Bank account numbers are never shown in this review.</p></div>
+          <div id="orchidProfileReview" class="space-y-3"></div>
+          <p class="text-[11px] leading-5 text-[#817486]">By submitting, you confirm that the information provided is accurate. You can contact HR if you need to correct it later.</p>
+        </fieldset>
+        <p id="orchidProfileError" class="hidden text-sm text-red-700" role="alert"></p>
+        <div class="flex items-center justify-between gap-3 border-t border-[#eee7f0] pt-4">
+          <button id="orchidProfileBack" type="button" class="rounded-xl border border-[#d9cddd] px-4 py-3 text-sm font-semibold text-[#5a285f]" disabled>Back</button>
+          <button id="orchidProfileNext" type="button" class="rounded-xl bg-[#5a285f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">Continue</button>
+          <button id="orchidProfileSubmit" type="submit" hidden class="rounded-xl bg-[#5a285f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">Submit profile</button>
+        </div>
+      </form>`;
     overlay.append(dialog);
     document.body.append(overlay);
-    input.focus();
+    const form = dialog.querySelector("#orchidProfileWizard");
+    const fields = name => form.elements.namedItem(name);
+    const workspaceProfile = window.__orchidWorkspace?.profile || {};
+    const values = {
+      line1: workspaceProfile.address?.line1 || "", line2: workspaceProfile.address?.line2 || "",
+      city: workspaceProfile.address?.city || "", district: workspaceProfile.address?.district || "",
+      state: workspaceProfile.address?.state || "", postalCode: workspaceProfile.address?.postalCode || "",
+      country: workspaceProfile.address?.country || "India", dateOfBirth: workspaceProfile.dateOfBirth || "",
+      emergencyName: workspaceProfile.emergencyContact?.name || "", emergencyRelationship: workspaceProfile.emergencyContact?.relationship || "",
+      emergencyPhone: workspaceProfile.emergencyContact?.phone || "", accountHolder: "", bankName: "", accountNumber: "", ifsc: ""
+    };
+    Object.entries(values).forEach(([name,value]) => { if (fields(name)) fields(name).value = value; });
+    let current = 0;
+    const names = ["Address","Date of birth","Emergency contact","Bank details","Review"];
+    const stepNodes = [...form.querySelectorAll("[data-step]")];
+    const error = dialog.querySelector("#orchidProfileError");
+    const readValues = () => Object.keys(values).forEach(name => { values[name] = fields(name)?.value?.trim() || ""; });
+    const showStep = () => {
+      stepNodes.forEach((node,index) => { node.hidden = index !== current; });
+      dialog.querySelector("#orchidProfileStepLabel").textContent = `STEP ${current+1} OF 5`;
+      dialog.querySelector("#orchidProfileStepName").textContent = names[current];
+      dialog.querySelector("#orchidProfileProgress").style.width = `${(current+1)*20}%`;
+      dialog.querySelector("#orchidProfileBack").disabled = current === 0;
+      dialog.querySelector("#orchidProfileNext").hidden = current === 4;
+      dialog.querySelector("#orchidProfileSubmit").hidden = current !== 4;
+      error.classList.add("hidden");
+    };
+    const review = () => {
+      readValues();
+      const root = dialog.querySelector("#orchidProfileReview");
+      root.replaceChildren();
+      const sections = [
+        ["Address",[values.line1,values.line2,values.city,values.district,values.state,values.postalCode,values.country].filter(Boolean).join(", ")],
+        ["Date of birth",values.dateOfBirth],
+        ["Emergency contact",values.emergencyName ? [values.emergencyName,values.emergencyRelationship,values.emergencyPhone].filter(Boolean).join(" · ") : "Not provided"],
+        ["Bank details",values.accountHolder ? `${values.accountHolder} · ${values.bankName} · Account ending ${values.accountNumber.slice(-4)} · ${values.ifsc.toUpperCase()}` : "Not provided"]
+      ];
+      sections.forEach(([label,value]) => { const row=document.createElement("div");row.className="rounded-xl border border-[#eee7f0] p-3";const title=document.createElement("p");title.className="text-[10px] font-bold uppercase tracking-wider text-[#8b7190]";title.textContent=label;const detail=document.createElement("p");detail.className="mt-1 break-words text-sm text-[#38223e]";detail.textContent=value||"—";row.append(title,detail);root.append(row); });
+    };
+    dialog.querySelector("#orchidProfileBack").addEventListener("click",()=>{readValues();current=Math.max(0,current-1);showStep();});
+    dialog.querySelector("#orchidProfileNext").addEventListener("click",()=>{
+      const active=stepNodes[current];
+      readValues();
+      if (!active.reportValidity()) return;
+      if (current===2 && [values.emergencyName,values.emergencyRelationship,values.emergencyPhone].some(Boolean) && ![values.emergencyName,values.emergencyRelationship,values.emergencyPhone].every(Boolean)) {
+        error.textContent="Complete the emergency contact name, relationship and phone number, or leave all three blank.";error.classList.remove("hidden");return;
+      }
+      if (current===3 && [values.accountHolder,values.bankName,values.accountNumber,values.ifsc].some(Boolean) && ![values.accountHolder,values.bankName,values.accountNumber,values.ifsc].every(Boolean)) {
+        error.textContent="Complete all bank fields, or leave all four blank.";error.classList.remove("hidden");return;
+      }
+      if (current===3) review();
+      current=Math.min(4,current+1);showStep();
+    });
+    form.addEventListener("submit",event=>{
+      event.preventDefault();readValues();
+      const emergencyContact=values.emergencyName?{name:values.emergencyName,relationship:values.emergencyRelationship,phone:values.emergencyPhone}:null;
+      const bankDetails=values.accountHolder?{accountHolder:values.accountHolder,bankName:values.bankName,accountNumber:values.accountNumber,ifsc:values.ifsc.toUpperCase()}:null;
+      const submit=dialog.querySelector("#orchidProfileSubmit");
+      submit.disabled=true;submit.textContent="Submitting…";error.classList.add("hidden");
+      window.parent.postMessage({type:"ORCHID_NOTIFICATION_ACTION",action:"complete-my-profile",dateOfBirth:values.dateOfBirth,address:{line1:values.line1,line2:values.line2,city:values.city,district:values.district,state:values.state,postalCode:values.postalCode,country:values.country},emergencyContact,bankDetails},window.location.origin);
+    });
+    showStep();
+    fields("line1")?.focus();
   }
 
   async function hydrate(prefetchedPayload) {
@@ -504,7 +581,7 @@
       const { workspace, policies, work } = payload;
       window.__orchidWorkspaceSnapshot = JSON.stringify({ workspace, policies, work });
       window.__orchidWorkspace = workspace;
-      if (workspace?.linked && workspace.profile && !workspace.profile.dateOfBirth) showDateOfBirthPrompt();
+      if (workspace?.linked && workspace.profile && !workspace.profile.profileCompletedAt) showDateOfBirthPrompt();
       else document.getElementById("orchidDobPrompt")?.remove();
       renderHomeUpcoming(workspace);
       window.__orchidWork = work || { assignments: [], history: [] };
@@ -1224,6 +1301,29 @@
       } else {
         if (message) { message.textContent = profileErrorMessage(event.data.error); message.className = "text-label-sm text-red-700"; }
         if (button) { button.disabled = false; button.textContent = "Save changes"; }
+      }
+    } else if (event.data?.type === "ORCHID_PROFILE_COMPLETION_RESULT") {
+      const prompt = document.getElementById("orchidDobPrompt");
+      if (event.data.success) {
+        prompt?.remove();
+        window.__orchidWorkspaceSnapshot = null;
+        toast("Your employee profile has been completed.");
+      } else {
+        const error = prompt?.querySelector("#orchidProfileError");
+        const button = prompt?.querySelector("#orchidProfileSubmit");
+        if (error) {
+          const messages = {
+            INVALID_DATE_OF_BIRTH: "Enter a valid date of birth that is not in the future.",
+            INVALID_EMPLOYEE_ADDRESS: "Check your address and PIN code.",
+            INVALID_EMERGENCY_CONTACT: "Check the emergency contact details.",
+            INVALID_BANK_DETAILS: "Check the bank account number and IFSC code.",
+            BANK_DETAILS_ENCRYPTION_NOT_CONFIGURED: "Bank detail submission is temporarily unavailable. Please contact HR.",
+            BANK_DETAILS_ENCRYPTION_KEY_INVALID: "Bank detail security is not configured correctly. Please contact HR."
+          };
+          error.textContent = messages[event.data.error] || "Unable to save your profile. Please check your details and try again.";
+          error.classList.remove("hidden");
+        }
+        if (button) { button.disabled = false; button.textContent = "Submit profile"; }
       }
     } else if (event.data?.type === "ORCHID_DATE_OF_BIRTH_RESULT") {
       const prompt = document.getElementById("orchidDobPrompt");
