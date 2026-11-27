@@ -7,10 +7,17 @@ import { api } from "@/../convex/_generated/api";
 export function EmployeeRealtimeFrame() {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [frameReady, setFrameReady] = useState(false);
+  const [wageMinuteBucket, setWageMinuteBucket] = useState(() => Math.floor(Date.now() / 60000));
   const workspace = useQuery(api.employee.myWorkspace, {});
+  const wageEstimate = useQuery(api.employee.myTodayWageEstimate, { minuteBucket: wageMinuteBucket });
   const policies = useQuery(api.policies.listPublishedForEmployee, {});
   const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const work = useQuery(api.teamsWork.myWorkDashboard, { workDate });
+  useEffect(() => {
+    const timer = window.setInterval(() => setWageMinuteBucket(Math.floor(Date.now() / 60000)), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const markNotificationRead = useMutation(api.notifications.markRead);
   const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
   const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);
@@ -18,12 +25,12 @@ export function EmployeeRealtimeFrame() {
   const updateMyProfile = useMutation(api.employee.updateMyProfile);
 
   useEffect(() => {
-    if (!frameReady || workspace === undefined || policies === undefined || work === undefined) return;
+    if (!frameReady || workspace === undefined || policies === undefined || work === undefined || wageEstimate === undefined) return;
     frameRef.current?.contentWindow?.postMessage(
-      { type: "ORCHID_EMPLOYEE_WORKSPACE", payload: { workspace, policies, work } },
+      { type: "ORCHID_EMPLOYEE_WORKSPACE", payload: { workspace, policies, work, wageEstimate } },
       window.location.origin
     );
-  }, [frameReady, workspace, policies, work]);
+  }, [frameReady, workspace, policies, work, wageEstimate]);
 
   useEffect(() => {
     const handleNotificationAction = (event: MessageEvent) => {
