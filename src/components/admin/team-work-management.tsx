@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { CreatableSelect } from "@/components/admin/creatable-select";
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 
 type Tab = "overview" | "assignments" | "teams" | "recurring" | "categories";
 type Priority = "low" | "normal" | "high";
@@ -17,7 +18,7 @@ const minute = (value: string) => {
   const [h, m] = value.split(":").map(Number);
   return h * 60 + m;
 };
-const errorText = (error: unknown) => error instanceof Error ? error.message.replaceAll("_", " ").toLowerCase() : "Something went wrong. Please try again.";
+const errorText = (error: unknown) => getAdminErrorMessage(error, "Something went wrong. Please try again.");
 
 export function TeamWorkManagement() {
   const [date, setDate] = useState(today);

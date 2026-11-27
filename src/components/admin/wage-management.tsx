@@ -1,5 +1,7 @@
 "use client";
 
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -52,7 +54,7 @@ export function WageManagement() {
       else await createComponent({ name: componentName, code: componentCode, category: componentCategory });
       setComponentName(""); setComponentCode(""); setEditingComponentId(null);
       setMessage(editingComponentId?"Salary component updated.":"Salary component added to the organization catalogue.");
-    } catch (e) { setError(e instanceof Error ? e.message : "Could not create component."); }
+    } catch (e) { setError(getAdminErrorMessage(e, "Could not create component.")); }
   };
 
   const submitCompensation = async () => {
@@ -70,7 +72,7 @@ export function WageManagement() {
       else await saveCompensation({ employeeId: employeeId as any, effectiveFrom, fixedMonthlyAmountPaise: fixed, components: payload });
       setMessage(editingCompensationId?"Compensation configuration updated.":"Compensation configuration saved. It is a configuration record, not an approved or paid payroll run.");
       setFixedAmount(""); setLines([]); setEditingCompensationId(null);
-    } catch (e) { setError(e instanceof Error ? e.message : "Could not save compensation."); }
+    } catch (e) { setError(getAdminErrorMessage(e, "Could not save compensation.")); }
     finally { setSaving(false); }
   };
 
@@ -90,7 +92,7 @@ export function WageManagement() {
 <label className="policy-field">Hourly rate (₹)<input className="input" type="number" min="0.01" step="0.01" value={rateAmount} onChange={e=>setRateAmount(e.target.value)}/></label>
 <label className="policy-field">Overtime multiplier<input className="input" type="number" min="1" max="10" step="0.01" value={overtimeMultiplier} onChange={e=>setOvertimeMultiplier(e.target.value)}/></label>
 <label className="policy-field">Effective from<input className="input" type="date" value={rateEffectiveFrom} onChange={e=>setRateEffectiveFrom(e.target.value)}/></label></div>
-<button className="btn btn-primary" type="button" disabled={rateSaving||!rateEmployeeId||!rateAmount||!overtimeMultiplier} onClick={async()=>{setRateSaving(true);setError("");setMessage("");try{const amountPaise=Math.round(Number(rateAmount)*100);if(!Number.isSafeInteger(amountPaise)||amountPaise<=0)throw new Error("Enter a valid positive rate.");if(editingRateId)await updateHourlyRate({rateId:editingRateId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});else await saveHourlyRate({employeeId:rateEmployeeId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});setMessage(editingRateId?"Hourly rate updated.":"Hourly rate saved.");setRateAmount("");setOvertimeMultiplier("");setEditingRateId(null);}catch(e){setError(e instanceof Error?e.message:"Could not save wage rate.");}finally{setRateSaving(false);}}}>{rateSaving?"Saving…":editingRateId?"Update rate":"Save rate"}</button>{editingRateId&&<button type="button" className="btn btn-outline" onClick={()=>{setEditingRateId(null);setRateEmployeeId("");setRateAmount("");setOvertimeMultiplier("");setRateEffectiveFrom(localDate());}}>Cancel edit</button>}
+<button className="btn btn-primary" type="button" disabled={rateSaving||!rateEmployeeId||!rateAmount||!overtimeMultiplier} onClick={async()=>{setRateSaving(true);setError("");setMessage("");try{const amountPaise=Math.round(Number(rateAmount)*100);if(!Number.isSafeInteger(amountPaise)||amountPaise<=0)throw new Error("Enter a valid positive rate.");if(editingRateId)await updateHourlyRate({rateId:editingRateId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});else await saveHourlyRate({employeeId:rateEmployeeId as any,amountPaise,overtimeMultiplier:Number(overtimeMultiplier),effectiveFrom:rateEffectiveFrom});setMessage(editingRateId?"Hourly rate updated.":"Hourly rate saved.");setRateAmount("");setOvertimeMultiplier("");setEditingRateId(null);}catch(e){setError(getAdminErrorMessage(e, "Could not save wage rate."));}finally{setRateSaving(false);}}}>{rateSaving?"Saving…":editingRateId?"Update rate":"Save rate"}</button>{editingRateId&&<button type="button" className="btn btn-outline" onClick={()=>{setEditingRateId(null);setRateEmployeeId("");setRateAmount("");setOvertimeMultiplier("");setRateEffectiveFrom(localDate());}}>Cancel edit</button>}
  
 <div className="wage-record-list">{(wageTab==="hourly"?rateData.hourlyEmployees:rateData.dailyEmployees).map(e=><div className="wage-employee-record" key={e._id}><div className="wage-employee-heading"><div><strong>{e.name}</strong><small>{e.employeeCode} · {e.departmentName}</small></div><span className={e.rates.length?"badge badge-success":"badge badge-warning"}>{e.rates.length?"Rate configured":"Rate missing"}</span></div>{e.rates.map(r=><div className="wage-history-row" key={r._id}><span>Effective {r.effectiveFrom}</span><strong>{money(r.amountPaise)} / {wageTab==="hourly"?"hour":"day"}</strong><span>OT ×{r.overtimeMultiplier}</span><button type="button" className="section-link" onClick={()=>{setEditingRateId(r._id);setRateEmployeeId(e._id);setRateAmount((r.amountPaise/100).toFixed(2));setOvertimeMultiplier(String(r.overtimeMultiplier??1));setRateEffectiveFrom(r.effectiveFrom);}}>Edit</button></div>)}</div>)}</div></div>}
 </div></div>

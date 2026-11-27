@@ -1,5 +1,7 @@
 "use client";
 
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -75,7 +77,7 @@ export function CompanyDocumentManagement() {
       setPreviewId(newId);
       setMessage("Document uploaded and published to all active employees.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to upload the document.");
+      setMessage(getAdminErrorMessage(error, "Unable to upload the document."));
     } finally {
       setBusy(false);
     }
@@ -122,7 +124,7 @@ export function CompanyDocumentManagement() {
           <div className="policy-row-main"><strong>{item.title}</strong><span>{item.category} · {item.originalFileName} · {(item.fileSize / 1024 / 1024).toFixed(2)} MB</span>{item.description && <small>{item.description}</small>}</div>
           <span className={"badge " + (item.status === "published" ? "badge-success" : "badge-neutral")}>{item.status}</span>
           <button className="icon-btn" title="Preview document" aria-label={"Preview " + item.title} onClick={() => setPreviewId(item._id)}><Eye size={16} /></button>
-          {(account.role === "superadmin" || account.role === "admin")&&item.status === "published" && <button className="icon-btn" title="Archive document" aria-label={"Archive " + item.title} onClick={async () => { try { await archiveDocument({ documentId: item._id }); setMessage("Document archived and hidden from employees."); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to archive document."); } }}><Archive size={16} /></button>}
+          {(account.role === "superadmin" || account.role === "admin")&&item.status === "published" && <button className="icon-btn" title="Archive document" aria-label={"Archive " + item.title} onClick={async () => { try { await archiveDocument({ documentId: item._id }); setMessage("Document archived and hidden from employees."); } catch (error) { setMessage(getAdminErrorMessage(error, "Unable to archive document.")); } }}><Archive size={16} /></button>}
         </div>)}
       </div>
     </div>

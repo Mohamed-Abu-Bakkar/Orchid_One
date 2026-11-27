@@ -1,4 +1,6 @@
 "use client";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -19,7 +21,7 @@ export function PayrollManagement(){
  const [toDate,setToDate]=useState(monthEnd);
  const [periodType,setPeriodType]=useState<"weekly"|"monthly"|"custom">("monthly");
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState(""),[expanded,setExpanded]=useState<string|null>(null);
- async function run(action:()=>Promise<any>,success:string){setBusy(true);setError("");setMessage("");try{await action();setMessage(success);}catch(e){setError(e instanceof Error?e.message:"Payroll operation failed.");}finally{setBusy(false);}}
+ async function run(action:()=>Promise<any>,success:string){setBusy(true);setError("");setMessage("");try{await action();setMessage(success);}catch(e){setError(getAdminErrorMessage(e, "Payroll operation failed."));}finally{setBusy(false);}}
  if(periods===undefined)return <section className="sec"><p className="sub">Loading payroll periods…</p></section>;
  return <section className="sec">
   <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Payroll</h2><p className="sub">Configure pay periods, calculate wages, review payroll and publish employee payslips.</p></div><span className="badge badge-neutral">{periods.length} payroll periods</span></div>
@@ -44,6 +46,6 @@ function DraftAdjustment({recordId}:{recordId:any}){
  const [category,setCategory]=useState<"earning"|"deduction">("deduction");
  const [label,setLabel]=useState("");const [amount,setAmount]=useState("");const [reason,setReason]=useState("");
  const [busy,setBusy]=useState(false),[message,setMessage]=useState("");
- async function submit(){setBusy(true);setMessage("");try{await add({recordId,category,label,amountPaise:Math.round(Number(amount)*100),reason});setLabel("");setAmount("");setReason("");setMessage("Adjustment added");}catch(e){setMessage(e instanceof Error?e.message:"Adjustment failed");}finally{setBusy(false);}}
+ async function submit(){setBusy(true);setMessage("");try{await add({recordId,category,label,amountPaise:Math.round(Number(amount)*100),reason});setLabel("");setAmount("");setReason("");setMessage("Adjustment added");}catch(e){setMessage(getAdminErrorMessage(e, "Adjustment failed"));}finally{setBusy(false);}}
  return <div className="row gap-2" style={{flexWrap:"wrap",alignItems:"end",padding:"8px 0"}}><label className="policy-field">Adjustment type<select className="input" value={category} onChange={e=>setCategory(e.target.value as any)}><option value="deduction">Deduction / advance</option><option value="earning">Additional earning</option></select></label><label className="policy-field">Label<input className="input" value={label} onChange={e=>setLabel(e.target.value)} placeholder="e.g. Salary advance"/></label><label className="policy-field">Amount (₹)<input className="input" type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></label><label className="policy-field">Reason<input className="input" value={reason} onChange={e=>setReason(e.target.value)} placeholder="Required for audit"/></label><button className="btn btn-outline btn-sm" disabled={busy||!label.trim()||!reason.trim()||!(Number(amount)>0)} onClick={()=>void submit()}>{busy?"Saving…":"Add adjustment"}</button>{message&&<small className="t-caption text-tertiary">{message}</small>}</div>;
 }

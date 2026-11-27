@@ -1,5 +1,7 @@
 "use client";
 
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -56,7 +58,7 @@ export function LocationManagement() {
       setResults(data);
       if (!data.length) setMessage("No matching places found. Try a more complete address.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to search this address.");
+      setError(getAdminErrorMessage(e, "Unable to search this address."));
     } finally { setSearching(false); }
   }
 
@@ -101,7 +103,7 @@ export function LocationManagement() {
       });
       setMessage(activate ? `${locationType === "remote" ? "Remote" : "Physical"} location activated and available for employee assignment.` : "Location configuration saved as a draft.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to save location configuration.");
+      setError(getAdminErrorMessage(e, "Unable to save location configuration."));
     } finally { setSaving(false); }
   }
 

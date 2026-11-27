@@ -6,10 +6,19 @@ import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import AdminShell from "@/components/admin/admin-shell";
+import { AdminErrorBoundary } from "@/components/admin/admin-error-boundary";
 
 const ADMIN_ROLES = ["superadmin", "admin", "supervisor"];
 
 export function AdminAccessGuard() {
+  return (
+    <AdminErrorBoundary>
+      <AdminAccessGuardContent />
+    </AdminErrorBoundary>
+  );
+}
+
+function AdminAccessGuardContent() {
   const router = useRouter();
   const session = authClient.useSession();
   const account = useQuery(api.account.getMyAccountStatus, session.data ? {} : "skip");
@@ -21,7 +30,7 @@ export function AdminAccessGuard() {
   }, [session.isPending, session.data, account, router]);
 
   if (session.isPending || (session.data && account === undefined)) {
-    return <main className="auth-page"><section className="auth-card"><p className="auth-subtitle">Verifying administrator access…</p></section></main>;
+    return <main className="auth-page"><section className="auth-card" aria-live="polite"><p className="auth-subtitle">Verifying administrator access…</p></section></main>;
   }
   if (!session.data || !account || account.status !== "active" || !ADMIN_ROLES.includes(account.role)) return null;
   return <AdminShell />;

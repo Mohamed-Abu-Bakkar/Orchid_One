@@ -1,4 +1,6 @@
 "use client";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import {useMemo,useState} from "react";
 import {useMutation,useQuery} from "convex/react";
 import {api} from "@/../convex/_generated/api";
@@ -15,7 +17,7 @@ export function ShiftScheduleManagement(){
  const employee=data?.employees.find((e:any)=>e._id===employeeId);
  const activeShifts=data?.shifts??[];
  const selectedShifts=useMemo(()=>activeShifts.filter((s:any)=>shiftIds.includes(s._id)),[activeShifts,shiftIds]);
- async function action(fn:()=>Promise<unknown>,success:string){setBusy(true);setError("");setNotice("");try{await fn();setNotice(success);}catch(e){setError(e instanceof Error?e.message:"The operation could not be completed.");}finally{setBusy(false);}}
+ async function action(fn:()=>Promise<unknown>,success:string){setBusy(true);setError("");setNotice("");try{await fn();setNotice(success);}catch(e){setError(getAdminErrorMessage(e, "The operation could not be completed."));}finally{setBusy(false);}}
  if(data===undefined)return <section className="sec"><p className="sub">Loading shift schedules…</p></section>;
  if(account?.role==="supervisor")return <section className="sec"><div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>Shifts & schedules</h2><p className="sub">Read-only view of configured shifts and employee schedules.</p></div></div><div className="panel"><div className="panel-head"><b>Shift templates</b></div><div className="panel-body">{activeShifts.map((s:any)=><p key={s._id}>{s.name} · {label(s.startMinute,s.endMinute)} · {s.breakMinutes} min break</p>)}</div></div><div className="panel mt-4"><div className="panel-head"><b>Schedule roster · {date}</b></div><div className="employee-directory-table-wrap"><table className="employee-directory-table"><thead><tr><th>Employee</th><th>Default shift</th><th>Effective schedule</th></tr></thead><tbody>{data.employees.map((e:any)=><tr key={e._id}><td>{e.name} · {e.employeeCode}</td><td>{activeShifts.find((s:any)=>s._id===e.defaultShiftId)?.name??"Not assigned"}</td><td>{(e.scheduledShiftIds.length?e.scheduledShiftIds.map((id:string)=>activeShifts.find((s:any)=>s._id===id)?.name??"Unavailable").join(", "):activeShifts.find((s:any)=>s._id===e.defaultShiftId)?.name??"No shift")}</td></tr>)}</tbody></table></div></div></section>;
  return <section className="sec">

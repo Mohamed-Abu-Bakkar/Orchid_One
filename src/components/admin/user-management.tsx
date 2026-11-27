@@ -1,4 +1,6 @@
 "use client";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -17,7 +19,7 @@ export function UserManagement() {
  const rows=useMemo(()=>(accounts??[]).filter(a=>filter==="all"||(filter==="linked"?!!a.employeeId:!a.employeeId)).filter(a=>[a.fullName,a.email,a.employeeName??"",a.employeeCode??"",a.role,a.accountStatus].join(" ").toLowerCase().includes(search.toLowerCase())),[accounts,filter,search]);
  if(accounts===undefined||employees===undefined||me===undefined)return <section className="sec"><p className="sub">Loading user accounts…</p></section>;
  const available=employees.filter(e=>!accounts.some(a=>a.employeeId===e._id));
- async function run(id:string,fn:()=>Promise<unknown>){setBusy(id);setMessage("");try{await fn();setMessage("Account updated successfully.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to update account.");}finally{setBusy("");}}
+ async function run(id:string,fn:()=>Promise<unknown>){setBusy(id);setMessage("");try{await fn();setMessage("Account updated successfully.");}catch(e){setMessage(getAdminErrorMessage(e, "Unable to update account."));}finally{setBusy("");}}
  return <section className="sec">
  <div className="page-head"><div><h2 className="t-h1" style={{fontSize:22}}>User management</h2><p className="sub">Manage employee links and account access. Admins can manage employees and supervisors; only superadmins can manage administrator accounts.</p></div><span className="badge badge-neutral">{accounts.length} accounts</span></div>
  <div className="employee-directory-toolbar"><div className="segmented-control">{["all","unlinked","linked"].map(x=><button type="button" key={x} className={filter===x?"active":""} onClick={()=>setFilter(x)}>{x==="all"?"All accounts":x==="unlinked"?"Unlinked":"Linked"}</button>)}</div><div className="input-icon-wrap employee-directory-search"><span className="input-prefix"><Search size={16}/></span><input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email, role or status…"/></div></div>

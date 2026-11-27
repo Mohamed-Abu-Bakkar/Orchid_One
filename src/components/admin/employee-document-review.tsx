@@ -1,4 +1,6 @@
 "use client";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";
 import {useMemo,useState} from "react";
 import {useMutation,useQuery} from "convex/react";
 import {api} from "@/../convex/_generated/api";
@@ -21,7 +23,7 @@ export function EmployeeDocumentReview(){
   const note=notes[id]??"";if(decision==="rejected"&&!note.trim()){setMessage("Enter a rejection reason before rejecting a document.");return;}
   setBusy(String(id));setMessage("");
   try{if(account?.role==="supervisor")await recommend({documentId:id,decision,note:note.trim()||undefined});else await review({documentId:id,decision,note:note.trim()||undefined});setMessage(account?.role==="supervisor"?"Recommendation submitted to Superadmin.":decision==="verified"?"Document verified.":"Document rejected.");setNotes(n=>({...n,[id]:""}));}
-  catch(error){setMessage(error instanceof Error?error.message:"Unable to review document.");}finally{setBusy(null);}
+  catch(error){setMessage(getAdminErrorMessage(error, "Unable to review document."));}finally{setBusy(null);}
  }
  if(documents===undefined||account===undefined||account===null)return <section className="sec"><p className="sub">Loading organization documents…</p></section>;
  const tabs:[Status,string,any][]=[["all","All documents",FileText],["pending","Pending",Clock3],["verified","Verified",ShieldCheck],["rejected","Rejected",AlertCircle],["replaced","Replaced",Archive]];
