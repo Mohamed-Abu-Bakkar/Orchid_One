@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { FileText, Upload, Eye, Archive, CheckCircle2, Clock3, X, ExternalLink } from "lucide-react";
@@ -42,7 +43,7 @@ export function PolicyManagement() {
       setTitle("");setDescription("");setEffectiveFrom("");setFile(null);
       const input=document.getElementById("policy-pdf") as HTMLInputElement|null;if(input)input.value="";
       setMessage("Policy saved as a draft. Publish it when it is ready for employees.");
-    } catch(error) {setMessage(error instanceof Error?error.message:"Unable to save policy.");}
+    } catch(error) {setMessage(getAdminErrorMessage(error, "Unable to save policy."));}
     finally {setBusy(false);}
   }
 
@@ -66,8 +67,8 @@ export function PolicyManagement() {
       <div className="panel-body" style={{display:"grid",gap:12}}>
         {policies.length===0&&<p className="sub">No policies uploaded yet.</p>}
         {policies.map(policy=><AdminPolicyRow key={policy._id} policy={policy} accountRole={account.role}
-          onPublish={async()=>{try{await publish({policyId:policy._id});setMessage("Policy published to all active employees.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to publish.");}}}
-          onArchive={async()=>{try{await archive({policyId:policy._id});setMessage("Policy archived.");}catch(e){setMessage(e instanceof Error?e.message:"Unable to archive.");}}}
+          onPublish={async()=>{try{await publish({policyId:policy._id});setMessage("Policy published to all active employees.");}catch(e){setMessage(getAdminErrorMessage(e, "Unable to publish."));}}}
+          onArchive={async()=>{try{await archive({policyId:policy._id});setMessage("Policy archived.");}catch(e){setMessage(getAdminErrorMessage(e, "Unable to archive."));}}}
           onAcknowledgements={()=>{setReportId(String(policy._id));setReportPolicy(policy);}} />)}
       </div>
     </div>
