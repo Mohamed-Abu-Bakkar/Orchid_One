@@ -13,7 +13,7 @@ export function EmployeeRealtimeFrame() {
   const work = useQuery(api.teamsWork.myWorkDashboard, { workDate });
   const markNotificationRead = useMutation(api.notifications.markRead);
   const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
-  const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);
+  const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);\n  const completeMyProfile = useMutation(api.employee.completeMyProfile);
   const updateMyProfile = useMutation(api.employee.updateMyProfile);
 
   useEffect(() => {
@@ -44,6 +44,25 @@ export function EmployeeRealtimeFrame() {
           () => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_PROFILE_UPDATE_RESULT", success: true }, window.location.origin),
           (error: unknown) => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_PROFILE_UPDATE_RESULT", success: false, error: error instanceof Error ? error.message : "Unable to update your profile." }, window.location.origin)
         );
+      } else if (message.action === "complete-my-profile") {
+        void completeMyProfile({
+          dateOfBirth: String(message.dateOfBirth ?? ""),
+          address: {
+            line1: String(message.address?.line1 ?? ""), line2: String(message.address?.line2 ?? "") || undefined,
+            city: String(message.address?.city ?? ""), district: String(message.address?.district ?? "") || undefined,
+            state: String(message.address?.state ?? ""), postalCode: String(message.address?.postalCode ?? ""),
+            country: String(message.address?.country ?? "India"),
+          },
+          emergencyContact: message.emergencyContact && typeof message.emergencyContact === "object"
+            ? { name: String(message.emergencyContact.name ?? ""), relationship: String(message.emergencyContact.relationship ?? ""), phone: String(message.emergencyContact.phone ?? "") }
+            : null,
+          bankDetails: message.bankDetails && typeof message.bankDetails === "object"
+            ? { accountHolder: String(message.bankDetails.accountHolder ?? ""), bankName: String(message.bankDetails.bankName ?? ""), accountNumber: String(message.bankDetails.accountNumber ?? ""), ifsc: String(message.bankDetails.ifsc ?? "") }
+            : null,
+        }).then(
+          () => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_PROFILE_COMPLETION_RESULT", success: true }, window.location.origin),
+          (error: unknown) => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_PROFILE_COMPLETION_RESULT", success: false, error: error instanceof Error ? error.message : "Unable to complete your profile." }, window.location.origin)
+        );
       } else if (message.action === "submit-date-of-birth" && typeof message.dateOfBirth === "string") {
         void submitDateOfBirth({ dateOfBirth: message.dateOfBirth }).then(
           () => frameRef.current?.contentWindow?.postMessage({ type: "ORCHID_DATE_OF_BIRTH_RESULT", success: true }, window.location.origin),
@@ -53,7 +72,7 @@ export function EmployeeRealtimeFrame() {
     };
     window.addEventListener("message", handleNotificationAction);
     return () => window.removeEventListener("message", handleNotificationAction);
-  }, [markNotificationRead, markAllNotificationsRead, submitDateOfBirth, updateMyProfile]);
+  }, [markNotificationRead, markAllNotificationsRead, submitDateOfBirth, updateMyProfile, completeMyProfile]);
   return (
     <iframe
       ref={frameRef}
