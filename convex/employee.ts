@@ -619,7 +619,7 @@ export const completeMyProfile = mutation({
     if (args.bankDetails) {
       const accountHolder = args.bankDetails.accountHolder.trim(), bankName = args.bankDetails.bankName.trim();
       const accountNumber = args.bankDetails.accountNumber.replace(/\s/g, ""), ifsc = args.bankDetails.ifsc.trim().toUpperCase();
-      if (!accountHolder || !bankName || !/^\\d{8,18}$/.test(accountNumber) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) throw new Error("INVALID_BANK_DETAILS");
+      if (!accountHolder || !bankName || !/^\d{8,18}$/.test(accountNumber) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) throw new Error("INVALID_BANK_DETAILS");
       bankDetailsEncrypted = await encryptEmployeeBankDetails({ accountHolder, bankName, accountNumber, ifsc });
     }
     const now = Date.now();
