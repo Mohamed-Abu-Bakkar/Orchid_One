@@ -29,3 +29,26 @@ Future email/phone editing must verify control of the new address/number, preven
 - Inactive/unlinked accounts cannot update.
 - No-op saves do not create audit records.
 - Successful saves appear in the realtime employee workspace.
+
+
+## Progressive profile completion
+
+- On first employee workspace entry, an authenticated active employee with no \`profileCompletedAt\` sees a guided five-step completion flow: residential address, date of birth, emergency contact, bank details, and review.
+- Address and DOB are required. Emergency contact and bank details are optional; each optional section must be either fully completed or left blank.
+- The wizard sends one final submission to \`employee.completeMyProfile\`. The mutation derives the employee and organization from the authenticated identity and validates every field server-side.
+- The profile completion marker prevents the wizard from reappearing on subsequent workspace visits. Existing DOB values are prefilled for employees who previously completed the DOB-only prompt.
+- Bank account number and IFSC are validated server-side. Bank details are encrypted with AES-256-GCM before being written to \`employees.bankDetailsEncrypted\`. The raw bank details are not returned by \`employee.myWorkspace\` and are not included in audit metadata.
+- Configure the Convex environment variable \`ORCHID_BANK_DETAILS_ENCRYPTION_KEY\` with a base64-encoded, randomly generated 32-byte key before enabling bank-detail submissions. Generate it with \`openssl rand -base64 32\`. Keep it only in Convex environment settings and a managed secrets vault; never commit it, add it to Vercel unless separately needed, or send it in chat. Without the key, submissions containing bank details are rejected while submissions that omit bank details remain available.
+- Audit action \`employee.profile.completed\` records only the submitted field names, not the submitted values.
+
+### Progressive completion QA checklist
+
+- First-time employee sees the wizard; completed employee does not see it again.
+- Existing DOB is prefilled when the employee had previously completed the DOB-only prompt.
+- Required address and DOB validation rejects invalid or missing values.
+- Emergency contact and bank fields accept all-empty optional sections and reject partial sections.
+- Invalid phone, PIN, DOB, bank account number, and IFSC values are rejected server-side.
+- Bank details are not returned by the workspace query and are not copied into audit metadata.
+- Bank submission fails closed when the encryption key is missing or malformed.
+- With the key configured, ciphertext is stored and no plaintext bank values are persisted.
+- Cross-employee and cross-organization updates are impossible because the mutation accepts no employee ID.
