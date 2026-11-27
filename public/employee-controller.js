@@ -506,7 +506,8 @@
       emergencyName: workspaceProfile.emergencyContact?.name || "", emergencyRelationship: workspaceProfile.emergencyContact?.relationship || "",
       emergencyPhone: workspaceProfile.emergencyContact?.phone || "", accountHolder: "", bankName: "", accountNumber: "", ifsc: ""
     };
-    Object.entries(values).forEach(([name,value]) => { if (fields(name)) fields(name).value = value; });\n    if (fields("dateOfBirth")) fields("dateOfBirth").max = new Date().toISOString().slice(0,10);
+    Object.entries(values).forEach(([name,value]) => { if (fields(name)) fields(name).value = value; });
+    if (fields("dateOfBirth")) fields("dateOfBirth").max = new Date().toISOString().slice(0,10);
     let current = 0;
     const names = ["Address","Date of birth","Emergency contact","Bank details","Review"];
     const stepNodes = [...form.querySelectorAll("[data-step]")];
