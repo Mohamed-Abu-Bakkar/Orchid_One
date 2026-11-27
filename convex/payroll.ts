@@ -14,7 +14,8 @@ function money(value: number) { return Math.round(value); }
 export const listPeriods = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireOrganizationAdmin(ctx);
+    const user = await requireIdentity(ctx);
+    if (!["superadmin","admin","supervisor"].includes(user.role)) throw new Error("FORBIDDEN");
     const periods = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).order("desc").take(60);
     return await Promise.all(periods.map(async period => {
       const wageRecords = await ctx.db.query("wageRecords")
@@ -101,7 +102,8 @@ export const deletePeriod = mutation({
 export const generatePeriod = mutation({
   args: { fromDate: v.string(), toDate: v.string(), periodType: v.union(v.literal("weekly"),v.literal("monthly"),v.literal("custom")) },
   handler: async (ctx, args) => {
-    const user = await requireOrganizationAdmin(ctx);
+    const user = await requireIdentity(ctx);
+    if (!["superadmin","admin","supervisor"].includes(user.role)) throw new Error("FORBIDDEN");
     if (!validDate(args.fromDate) || !validDate(args.toDate) || args.fromDate > args.toDate) throw new Error("INVALID_PAYROLL_PERIOD");
     const overlap = await ctx.db.query("wagePeriods").withIndex("by_org_dates", q => q.eq("organizationId", user.organizationId)).collect();
     if (overlap.some(p => p.fromDate <= args.toDate && p.toDate >= args.fromDate)) throw new Error("PAYROLL_PERIOD_OVERLAPS_FINALIZED_PERIOD");
@@ -251,7 +253,8 @@ export const generatePeriod = mutation({
 export const addDraftAdjustment = mutation({
   args: { recordId: v.id("wageRecords"), category: v.union(v.literal("earning"),v.literal("deduction")), label: v.string(), amountPaise: v.number(), reason: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireOrganizationAdmin(ctx);
+    const user = await requireIdentity(ctx);
+    if (!["superadmin","admin","supervisor"].includes(user.role)) throw new Error("FORBIDDEN");
     const record = await ctx.db.get(args.recordId);
     if (!record || record.organizationId !== user.organizationId || record.status !== "draft") throw new Error("DRAFT_PAYROLL_RECORD_REQUIRED");
     const period = await ctx.db.get(record.wagePeriodId);
@@ -273,13 +276,17 @@ export const addDraftAdjustment = mutation({
   },
 });
 
+export const submitPeriodForApproval = mutation({
+ args:{periodId:v.id("wagePeriods")},
+ handler:async(ctx,{periodId})=>{const actor=await requireIdentity(ctx);if(actor.role!=="supervisor")throw new Error("SUPERVISOR_SUBMISSION_REQUIRED");const period=await ctx.db.get(periodId);if(!period||period.organizationId!==actor.organizationId)throw new Error("PAYROLL_PERIOD_NOT_FOUND");if(period.status!=="draft")throw new Error("PAYROLL_PERIOD_NOT_DRAFT");const records=await ctx.db.query("wageRecords").withIndex("by_period",q=>q.eq("wagePeriodId",period._id)).collect();if(!records.length)throw new Error("PAYROLL_HAS_NO_RECORDS");const now=Date.now();for(const record of records)await ctx.db.patch(record._id,{status:"pending_approval"});await ctx.db.patch(period._id,{status:"pending_approval"});await ctx.db.insert("auditLogs",{organizationId:actor.organizationId,actorUserId:actor._id,action:"payroll.period_submitted_for_approval",entityType:"wagePeriod",entityId:String(period._id),metadata:{employeeCount:records.length,totalNetPaise:period.totalNetPaise??0},createdAt:now});return {submitted:records.length};}
+});
 export const approvePeriod = mutation({
   args: { periodId: v.id("wagePeriods") },
   handler: async (ctx, args) => {
     const user = await requireOrganizationAdmin(ctx);
     const period = await ctx.db.get(args.periodId);
     if (!period || period.organizationId !== user.organizationId) throw new Error("PAYROLL_PERIOD_NOT_FOUND");
-    if (period.status !== "draft") throw new Error("PAYROLL_PERIOD_NOT_DRAFT");
+    if (period.status !== "draft" && period.status !== "pending_approval") throw new Error("PAYROLL_PERIOD_NOT_PENDING_APPROVAL");
     const records = await ctx.db.query("wageRecords").withIndex("by_period", q => q.eq("wagePeriodId", period._id)).collect();
     if (!records.length) throw new Error("PAYROLL_HAS_NO_PAYSLIPS");
     const now = Date.now();
