@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+
+import { getAdminErrorMessage } from "@/lib/admin-errors";import { useState } from "react";
 import { useMutation,useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 
@@ -13,7 +14,7 @@ export function LeaveManagement(){
  const [employee,setEmployee]=useState(""),[leaveType,setLeaveType]=useState(""),[allocation,setAllocation]=useState(""),[defaultType,setDefaultType]=useState(""),[defaultAllocation,setDefaultAllocation]=useState(""),[decisionNote,setDecisionNote]=useState("");
  const data=useQuery(api.leave.adminWorkspace,{year});const account=useQuery(api.account.getMyAccountStatus,{});
  const saveType=useMutation(api.leave.saveLeaveType),setTypeActive=useMutation(api.leave.setLeaveTypeActive),saveCalendar=useMutation(api.leave.saveWorkCalendar),saveHoliday=useMutation(api.leave.saveHoliday),deleteHoliday=useMutation(api.leave.deleteHoliday),saveBalance=useMutation(api.leave.saveBalance),saveDefault=useMutation(api.leave.saveLeaveDefault),resetBalance=useMutation(api.leave.resetBalanceToDefault),decide=useMutation(api.leave.decideRequest),recommend=useMutation(api.leave.recommendRequest);
- async function run(fn:()=>Promise<any>,message:string){try{await fn();setNotice(message);}catch(e){setNotice(e instanceof Error?e.message:"Unable to complete action.");}}
+ async function run(fn:()=>Promise<any>,message:string){try{await fn();setNotice(message);}catch(e){setNotice(getAdminErrorMessage(e, "Unable to complete action."));}}
  if(!data||account===undefined||account===null)return <section className="sec"><p className="sub">Loading leave configuration…</p></section>;
  const leaveTypes=data.leaveTypes??[], employees=data.employees??[], balances=data.balances??[], leaveDefaults=data.defaults??[], requests=data.requests??[], holidays=data.holidays??[], locations=data.locations??[], calendars=data.calendars??[];
  const calendar=calendars.find((x:any)=>String(x.locationId??"organization")===location);
