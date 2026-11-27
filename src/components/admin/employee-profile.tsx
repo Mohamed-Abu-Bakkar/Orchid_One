@@ -48,6 +48,9 @@ export function EmployeeProfile({ employeeId, onBack }: { employeeId: Id<"employ
   const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
   const initials = [p.firstName, p.lastName].filter(Boolean).map(part => part[0]).join("").slice(0, 2).toUpperCase();
   const a = data.analytics;
+  const residentialAddress = p.address
+    ? [p.address.line1, p.address.line2, p.address.city, p.address.district, p.address.state, p.address.postalCode, p.address.country].filter(Boolean).join(", ")
+    : "Not provided";
   const money = (paise: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(paise / 100);
 
   return <section className="sec">
@@ -88,9 +91,16 @@ export function EmployeeProfile({ employeeId, onBack }: { employeeId: Id<"employ
           </div></div>
           <div><h3 className="t-h3">Contact & personal details</h3><div className="employee-directory-table-wrap"><table className="employee-directory-table"><tbody>
             <tr><th>Email</th><td>{p.email || "—"}</td></tr><tr><th>Phone</th><td>{p.phone || "—"}</td></tr><tr><th>Date of birth</th><td>{dateLabel(p.dateOfBirth)}</td></tr><tr><th>Work location</th><td>{p.locationAddress || p.locationName}</td></tr>
+            <tr><th>Residential address</th><td>{residentialAddress}</td></tr>
             <tr><th>Emergency contact</th><td>{p.emergencyContact ? p.emergencyContact.name + " · " + p.emergencyContact.relationship + " · " + p.emergencyContact.phone : "Not provided"}</td></tr>
             <tr><th>Employee record created</th><td>{dateTimeLabel(p.createdAt)}</td></tr>
           </tbody></table></div></div>
+          <div><h3 className="t-h3">Profile completion</h3><div className="employee-directory-stats" style={{ marginTop: 12 }}>
+            <Stat label="Personal profile" value={p.profileComplete ? "Complete" : "Incomplete"} detail={p.profileComplete ? (p.profileCompletedAt ? "Employee submitted " + dateLabel(p.profileCompletedAt) : "Required details are on file") : "Missing required personal information"} />
+            <Stat label="Bank details" value={p.bankDetailsConfigured ? "Submitted" : "Not provided"} detail="Encrypted at rest; account values are never displayed here" />
+          </div>
+          {!p.profileComplete && p.profileMissingFields?.length > 0 && <p className="t-caption text-tertiary">Outstanding: {p.profileMissingFields.join(" · ")}</p>}
+          <p className="t-caption text-tertiary">Emergency contact and bank details are optional. Profile completion requires date of birth and residential address.</p></div>
           <div><h3 className="t-h3">Recent activity summary</h3><div className="employee-directory-stats" style={{ marginTop: 12 }}>
             <Stat label="Attendance exceptions" value={a.exceptionDays} /><Stat label="Approved leave days" value={a.approvedLeaveDays} /><Stat label="Overtime requests" value={a.overtimeRequests} /><Stat label="Daily feedback" value={a.feedbackEntries} detail={a.averageSelfRating === null ? "No ratings submitted" : "Average self-rating " + a.averageSelfRating} />
           </div></div>

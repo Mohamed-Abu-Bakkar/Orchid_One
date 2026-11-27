@@ -17,6 +17,21 @@ Email and mobile number are read-only until a verified identity/contact-change w
 ## Audit and privacy
 Actual changes create an `auditLogs` entry with action `employee.profile.updated`, changed field names and before/after values. DOB and emergency-contact details are sensitive; audit-log readers must remain restricted to authorized HR/admin roles and must not expose these snapshots to ordinary employee queries.
 
+## Admin Employee 360 visibility and editing
+
+- The organization admin's Employee 360 profile includes residential address, date of birth, emergency contact, profile-completion timestamp/status, and whether bank details have been submitted.
+- The employee directory includes these fields only in the Admin/Super Admin projection. Supervisor directory responses do not include residential address, date of birth, emergency contact, profile-completion metadata, or bank-detail status.
+- Admin/Super Admin can update date of birth, residential address, and emergency contact from the employee edit form. Partial address or emergency-contact records are rejected server-side; an entirely blank optional section clears the saved value.
+- Bank account values remain encrypted and are never returned to the admin query or rendered in Employee 360. The UI shows only whether bank details were submitted.
+- Admin update audit metadata records changed field names, not residential address or emergency-contact values.
+
+## Production release sequence
+
+- The controlled GitHub Actions release workflow requires a production-scoped `CONVEX_DEPLOY_KEY` and deploys Convex functions/schema first.
+- Only after the Convex deployment succeeds does the workflow validate and invoke `VERCEL_DEPLOY_HOOK` for the Next.js production frontend.
+- Production release commits must end with `[deploy]`; normal development commits and pull-request merges do not trigger production deployment.
+- The Convex deploy key must be stored only as a GitHub Actions secret. It must not be committed, added to Vercel, or exposed in application logs.
+
 ## Contact verification follow-up
 Future email/phone editing must verify control of the new address/number, prevent duplicate account identities, update auth identity and employee contact consistently, and audit the transition.
 

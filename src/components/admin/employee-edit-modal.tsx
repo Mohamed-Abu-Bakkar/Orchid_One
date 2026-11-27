@@ -18,6 +18,9 @@ type EmployeeRecord = {
   employmentType: "permanent" | "hourly" | "daily" | "contract";
   status: "active" | "inactive" | "pending" | "archived";
   joiningDate: string;
+  dateOfBirth?: string;
+  address?: { line1: string; line2?: string; city: string; district?: string; state: string; postalCode: string; country: string } | null;
+  emergencyContact?: { name: string; relationship: string; phone: string } | null;
   departmentId: any;
   locationId: any;
   defaultShiftId: any;
@@ -56,6 +59,17 @@ export function EmployeeEditModal({
   const [employmentType, setEmploymentType] = useState<EmployeeRecord["employmentType"]>(employee.employmentType);
   const [status, setStatus] = useState<EmployeeRecord["status"]>(employee.status);
   const [joiningDate, setJoiningDate] = useState(employee.joiningDate);
+  const [dateOfBirth, setDateOfBirth] = useState(employee.dateOfBirth ?? "");
+  const [addressLine1, setAddressLine1] = useState(employee.address?.line1 ?? "");
+  const [addressLine2, setAddressLine2] = useState(employee.address?.line2 ?? "");
+  const [addressCity, setAddressCity] = useState(employee.address?.city ?? "");
+  const [addressDistrict, setAddressDistrict] = useState(employee.address?.district ?? "");
+  const [addressState, setAddressState] = useState(employee.address?.state ?? "");
+  const [addressPostalCode, setAddressPostalCode] = useState(employee.address?.postalCode ?? "");
+  const [addressCountry, setAddressCountry] = useState(employee.address?.country ?? "India");
+  const [emergencyName, setEmergencyName] = useState(employee.emergencyContact?.name ?? "");
+  const [emergencyRelationship, setEmergencyRelationship] = useState(employee.emergencyContact?.relationship ?? "");
+  const [emergencyPhone, setEmergencyPhone] = useState(employee.emergencyContact?.phone ?? "");
   const [departmentId, setDepartmentId] = useState(String(employee.departmentId));
   const [locationId, setLocationId] = useState(String(employee.locationId));
   const [defaultShiftId, setDefaultShiftId] = useState(employee.defaultShiftId ? String(employee.defaultShiftId) : "");
@@ -78,6 +92,13 @@ export function EmployeeEditModal({
         employmentType,
         status,
         joiningDate,
+        dateOfBirth: dateOfBirth || undefined,
+        address: [addressLine1, addressLine2, addressCity, addressDistrict, addressState, addressPostalCode].some(value => value.trim())
+          ? { line1: addressLine1, line2: addressLine2, city: addressCity, district: addressDistrict, state: addressState, postalCode: addressPostalCode, country: addressCountry }
+          : null,
+        emergencyContact: [emergencyName, emergencyRelationship, emergencyPhone].some(value => value.trim())
+          ? { name: emergencyName, relationship: emergencyRelationship, phone: emergencyPhone }
+          : null,
         departmentId: departmentId as any,
         locationId: locationId as any,
         defaultShiftId: defaultShiftId ? defaultShiftId as any : null,
@@ -122,7 +143,32 @@ export function EmployeeEditModal({
                     <label className="policy-field">Last name<input className="input" maxLength={80} value={lastName} onChange={event => setLastName(event.target.value)} /></label>
                     <label className="policy-field">Email address<input className="input" type="email" maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /></label>
                     <label className="policy-field">Phone number *<input className="input" required maxLength={20} value={phone} onChange={event => setPhone(event.target.value)} /></label>
+                    <label className="policy-field">Date of birth *<input className="input" type="date" required min="1900-01-01" max={new Date().toISOString().slice(0, 10)} value={dateOfBirth} onChange={event => setDateOfBirth(event.target.value)} /></label>
                   </div>
+                </div>
+
+                <div style={{ borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 22, marginBottom: 22 }}>
+                  <h3 className="t-h3" style={{ margin: "0 0 14px" }}>Residential address</h3>
+                  <div className="policy-form-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+                    <label className="policy-field">Address line 1<input className="input" maxLength={160} value={addressLine1} onChange={event => setAddressLine1(event.target.value)} /></label>
+                    <label className="policy-field">Address line 2<input className="input" maxLength={160} value={addressLine2} onChange={event => setAddressLine2(event.target.value)} /></label>
+                    <label className="policy-field">City<input className="input" maxLength={80} value={addressCity} onChange={event => setAddressCity(event.target.value)} /></label>
+                    <label className="policy-field">District<input className="input" maxLength={80} value={addressDistrict} onChange={event => setAddressDistrict(event.target.value)} /></label>
+                    <label className="policy-field">State<input className="input" maxLength={80} value={addressState} onChange={event => setAddressState(event.target.value)} /></label>
+                    <label className="policy-field">Postal code<input className="input" maxLength={10} value={addressPostalCode} onChange={event => setAddressPostalCode(event.target.value)} /></label>
+                    <label className="policy-field">Country<input className="input" maxLength={80} value={addressCountry} onChange={event => setAddressCountry(event.target.value)} /></label>
+                  </div>
+                  <p className="t-caption text-tertiary" style={{ marginTop: 8 }}>Leave every address field blank to clear the residential address. Partial addresses are rejected.</p>
+                </div>
+
+                <div style={{ borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 22, marginBottom: 22 }}>
+                  <h3 className="t-h3" style={{ margin: "0 0 14px" }}>Emergency contact</h3>
+                  <div className="policy-form-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+                    <label className="policy-field">Contact name<input className="input" maxLength={100} value={emergencyName} onChange={event => setEmergencyName(event.target.value)} /></label>
+                    <label className="policy-field">Relationship<input className="input" maxLength={60} value={emergencyRelationship} onChange={event => setEmergencyRelationship(event.target.value)} /></label>
+                    <label className="policy-field">Phone number<input className="input" maxLength={20} value={emergencyPhone} onChange={event => setEmergencyPhone(event.target.value)} /></label>
+                  </div>
+                  <p className="t-caption text-tertiary" style={{ marginTop: 8 }}>Leave all emergency-contact fields blank to clear the contact. If supplied, all three fields are required.</p>
                 </div>
 
                 <div style={{ borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 22, marginBottom: 22 }}>

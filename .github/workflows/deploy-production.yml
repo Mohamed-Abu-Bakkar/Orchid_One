@@ -17,7 +17,35 @@ jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy]')
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate Convex production deploy key
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::error::Missing GitHub Actions secret CONVEX_DEPLOY_KEY."
+            exit 1
+          fi
+          case "$CONVEX_DEPLOY_KEY" in
+            prod:*) ;;
+            *)
+              echo "::error::CONVEX_DEPLOY_KEY must be a production-scoped Convex deploy key."
+              exit 1
+              ;;
+          esac
+      - name: Deploy Convex backend
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy --message "Orchid One production release ${GITHUB_SHA}"
       - name: Validate deployment hook
         env:
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
