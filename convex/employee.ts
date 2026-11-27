@@ -611,14 +611,14 @@ export const completeMyProfile = mutation({
     let emergencyContact: { name: string; relationship: string; phone: string } | undefined;
     if (args.emergencyContact) {
       const name = args.emergencyContact.name.trim(), relationship = args.emergencyContact.relationship.trim(), phone = args.emergencyContact.phone.trim();
-      const digits = phone.replace(/\\D/g, "");
+      const digits = phone.replace(/\D/g, "");
       if (!name || !relationship || digits.length < 7 || digits.length > 15) throw new Error("INVALID_EMERGENCY_CONTACT");
       emergencyContact = { name, relationship, phone };
     }
     let bankDetailsEncrypted: string | undefined;
     if (args.bankDetails) {
       const accountHolder = args.bankDetails.accountHolder.trim(), bankName = args.bankDetails.bankName.trim();
-      const accountNumber = args.bankDetails.accountNumber.replace(/\\s/g, ""), ifsc = args.bankDetails.ifsc.trim().toUpperCase();
+      const accountNumber = args.bankDetails.accountNumber.replace(/\s/g, ""), ifsc = args.bankDetails.ifsc.trim().toUpperCase();
       if (!accountHolder || !bankName || !/^\\d{8,18}$/.test(accountNumber) || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) throw new Error("INVALID_BANK_DETAILS");
       bankDetailsEncrypted = await encryptEmployeeBankDetails({ accountHolder, bankName, accountNumber, ifsc });
     }
