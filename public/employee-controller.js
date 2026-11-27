@@ -458,62 +458,81 @@
     dialog.setAttribute("aria-modal", "true");
     dialog.setAttribute("aria-labelledby", "orchidProfileTitle");
     dialog.innerHTML = `
-      <div class="mb-5">
-        <p class="text-[10px] font-bold tracking-[.18em] text-[#8b7190]">ORCHID ONE · EMPLOYEE SETUP</p>
-        <h2 id="orchidProfileTitle" class="mt-1 text-2xl font-bold text-[#38223e]">Complete your profile</h2>
-        <p class="mt-2 text-sm leading-6 text-[#756879]">A few details will help HR keep your employee records accurate and support payroll when needed.</p>
-      </div>
-      <div class="mb-5">
-        <div class="flex items-center justify-between text-xs font-semibold text-[#6f5385]"><span id="orchidProfileStepLabel">STEP 1 OF 5</span><span id="orchidProfileStepName">Address</span></div>
-        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#eee7f0]"><div id="orchidProfileProgress" class="h-full rounded-full bg-[#5a285f] transition-all" style="width:20%"></div></div>
-        <div class="mt-3 grid grid-cols-5 gap-1 text-center text-[9px] font-semibold text-[#8b7c8e]"><span>Address</span><span>DOB</span><span>Emergency</span><span>Bank</span><span>Review</span></div>
-      </div>
-      <form id="orchidProfileWizard" class="flex flex-col gap-4">
-        <fieldset data-step="0" class="flex flex-col gap-3">
-          <div><h3 class="font-bold text-[#38223e]">Your residential address</h3><p class="text-xs text-[#817486]">Enter the address where you currently reside.</p></div>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Address line 1 *<input name="line1" required maxlength="120" autocomplete="address-line1" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="Door number, street name"></label>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Address line 2<input name="line2" maxlength="120" autocomplete="address-line2" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="Area, landmark (optional)"></label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">City / Town *<input name="city" required maxlength="80" autocomplete="address-level2" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">District<input name="district" maxlength="80" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">State *<input name="state" required maxlength="80" autocomplete="address-level1" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">PIN code *<input name="postalCode" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="6-digit PIN"></label>
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#3f1748] via-[#55245f] to-[#75437d] px-5 py-6 text-white sm:px-7">
+        <div class="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full border-[24px] border-white/5"></div>
+        <div class="relative flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[.2em] text-white/65">ORCHID ONE · EMPLOYEE PROFILE</p>
+            <h2 id="orchidProfileTitle" class="mt-2 text-2xl font-bold tracking-tight sm:text-[28px]">Let’s complete your profile</h2>
+            <p class="mt-2 max-w-md text-sm leading-6 text-white/75">Add a few details so your employee records stay accurate and up to date.</p>
           </div>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Country *<input name="country" required maxlength="60" value="India" autocomplete="country-name" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-        </fieldset>
-        <fieldset data-step="1" hidden class="flex flex-col gap-3">
-          <div><h3 class="font-bold text-[#38223e]">Date of birth</h3><p class="text-xs text-[#817486]">Your date of birth is used for employee records and birthday notifications.</p></div>
-          <label class="flex flex-col gap-2 text-sm font-semibold text-[#4b3b50]">Date of birth *<input name="dateOfBirth" type="date" required min="1900-01-01" max="${new Date().toISOString().slice(0,10)}" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-base font-normal"></label>
-        </fieldset>
-        <fieldset data-step="2" hidden class="flex flex-col gap-3">
-          <div><h3 class="font-bold text-[#38223e]">Emergency contact</h3><p class="text-xs text-[#817486]">Someone HR can contact if there is an emergency. This section is optional.</p></div>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Contact name<input name="emergencyName" maxlength="100" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Relationship<input name="emergencyRelationship" maxlength="50" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="Parent, spouse, sibling…"></label>
-            <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Phone number<input name="emergencyPhone" type="tel" inputmode="tel" maxlength="20" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-          </div>
-          <p class="text-[11px] text-[#817486]">You can leave all three fields blank. If you enter one, complete all three.</p>
-        </fieldset>
-        <fieldset data-step="3" hidden class="flex flex-col gap-3">
-          <div><h3 class="font-bold text-[#38223e]">Bank details</h3><p class="text-xs text-[#817486]">Optional. These details are encrypted before they are stored and are not returned in your normal profile data.</p></div>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Account holder name<input name="accountHolder" maxlength="100" autocomplete="name" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Bank name<input name="bankName" maxlength="100" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">Account number<input name="accountNumber" type="password" inputmode="numeric" autocomplete="off" maxlength="18" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal"></label>
-          <label class="flex flex-col gap-1 text-xs font-semibold text-[#4b3b50]">IFSC code<input name="ifsc" maxlength="11" autocapitalize="characters" autocomplete="off" class="w-full rounded-xl border border-[#d9cddd] px-3 py-3 text-sm font-normal" placeholder="e.g. SBIN0001234"></label>
-          <p class="text-[11px] text-[#817486]">Leave all fields blank to add bank information later. If you enter one, complete all four.</p>
-        </fieldset>
-        <fieldset data-step="4" hidden class="flex flex-col gap-3">
-          <div><h3 class="font-bold text-[#38223e]">Review your information</h3><p class="text-xs text-[#817486]">Check the details before submitting. Bank account numbers are never shown in this review.</p></div>
-          <div id="orchidProfileReview" class="space-y-3"></div>
-          <p class="text-[11px] leading-5 text-[#817486]">By submitting, you confirm that the information provided is accurate. You can contact HR if you need to correct it later.</p>
-        </fieldset>
-        <p id="orchidProfileError" class="hidden text-sm text-red-700" role="alert"></p>
-        <div class="flex items-center justify-between gap-3 border-t border-[#eee7f0] pt-4">
-          <button id="orchidProfileBack" type="button" class="rounded-xl border border-[#d9cddd] px-4 py-3 text-sm font-semibold text-[#5a285f]" disabled>Back</button>
-          <button id="orchidProfileNext" type="button" class="rounded-xl bg-[#5a285f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">Continue</button>
-          <button id="orchidProfileSubmit" type="submit" hidden class="rounded-xl bg-[#5a285f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">Submit profile</button>
+          <span class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 sm:flex"><span class="material-symbols-outlined text-[26px]">badge</span></span>
         </div>
-      </form>`;
+        <div class="relative mt-6 rounded-xl border border-white/10 bg-black/10 p-3.5">
+          <div class="flex items-center justify-between gap-3 text-xs">
+            <span id="orchidProfileStepLabel" class="font-bold tracking-wide text-white">STEP 1 OF 5</span>
+            <span id="orchidProfileStepName" class="font-semibold text-white/75">Address</span>
+          </div>
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-label="Profile completion progress" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+            <div id="orchidProfileProgress" class="h-full rounded-full bg-[#e8c5fe] transition-all duration-300" style="width:20%"></div>
+          </div>
+          <div class="mt-3 grid grid-cols-5 gap-1 text-center text-[9px] font-semibold text-white/60 sm:text-[10px]">
+            <span>Address</span><span>Birth</span><span>Emergency</span><span>Bank</span><span>Review</span>
+          </div>
+        </div>
+      </div>
+      <div class="px-5 pb-5 pt-5 sm:px-7 sm:pb-7">
+        <form id="orchidProfileWizard" class="flex flex-col gap-5">
+          <fieldset data-step="0" class="flex flex-col gap-4">
+            <div class="flex items-start gap-3">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4eafa] text-[#5a285f]"><span class="material-symbols-outlined">home_pin</span></span>
+              <div><h3 class="text-base font-bold text-[#38223e]">Residential address</h3><p class="mt-1 text-xs leading-5 text-[#817486]">Enter your current home address. Fields marked * are required.</p></div>
+            </div>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Address line 1 *<input name="line1" required maxlength="120" autocomplete="address-line1" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15" placeholder="Door number, street name"></label>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Address line 2 <span class="font-normal text-[#95899a]">Optional</span><input name="line2" maxlength="120" autocomplete="address-line2" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15" placeholder="Area, landmark"></label>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">City / Town *<input name="city" required maxlength="80" autocomplete="address-level2" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+              <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">District <span class="font-normal text-[#95899a]">Optional</span><input name="district" maxlength="80" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+              <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">State *<input name="state" required maxlength="80" autocomplete="address-level1" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+              <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">PIN code *<input name="postalCode" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15" placeholder="6-digit PIN"></label>
+            </div>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Country *<input name="country" required maxlength="60" value="India" autocomplete="country-name" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+          </fieldset>
+          <fieldset data-step="1" hidden class="flex flex-col gap-4">
+            <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4eafa] text-[#5a285f]"><span class="material-symbols-outlined">cake</span></span><div><h3 class="text-base font-bold text-[#38223e]">Date of birth</h3><p class="mt-1 text-xs leading-5 text-[#817486]">Used for employee records and birthday notifications.</p></div></div>
+            <label class="flex flex-col gap-2 text-xs font-semibold text-[#4b3b50]">Date of birth *<input name="dateOfBirth" type="date" required min="1900-01-01" max="${new Date().toISOString().slice(0,10)}" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-base font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+          </fieldset>
+          <fieldset data-step="2" hidden class="flex flex-col gap-4">
+            <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4eafa] text-[#5a285f]"><span class="material-symbols-outlined">contact_emergency</span></span><div><h3 class="text-base font-bold text-[#38223e]">Emergency contact</h3><p class="mt-1 text-xs leading-5 text-[#817486]">A trusted person HR can contact if needed. This section is optional.</p></div></div>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Contact name<input name="emergencyName" maxlength="100" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Relationship<input name="emergencyRelationship" maxlength="50" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15" placeholder="Parent, spouse, sibling…"></label>
+              <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Phone number<input name="emergencyPhone" type="tel" inputmode="tel" maxlength="20" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+            </div>
+            <p class="rounded-lg bg-[#f8f5f9] px-3 py-2.5 text-[11px] leading-5 text-[#817486]">You can leave all fields blank. If you enter one, complete all three.</p>
+          </fieldset>
+          <fieldset data-step="3" hidden class="flex flex-col gap-4">
+            <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4eafa] text-[#5a285f]"><span class="material-symbols-outlined">account_balance</span></span><div><h3 class="text-base font-bold text-[#38223e]">Bank details</h3><p class="mt-1 text-xs leading-5 text-[#817486]">Optional. Your bank information is encrypted before storage and is not exposed in your normal profile data.</p></div></div>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Account holder name<input name="accountHolder" maxlength="100" autocomplete="name" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Bank name<input name="bankName" maxlength="100" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">Account number<input name="accountNumber" type="password" inputmode="numeric" autocomplete="off" maxlength="18" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15"></label>
+            <label class="flex flex-col gap-1.5 text-xs font-semibold text-[#4b3b50]">IFSC code<input name="ifsc" maxlength="11" autocapitalize="characters" autocomplete="off" class="w-full rounded-xl border border-[#ded5e2] bg-[#fcfafc] px-3.5 py-3 text-sm font-normal text-[#38223e] outline-none transition focus:border-[#75437d] focus:bg-white focus:ring-2 focus:ring-[#75437d]/15" placeholder="e.g. SBIN0001234"></label>
+            <p class="rounded-lg bg-[#f8f5f9] px-3 py-2.5 text-[11px] leading-5 text-[#817486]">Leave all fields blank to add bank information later. If you enter one, complete all four.</p>
+          </fieldset>
+          <fieldset data-step="4" hidden class="flex flex-col gap-4">
+            <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4eafa] text-[#5a285f]"><span class="material-symbols-outlined">fact_check</span></span><div><h3 class="text-base font-bold text-[#38223e]">Review your information</h3><p class="mt-1 text-xs leading-5 text-[#817486]">Check everything before submitting. Your bank account number is never shown here.</p></div></div>
+            <div id="orchidProfileReview" class="space-y-3"></div>
+            <p class="rounded-lg bg-[#f8f5f9] px-3 py-2.5 text-[11px] leading-5 text-[#817486]">By submitting, you confirm that the information provided is accurate. Contact HR if you need to correct it later.</p>
+          </fieldset>
+          <p id="orchidProfileError" class="hidden rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700" role="alert"></p>
+          <div class="flex items-center justify-between gap-3 border-t border-[#eee7f0] pt-4">
+            <button id="orchidProfileBack" type="button" class="rounded-xl border border-[#d9cddd] px-5 py-3 text-sm font-semibold text-[#5a285f] transition hover:bg-[#f8f5f9] disabled:cursor-not-allowed disabled:opacity-40" disabled>Back</button>
+            <button id="orchidProfileNext" type="button" class="rounded-xl bg-[#5a285f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#48204f] focus:outline-none focus:ring-4 focus:ring-[#5a285f]/20 disabled:opacity-60">Continue <span aria-hidden="true">→</span></button>
+            <button id="orchidProfileSubmit" type="submit" hidden class="rounded-xl bg-[#5a285f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#48204f] focus:outline-none focus:ring-4 focus:ring-[#5a285f]/20 disabled:opacity-60">Submit profile</button>
+          </div>
+        </form>
+      </div>`;
+    
     overlay.append(dialog);
     document.body.append(overlay);
     const form = dialog.querySelector("#orchidProfileWizard");
