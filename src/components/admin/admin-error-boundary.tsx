@@ -35,7 +35,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
         <section className="admin-error-state" role="alert" aria-live="assertive">
           <span className="admin-error-icon"><AlertTriangle size={22} /></span>
           <h2>We hit an unexpected problem</h2>
-          <p>Something went wrong while loading this section. Your access and saved records have not been changed by this screen.</p>
+          <p>Something went wrong while loading this section. If an action was in progress, refresh the section before retrying to confirm its latest status.</p>
           <div className="admin-error-actions">
             <button type="button" className="btn btn-primary" onClick={this.recover}>
               <RefreshCw size={15} /> Try again
