@@ -625,7 +625,7 @@ export const completeMyProfile = mutation({
     const now = Date.now();
     await ctx.db.patch(employee._id, {
       dateOfBirth: args.dateOfBirth, address, emergencyContact,
-      bankDetailsEncrypted, profileCompletedAt: now, updatedAt: now,
+      bankDetailsEncrypted: bankDetailsEncrypted ?? employee.bankDetailsEncrypted, profileCompletedAt: now, updatedAt: now,
     });
     await ctx.db.insert("auditLogs", {
       organizationId: user.organizationId, actorUserId: user._id, action: "employee.profile.completed",
