@@ -41,3 +41,7 @@ Unit tests cover error classification, supervisor permission restrictions, and s
 - Unknown errors deliberately do not expose arbitrary backend text, stack traces, database details, or environment data. They state that the exact cause was not provided and retain the incident reference for support.
 - Add a specific entry to `codeMessages` and a regression test whenever a new backend business error is introduced. This keeps the user explanation accurate without leaking implementation details.
 - This improves diagnosis of known application errors. It does not replace centralized server-side observability; network failures and unexpected infrastructure errors may still need support logs to identify their root cause.
+
+## Release gate
+- Run the production build after admin workspace JSX changes. Conditional tab sections and modal overlays must each remain inside the intended React fragment boundaries.
+- A production release is complete only after Vercel reports the deployment as `READY`.
