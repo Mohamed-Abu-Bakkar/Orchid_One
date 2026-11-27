@@ -13,7 +13,8 @@ export function EmployeeRealtimeFrame() {
   const work = useQuery(api.teamsWork.myWorkDashboard, { workDate });
   const markNotificationRead = useMutation(api.notifications.markRead);
   const markAllNotificationsRead = useMutation(api.notifications.markAllRead);
-  const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);\n  const completeMyProfile = useMutation(api.employee.completeMyProfile);
+  const submitDateOfBirth = useMutation(api.employee.submitMyDateOfBirth);
+  const completeMyProfile = useMutation(api.employee.completeMyProfile);
   const updateMyProfile = useMutation(api.employee.updateMyProfile);
 
   useEffect(() => {
